@@ -2612,7 +2612,7 @@ async def test_cover_garage_door(hass):
     """Test garage door cover discovery."""
     device = (
         "cover.test_garage_door",
-        "off",
+        "closed",
         {
             "friendly_name": "Test cover garage door",
             "supported_features": 3,
@@ -2624,6 +2624,28 @@ async def test_cover_garage_door(hass):
     assert appliance["endpointId"] == "cover#test_garage_door"
     assert appliance["displayCategories"][0] == "GARAGE_DOOR"
     assert appliance["friendlyName"] == "Test cover garage door"
+
+    assert_endpoint_capabilities(
+        appliance, "Alexa.ModeController", "Alexa.EndpointHealth", "Alexa"
+    )
+
+
+async def test_cover_gate(hass):
+    """Test cover with device class gate discovery."""
+    device = (
+        "cover.test_gate",
+        "closed",
+        {
+            "friendly_name": "Test cover gate",
+            "supported_features": 3,
+            "device_class": "gate",
+        },
+    )
+    appliance = await discovery_test(device, hass)
+
+    assert appliance["endpointId"] == "cover#test_gate"
+    assert appliance["displayCategories"][0] == "GARAGE_DOOR"
+    assert appliance["friendlyName"] == "Test cover gate"
 
     assert_endpoint_capabilities(
         appliance, "Alexa.ModeController", "Alexa.EndpointHealth", "Alexa"
