@@ -13,6 +13,7 @@ from broadlink.exceptions import (
 import voluptuous as vol
 
 from homeassistant import config_entries, data_entry_flow
+from homeassistant.components.dhcp import IP_ADDRESS, MAC_ADDRESS
 from homeassistant.const import CONF_HOST, CONF_MAC, CONF_NAME, CONF_TIMEOUT, CONF_TYPE
 from homeassistant.helpers import config_validation as cv
 
@@ -58,6 +59,23 @@ class BroadlinkFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             "model": device.model,
             "host": device.host[0],
         }
+
+    async def async_step_dhcp(self, dhcp_discovery):
+        """Handle dhcp discovery."""
+        host = dhcp_discovery[IP_ADDRESS]
+        mac_hex = format_mac(dhcp_discovery[MAC_ADDRESS])
+        await self.async_set_unique_id(mac_hex)
+        self._abort_if_unique_id_configured(updates={CONF_HOST: host})
+        timeout = DEFAULT_TIMEOUT
+        try:
+            hello = partial(blk.discover, discover_ip_address=host, timeout=timeout)
+            device = (await self.hass.async_add_executor_job(hello))[0]
+        except Exception:  # pylint: disable=broad-except
+            return self.async_abort(reason="cannot_connect")
+
+        await self.async_set_device(device)
+        device.timeout = timeout
+        return await self.async_step_auth()
 
     async def async_step_user(self, user_input=None):
         """Handle a flow initiated by the user."""
