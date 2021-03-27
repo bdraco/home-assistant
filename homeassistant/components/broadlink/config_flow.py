@@ -63,8 +63,7 @@ class BroadlinkFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_dhcp(self, dhcp_discovery):
         """Handle dhcp discovery."""
         host = dhcp_discovery[IP_ADDRESS]
-        mac_hex = format_mac(dhcp_discovery[MAC_ADDRESS])
-        await self.async_set_unique_id(mac_hex)
+        await self.async_set_unique_id(format_mac(dhcp_discovery[MAC_ADDRESS]))
         self._abort_if_unique_id_configured(updates={CONF_HOST: host})
         try:
             hello = partial(blk.discover, discover_ip_address=host)
