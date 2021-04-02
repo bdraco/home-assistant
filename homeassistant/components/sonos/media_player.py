@@ -589,6 +589,11 @@ class SonosEntity(MediaPlayerEntity):
 
             player = self.soco
 
+            # If already subscribed, do not do it again
+            # to avoid leaking memory
+            if self._subscriptions:
+                return
+
             def subscribe(sonos_service, action):
                 """Add a subscription to a pysonos service."""
                 queue = _ProcessSonosEventQueue(action)
