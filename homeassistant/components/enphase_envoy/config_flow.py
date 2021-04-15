@@ -20,7 +20,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.httpx_client import get_async_client
 
-from .const import DOMAIN
+from .const import CONF_INVERTERS, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,7 +29,9 @@ ENVOY = "Envoy"
 CONF_SERIAL = "serial"
 
 
-async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
+async def async_check_access(
+    hass: HomeAssistant, data: dict[str, Any]
+) -> dict[str, Any]:
     """Validate the user input allows us to connect."""
     envoy_reader = EnvoyReader(
         data[CONF_HOST],
@@ -39,6 +41,21 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         async_client=get_async_client(hass),
     )
 
+    try:
+        await _async_check_login(hass, envoy_reader)
+    except InvalidAuth:
+        pass
+    else:
+        return True
+
+    envoy_reader.inverters = False
+    await _async_check_login(hass, envoy_reader)
+    return False
+
+
+@callback
+async def _async_check_login(hass: HomeAssistant, envoy_reader: EnvoyReader) -> None:
+    """Check login to the envoy."""
     try:
         await envoy_reader.getData()
     except httpx.HTTPStatusError as err:
@@ -131,7 +148,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if user_input[CONF_HOST] in self._async_current_hosts():
                 return self.async_abort(reason="already_configured")
             try:
-                await validate_input(self.hass, user_input)
+                inverter_access = await async_check_access(self.hass, user_input)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
@@ -141,6 +158,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "unknown"
             else:
                 data = user_input.copy()
+                data[CONF_INVERTERS] = inverter_access
                 if self.serial:
                     data[CONF_NAME] = f"{ENVOY} {self.serial}"
                 else:

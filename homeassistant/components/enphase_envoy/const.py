@@ -7,6 +7,7 @@ DOMAIN = "enphase_envoy"
 
 PLATFORMS = ["sensor"]
 
+CONF_INVERTERS = "inverters"
 
 COORDINATOR = "coordinator"
 NAME = "name"

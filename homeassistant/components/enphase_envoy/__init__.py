@@ -16,7 +16,7 @@ from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.httpx_client import get_async_client
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import COORDINATOR, DOMAIN, NAME, PLATFORMS, SENSORS
+from .const import CONF_INVERTERS, COORDINATOR, DOMAIN, NAME, PLATFORMS, SENSORS
 
 SCAN_INTERVAL = timedelta(seconds=60)
 
@@ -73,7 +73,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         update_interval=SCAN_INTERVAL,
     )
 
-    envoy_reader.get_inverters = True
+    envoy_reader.get_inverters = config[CONF_INVERTERS]
     await coordinator.async_config_entry_first_refresh()
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
