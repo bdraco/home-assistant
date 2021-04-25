@@ -17,6 +17,7 @@ from homeassistant.helpers.dispatcher import (
 )
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.icon import icon_for_battery_level
+from homeassistant.util import dt as dt_util
 
 from . import SonosData
 from .const import (
@@ -83,6 +84,7 @@ class SonosBatteryEntity(SonosEntity, Entity):
         """Initialize a SonosBatteryEntity."""
         super().__init__(speaker, sonos_data)
         self._battery_info = battery_info
+        self._last_event = None
 
     async def async_added_to_hass(self) -> None:
         """Register polling callback when added to hass."""
@@ -90,7 +92,7 @@ class SonosBatteryEntity(SonosEntity, Entity):
 
         self.async_on_remove(
             self.hass.helpers.event.async_track_time_interval(
-                self.update, BATTERY_SCAN_INTERVAL
+                self.async_update, BATTERY_SCAN_INTERVAL
             )
         )
         self.async_on_remove(
@@ -113,6 +115,7 @@ class SonosBatteryEntity(SonosEntity, Entity):
             return
 
         more_info_dict = dict(x.split(":") for x in more_info.split(","))
+        self._last_event = dt_util.utcnow()
 
         is_charging = EVENT_CHARGING[more_info_dict["BattChg"]]
         if is_charging == self.charging:
@@ -145,15 +148,21 @@ class SonosBatteryEntity(SonosEntity, Entity):
         """Get the unit of measurement."""
         return PERCENTAGE
 
-    def update(self, event=None):
+    async def async_update(self, event=None):
         """Poll the device for the current state."""
         if not self.available:
             # wait for the Sonos device to come back online
             return
-        battery_info = fetch_battery_info_or_none(self.soco)
-        if battery_info is not None:
+        if (
+            self._last_event
+            and dt_util.utcnow() - self._last_event < BATTERY_SCAN_INTERVAL
+        ):
+            return
+        if battery_info := await self.hass.async_add_executor_job(
+            fetch_battery_info_or_none, self.soco
+        ):
             self._battery_info = battery_info
-            self.schedule_update_ha_state()
+            self.async_write_ha_state()
 
     @property
     def battery_level(self) -> int:
