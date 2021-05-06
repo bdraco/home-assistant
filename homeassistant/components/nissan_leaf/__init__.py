@@ -16,7 +16,7 @@ from homeassistant.helpers.dispatcher import (
     async_dispatcher_send,
 )
 from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.event import async_track_point_in_utc_time
+from homeassistant.helpers.event import async_call_later, async_track_point_in_utc_time
 from homeassistant.util.dt import utcnow
 
 _LOGGER = logging.getLogger(__name__)
@@ -39,6 +39,7 @@ CONF_VALID_REGIONS = ["NNA", "NE", "NCI", "NMA", "NML"]
 CONF_FORCE_MILES = "force_miles"
 
 INITIAL_UPDATE = timedelta(seconds=15)
+UPDATE_PROCESS_SECONDS = 60
 MIN_UPDATE_INTERVAL = timedelta(minutes=2)
 DEFAULT_INTERVAL = timedelta(hours=1)
 DEFAULT_CHARGING_INTERVAL = timedelta(minutes=15)
@@ -289,117 +290,76 @@ class LeafDataStore:
 
         self.last_check = datetime.today()
         self.request_in_progress = True
+        # Schedule processing of the update which can take
+        # a few seconds to be available after the update is requested
+        # We schedule the call before requesting the update to ensure
+        # that if something goes wrong request_in_progress is always set
+        # to False
+        async_call_later(
+            self.hass, UPDATE_PROCESS_SECONDS, self._async_refresh_after_update
+        )
+        await self.async_request_update()
 
+    async def async_refresh_after_update(self):
+        """Schedule the update after the refresh request."""
+        try:
+            await self._async_refresh_after_update()
+        finally:
+            self.request_in_progress = False
+            async_dispatcher_send(self.hass, SIGNAL_UPDATE_LEAF)
+
+    async def _async_refresh_after_update(self):
+        """Fetch the update after the refresh was request."""
         server_response = await self.async_get_battery()
+        if server_response is None:
+            return
 
-        if server_response is not None:
-            _LOGGER.debug("Server Response: %s", server_response.__dict__)
+        _LOGGER.debug("Server Response: %s", server_response.__dict__)
+        if server_response.answer["status"] == HTTP_OK:
+            self.data[DATA_BATTERY] = server_response.battery_percent
 
-            if server_response.answer["status"] == HTTP_OK:
-                self.data[DATA_BATTERY] = server_response.battery_percent
+            # pycarwings2 library doesn't always provide cruising rnages
+            # so we have to check if they exist before we can use them.
+            # Root cause: the nissan servers don't always send the data.
+            if hasattr(server_response, "cruising_range_ac_on_km"):
+                self.data[DATA_RANGE_AC] = server_response.cruising_range_ac_on_km
+            else:
+                self.data[DATA_RANGE_AC] = None
 
-                # pycarwings2 library doesn't always provide cruising rnages
-                # so we have to check if they exist before we can use them.
-                # Root cause: the nissan servers don't always send the data.
-                if hasattr(server_response, "cruising_range_ac_on_km"):
-                    self.data[DATA_RANGE_AC] = server_response.cruising_range_ac_on_km
-                else:
-                    self.data[DATA_RANGE_AC] = None
+            if hasattr(server_response, "cruising_range_ac_off_km"):
+                self.data[DATA_RANGE_AC_OFF] = server_response.cruising_range_ac_off_km
+            else:
+                self.data[DATA_RANGE_AC_OFF] = None
 
-                if hasattr(server_response, "cruising_range_ac_off_km"):
-                    self.data[
-                        DATA_RANGE_AC_OFF
-                    ] = server_response.cruising_range_ac_off_km
-                else:
-                    self.data[DATA_RANGE_AC_OFF] = None
-
-                self.data[DATA_PLUGGED_IN] = server_response.is_connected
-                self.data[DATA_CHARGING] = server_response.is_charging
-                async_dispatcher_send(self.hass, SIGNAL_UPDATE_LEAF)
-                self.last_battery_response = utcnow()
+            self.data[DATA_PLUGGED_IN] = server_response.is_connected
+            self.data[DATA_CHARGING] = server_response.is_charging
+            async_dispatcher_send(self.hass, SIGNAL_UPDATE_LEAF)
+            self.last_battery_response = utcnow()
 
         # Climate response only updated if battery data updated first.
-        if server_response is not None:
-            try:
-                climate_response = await self.async_get_climate()
-                if climate_response is not None:
-                    _LOGGER.debug(
-                        "Got climate data for Leaf: %s", climate_response.__dict__
-                    )
-                    self.data[DATA_CLIMATE] = climate_response.is_hvac_running
-                    self.last_climate_response = utcnow()
-            except CarwingsError:
-                _LOGGER.error("Error fetching climate info")
+        climate_response = await self.async_get_climate()
+        if climate_response is None:
+            return
 
-        self.request_in_progress = False
-        async_dispatcher_send(self.hass, SIGNAL_UPDATE_LEAF)
+        _LOGGER.debug("Got climate data for Leaf: %s", climate_response.__dict__)
+        self.data[DATA_CLIMATE] = climate_response.is_hvac_running
+        self.last_climate_response = utcnow()
+
+    async def async_request_update(self):
+        """Request an update."""
+        try:
+            if await self.hass.async_add_executor_job(self.leaf.request_update):
+                return True
+            _LOGGER.error("Update request failed")
+        except CarwingsError:
+            _LOGGER.error("An error occurred while requesting update")
+
+        return False
 
     async def async_get_battery(self):
         """Request battery update from Nissan servers."""
-
         try:
             # Request battery update from the car
-            _LOGGER.debug("Requesting battery update, %s", self.leaf.vin)
-            start_date = None
-            try:
-                start_server_info = await self.hass.async_add_executor_job(
-                    self.leaf.get_latest_battery_status
-                )
-            except TypeError:  # pycarwings2 can fail if Nissan returns nothing
-                _LOGGER.debug("Battery status check returned nothing")
-            else:
-                if not start_server_info:
-                    _LOGGER.debug("Battery status check failed")
-                else:
-                    start_date = _extract_start_date(start_server_info)
-            await asyncio.sleep(1)  # Critical sleep
-            request = await self.hass.async_add_executor_job(self.leaf.request_update)
-            if not request:
-                _LOGGER.error("Battery update request failed")
-                return None
-
-            for attempt in range(MAX_RESPONSE_ATTEMPTS):
-                _LOGGER.debug(
-                    "Waiting %s seconds for battery update (%s) (%s)",
-                    PYCARWINGS2_SLEEP,
-                    self.leaf.vin,
-                    attempt,
-                )
-                await asyncio.sleep(PYCARWINGS2_SLEEP)
-
-                # We don't use the response from get_status_from_update
-                # apart from knowing that the car has responded saying it
-                # has given the latest battery status to Nissan.
-                check_result_info = await self.hass.async_add_executor_job(
-                    self.leaf.get_status_from_update, request
-                )
-
-                if check_result_info is not None:
-                    # Get the latest battery status from Nissan servers.
-                    # This has the SOC in it.
-                    server_info = await self.hass.async_add_executor_job(
-                        self.leaf.get_latest_battery_status
-                    )
-                    if not start_date or (
-                        server_info and start_date != _extract_start_date(server_info)
-                    ):
-                        return server_info
-                    # get_status_from_update returned {"resultFlag": "1"}
-                    # but the data didn't change, make a fresh request.
-                    await asyncio.sleep(1)  # Critical sleep
-                    request = await self.hass.async_add_executor_job(
-                        self.leaf.request_update
-                    )
-                    if not request:
-                        _LOGGER.error("Battery update request failed")
-                        return None
-
-            _LOGGER.debug(
-                "%s attempts exceeded return latest data from server",
-                MAX_RESPONSE_ATTEMPTS,
-            )
-            # Get the latest data from the nissan servers, even though
-            # it may be out of date, it's better than nothing.
             server_info = await self.hass.async_add_executor_job(
                 self.leaf.get_latest_battery_status
             )
