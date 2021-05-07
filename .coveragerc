@@ -334,6 +334,7 @@ omit =
     homeassistant/components/fritz/common.py
     homeassistant/components/fritz/const.py
     homeassistant/components/fritz/device_tracker.py
+    homeassistant/components/fritz/sensor.py
     homeassistant/components/fritzbox_callmonitor/__init__.py
     homeassistant/components/fritzbox_callmonitor/const.py
     homeassistant/components/fritzbox_callmonitor/base.py
@@ -547,7 +548,6 @@ omit =
     homeassistant/components/life360/*
     homeassistant/components/lifx/*
     homeassistant/components/lifx_cloud/scene.py
-    homeassistant/components/lifx_legacy/light.py
     homeassistant/components/lightwave/*
     homeassistant/components/limitlessled/light.py
     homeassistant/components/linksys_smart/device_tracker.py
@@ -978,6 +978,10 @@ omit =
     homeassistant/components/synology_dsm/switch.py
     homeassistant/components/synology_srm/device_tracker.py
     homeassistant/components/syslog/notify.py
+    homeassistant/components/system_bridge/__init__.py
+    homeassistant/components/system_bridge/const.py
+    homeassistant/components/system_bridge/binary_sensor.py
+    homeassistant/components/system_bridge/sensor.py
     homeassistant/components/systemmonitor/sensor.py
     homeassistant/components/tado/*
     homeassistant/components/tado/device_tracker.py

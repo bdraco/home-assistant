@@ -16,10 +16,10 @@ defusedxml==0.6.0
 distro==1.5.0
 emoji==1.2.0
 hass-nabucasa==0.43.0
-home-assistant-frontend==20210503.0
+home-assistant-frontend==20210504.0
 httpx==0.18.0
 jinja2>=2.11.3
-netdisco==2.8.2
+netdisco==2.8.3
 paho-mqtt==1.5.1
 pillow==8.1.2
 pip>=8.0.3,<20.3
@@ -30,11 +30,11 @@ pyyaml==5.4.1
 requests==2.25.1
 ruamel.yaml==0.15.100
 scapy==2.4.5
-sqlalchemy==1.4.11
+sqlalchemy==1.4.13
 voluptuous-serialize==2.4.0
 voluptuous==0.12.1
 yarl==1.6.3
-zeroconf==0.29.0
+zeroconf==0.30.0
 
 pycryptodome>=3.6.6
 
