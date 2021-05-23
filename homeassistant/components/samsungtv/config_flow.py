@@ -107,7 +107,8 @@ class SamsungTVConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def _async_set_device_unique_id(self, raise_on_progress=True):
         """Set device unique_id."""
-        await self._async_get_and_check_device_info()
+        if not await self._async_get_and_check_device_info():
+            raise data_entry_flow.AbortFlow(RESULT_NOT_SUPPORTED)
         await self._async_set_unique_id_from_udn(raise_on_progress)
 
     async def _async_set_unique_id_from_udn(self, raise_on_progress=True):
@@ -135,7 +136,7 @@ class SamsungTVConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Try to get the device info."""
         info = await async_get_device_info(self.hass, self._bridge, self._host)
         if not info:
-            raise data_entry_flow.AbortFlow(RESULT_NOT_SUPPORTED)
+            return False
         dev_info = info.get("device", {})
         device_type = dev_info.get("type")
         if device_type != "Samsung SmartTV":
@@ -148,6 +149,7 @@ class SamsungTVConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if dev_info.get("networkType") == "wireless" and dev_info.get("wifiMac"):
             self._mac = format_mac(dev_info.get("wifiMac"))
         self._device_info = info
+        return True
 
     async def async_step_import(self, user_input=None):
         """Handle configuration by yaml file."""
@@ -229,6 +231,7 @@ class SamsungTVConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         await self._async_start_discovery_for_host(
             urlparse(discovery_info[ATTR_SSDP_LOCATION]).hostname
         )
+        await self._async_get_and_check_device_info()
         self._manufacturer = discovery_info[ATTR_UPNP_MANUFACTURER]
         if not self._manufacturer or not self._manufacturer.lower().startswith(
             "samsung"
