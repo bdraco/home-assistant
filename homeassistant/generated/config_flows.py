@@ -384,6 +384,7 @@ FLOWS = [
     "wiz",
     "wled",
     "wolflink",
+    "ws66i",
     "xbox",
     "xiaomi_aqara",
     "xiaomi_miio",
