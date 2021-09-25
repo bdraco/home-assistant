@@ -6,32 +6,33 @@ import logging
 from typing import Any
 
 from kasa import SmartDevice, SmartDeviceException
+from kasa.discover import Discover
+from kasa.protocol import TPLinkSmartHomeProtocol
 import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.components.switch import ATTR_CURRENT_POWER_W, ATTR_TODAY_ENERGY_KWH
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_VOLTAGE, CONF_HOST
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from homeassistant.config_entries import ConfigEntry, ConfigEntryNotReady
+from homeassistant.const import ATTR_VOLTAGE, CONF_HOST, CONF_MAC, CONF_NAME
+from homeassistant.core import HomeAssistant, split_entity_id
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .common import SmartDevices, async_discover_devices, get_static_devices
 from .const import (
-    ATTR_CONFIG,
     ATTR_CURRENT_A,
     ATTR_TOTAL_ENERGY_KWH,
     CONF_DIMMER,
     CONF_DISCOVERY,
     CONF_EMETER_PARAMS,
+    CONF_LEGACY_ENTRY_ID,
     CONF_LIGHT,
     CONF_STRIP,
     CONF_SWITCH,
-    COORDINATORS,
+    DISCOVERED_DEVICES,
+    MAC_ADDRESS_LEN,
     PLATFORMS,
-    UNAVAILABLE_DEVICES,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -64,89 +65,139 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
+async def async_migrate_legacy_entries(
+    hass: HomeAssistant,
+    legacy_entry: ConfigEntry,
+    config_entries_by_mac: dict[str, ConfigEntry],
+) -> None:
+    """Migrate the legacy config entries to have an entry per device."""
+    entity_registry = er.async_get(hass)
+    tplink_reg_entities = er.async_entries_for_config_entry(
+        entity_registry, legacy_entry.entry_id
+    )
+
+    for reg_entity in tplink_reg_entities:
+        # Only migrate entities with a mac address only
+        if len(reg_entity.unique_id) != MAC_ADDRESS_LEN:
+            continue
+        mac = dr.format_mac(reg_entity.unique_id)
+        if mac in config_entries_by_mac:
+            continue
+
+        domain = (split_entity_id(reg_entity.entity_id))[0]
+        if domain not in ("switch", "light"):
+            continue
+        hass.async_create_task(
+            hass.config_entries.flow.async_init(
+                DOMAIN,
+                context={"source": "migration"},
+                data={
+                    CONF_LEGACY_ENTRY_ID: reg_entity.entry_id,
+                    CONF_MAC: dr.format_mac(reg_entity.unique_id),
+                    CONF_NAME: reg_entity.name,
+                },
+            )
+        )
+
+
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the TP-Link component."""
     conf = config.get(DOMAIN)
-
     hass.data[DOMAIN] = {}
-    hass.data[DOMAIN][ATTR_CONFIG] = conf
+
+    legacy_entry = None
+    config_entries_by_mac = {}
+    for entry in hass.config_entries.async_entries(DOMAIN):
+        if entry.unique_id is None:
+            legacy_entry = entry
+        else:
+            config_entries_by_mac[entry.unique_id] = entry
+
+    discovered_devices = {
+        dr.format_mac(device.mac): device
+        for device in (await Discover.discover()).values()
+    }
+    hass.data[DOMAIN][DISCOVERED_DEVICES] = discovered_devices
+
+    if legacy_entry:
+        await async_migrate_legacy_entries(hass, legacy_entry)
 
     if conf is not None:
+        for device_type in (CONF_LIGHT, CONF_SWITCH, CONF_STRIP, CONF_DIMMER):
+            if device_type not in conf:
+                continue
+            for device in conf[device_type]:
+                hass.async_create_task(
+                    hass.config_entries.flow.async_init(
+                        DOMAIN,
+                        context={"source": config_entries.SOURCE_IMPORT},
+                        data={
+                            CONF_HOST: device[CONF_HOST],
+                        },
+                    )
+                )
+
+    for formatted_mac, device in discovered_devices:
+        formatted_mac = dr.format_mac(device.mac)
+        if formatted_mac in config_entries_by_mac:
+            continue
         hass.async_create_task(
             hass.config_entries.flow.async_init(
-                DOMAIN, context={"source": config_entries.SOURCE_IMPORT}
+                DOMAIN,
+                context={"source": config_entries.SOURCE_DISCOVERY},
+                data={
+                    CONF_NAME: device.alias,
+                    CONF_HOST: device.host,
+                    CONF_MAC: formatted_mac,
+                },
             )
         )
 
     return True
 
 
+async def async_migrate_entities(
+    hass: HomeAssistant, legacy_entry_id: str, new_entry: ConfigEntry
+) -> None:
+    """Move entities to the new config entry."""
+    entity_registry = er.async_get(hass)
+    tplink_reg_entities = er.async_entries_for_config_entry(
+        entity_registry, legacy_entry_id
+    )
+
+    for reg_entity in tplink_reg_entities:
+        # Only migrate entities with a mac address only
+        if len(reg_entity.unique_id) < MAC_ADDRESS_LEN:
+            continue
+        mac = reg_entity.unique_id[:MAC_ADDRESS_LEN]
+        formatted_mac = dr.format_mac(mac)
+        if formatted_mac != new_entry.unique_id:
+            continue
+        er._async_update_entity(
+            reg_entity.entity_id, config_entry_id=new_entry.entry_id
+        )
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up TPLink from a config entry."""
-    config_data = hass.data[DOMAIN].get(ATTR_CONFIG)
-    if config_data is None and entry.data:
-        config_data = entry.data
-    elif config_data is not None:
-        hass.config_entries.async_update_entry(entry, data=config_data)
+    if not entry.unique_id:
+        return False
 
-    device_registry = dr.async_get(hass)
-    tplink_devices = dr.async_entries_for_config_entry(device_registry, entry.entry_id)
-    device_count = len(tplink_devices)
-    hass_data: dict[str, Any] = hass.data[DOMAIN]
+    if legacy_entry_id := entry.data.get(CONF_LEGACY_ENTRY_ID):
+        await async_migrate_entities(hass, legacy_entry_id, entry.entry_id)
 
-    # These will contain the initialized devices
-    hass_data[CONF_LIGHT] = []
-    hass_data[CONF_SWITCH] = []
-    hass_data[UNAVAILABLE_DEVICES] = []
-    lights: list[SmartDevice] = hass_data[CONF_LIGHT]
-    switches: list[SmartDevice] = hass_data[CONF_SWITCH]
+    protocol = TPLinkSmartHomeProtocol(entry.data[CONF_HOST])
+    try:
+        info = await protocol.query(Discover.DISCOVERY_QUERY)
+    except SmartDeviceException as ex:
+        raise ConfigEntryNotReady from ex
 
-    # Add static devices
-    static_devices = SmartDevices()
-    if config_data is not None:
-        static_devices = await get_static_devices(config_data)
+    device_class = Discover._get_device_class(info)  # pylint: disable=protected-access
+    device = device_class(entry.data[CONF_HOST])
+    coordinator = TPLinkDataUpdateCoordinator(hass, device)
+    await coordinator.async_config_entry_first_refresh()
 
-        lights.extend(static_devices.lights)
-        switches.extend(static_devices.switches)
-
-    # Add discovered devices
-    if config_data is None or config_data[CONF_DISCOVERY]:
-        discovered_devices = await async_discover_devices(
-            hass, static_devices, device_count
-        )
-
-        lights.extend(discovered_devices.lights)
-        switches.extend(discovered_devices.switches)
-
-    if lights:
-        _LOGGER.debug(
-            "Got %s lights: %s", len(lights), ", ".join(d.host for d in lights)
-        )
-
-    if switches:
-        _LOGGER.debug(
-            "Got %s switches: %s",
-            len(switches),
-            ", ".join(d.host for d in switches),
-        )
-
-    # prepare DataUpdateCoordinators
-    coordinators: dict[str, TPLinkDataUpdateCoordinator] = {}
-    hass_data[COORDINATORS] = coordinators
-    for device in switches + lights:
-        coordinator = coordinators[device.device_id] = TPLinkDataUpdateCoordinator(
-            hass, device
-        )
-
-        try:
-            await coordinator.async_refresh()
-        except SmartDeviceException:
-            _LOGGER.warning(
-                "Device at '%s' not reachable during setup, retry not yet implemented",
-                device.host,
-            )
-            continue
-
+    hass.data[DOMAIN][entry.entry_id] = coordinator
     hass.config_entries.async_setup_platforms(entry, PLATFORMS)
 
     return True

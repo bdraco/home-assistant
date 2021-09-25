@@ -30,7 +30,7 @@ from homeassistant.util.color import (
 )
 
 from .common import CoordinatedTPLinkEntity
-from .const import CONF_LIGHT, COORDINATORS, DOMAIN as TPLINK_DOMAIN
+from .const import DOMAIN
 
 PARALLEL_UPDATES = 0
 SCAN_INTERVAL = timedelta(seconds=5)
@@ -50,15 +50,11 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up switches."""
-    coordinators: dict[str, TPLinkDataUpdateCoordinator] = hass.data[TPLINK_DOMAIN][
-        COORDINATORS
-    ]
-    async_add_entities(
-        [
-            TPLinkSmartBulb(device, coordinators[device.device_id])
-            for device in hass.data[TPLINK_DOMAIN][CONF_LIGHT]
-        ]
-    )
+    coordinator: TPLinkDataUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
+    device = coordinator.device
+    if not device.is_bulb and not device.is_light_strip and not device.is_dimmer:
+        return
+    async_add_entities(TPLinkSmartBulb(device, coordinator))
 
 
 def brightness_to_percentage(byt):

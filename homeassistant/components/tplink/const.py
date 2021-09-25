@@ -8,12 +8,19 @@ COORDINATORS = "coordinators"
 UNAVAILABLE_DEVICES = "unavailable_devices"
 UNAVAILABLE_RETRY_DELAY = datetime.timedelta(seconds=300)
 
+CONF_DEVICE_TYPE = "device_type"
+
 MIN_TIME_BETWEEN_UPDATES = datetime.timedelta(seconds=8)
 MAX_DISCOVERY_RETRIES = 4
 
 ATTR_CONFIG = "config"
 ATTR_TOTAL_ENERGY_KWH = "total_energy_kwh"
 ATTR_CURRENT_A = "current_a"
+
+CONF_LEGACY_ENTRY_ID = "legacy_entry_id"
+DATA_DISCOVERY = "discovery"
+DISCOVERED_DEVICES = "discovered_devices"
+
 
 CONF_MODEL = "model"
 CONF_SW_VERSION = "sw_ver"

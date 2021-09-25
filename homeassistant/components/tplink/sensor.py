@@ -29,13 +29,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .common import CoordinatedTPLinkEntity
-from .const import (
-    CONF_EMETER_PARAMS,
-    CONF_LIGHT,
-    CONF_SWITCH,
-    COORDINATORS,
-    DOMAIN as TPLINK_DOMAIN,
-)
+from .const import CONF_EMETER_PARAMS, DOMAIN
 
 ATTR_CURRENT_A = "current_a"
 ATTR_CURRENT_POWER_W = "current_power_w"
@@ -86,21 +80,16 @@ async def async_setup_entry(
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up switches."""
-    entities: list[SmartPlugSensor] = []
-    coordinators: dict[str, TPLinkDataUpdateCoordinator] = hass.data[TPLINK_DOMAIN][
-        COORDINATORS
-    ]
-    switches: list[SmartDevice] = hass.data[TPLINK_DOMAIN][CONF_SWITCH]
-    lights: list[SmartDevice] = hass.data[TPLINK_DOMAIN][CONF_LIGHT]
-    for device in switches + lights:
-        coordinator: TPLinkDataUpdateCoordinator = coordinators[device.device_id]
-        if not device.has_emeter:
-            continue
-        for description in ENERGY_SENSORS:
-            if coordinator.data[CONF_EMETER_PARAMS].get(description.key) is not None:
-                entities.append(SmartPlugSensor(device, coordinator, description))
+    """Set up sensors."""
+    coordinator: TPLinkDataUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
+    device = coordinator.device
+    if not device.has_emeter:
+        return
 
+    entities = []
+    for description in ENERGY_SENSORS:
+        if coordinator.data[CONF_EMETER_PARAMS].get(description.key) is not None:
+            entities.append(SmartPlugSensor(device, coordinator, description))
     async_add_entities(entities)
 
 
