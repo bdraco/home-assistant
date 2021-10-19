@@ -1,6 +1,8 @@
 """Component to embed TP-Link smart home devices."""
 from __future__ import annotations
 
+import asyncio
+import contextlib
 from datetime import timedelta
 import logging
 
@@ -13,6 +15,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 _LOGGER = logging.getLogger(__name__)
 
 REQUEST_REFRESH_DELAY = 0.35
+REQUEST_TIMEOUT = 5
 
 
 class TPLinkDataUpdateCoordinator(DataUpdateCoordinator):
@@ -26,6 +29,7 @@ class TPLinkDataUpdateCoordinator(DataUpdateCoordinator):
         """Initialize DataUpdateCoordinator to gather data for specific SmartPlug."""
         self.device = device
         self.update_children = True
+        self.update_futures: list[asyncio.Future] = []
         update_interval = timedelta(seconds=10)
         super().__init__(
             hass,
@@ -45,7 +49,12 @@ class TPLinkDataUpdateCoordinator(DataUpdateCoordinator):
         # optimization to reduce the number of requests on the device
         # when we do not need it.
         self.update_children = False
+        # not using asyncio.Event because of https://bugs.python.org/issue39032
+        future: asyncio.Future = asyncio.Future()
+        self.update_futures.append(future)
         await self.async_request_refresh()
+        with contextlib.suppress(asyncio.TimeoutError):
+            await asyncio.wait_for(future, timeout=REQUEST_TIMEOUT)
 
     async def _async_update_data(self) -> None:
         """Fetch all device and sensor data from api."""
@@ -55,3 +64,6 @@ class TPLinkDataUpdateCoordinator(DataUpdateCoordinator):
             raise UpdateFailed(ex) from ex
         finally:
             self.update_children = True
+            for future in self.update_futures:
+                future.set_result(None)
+            self.update_futures = []
