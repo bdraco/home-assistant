@@ -1,4 +1,4 @@
-"""Define tests for the Flux LED/Magic Home config flow."""
+"""Define tests for the lookin config flow."""
 from __future__ import annotations
 
 from unittest.mock import patch
