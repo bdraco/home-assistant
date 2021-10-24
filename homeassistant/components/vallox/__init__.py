@@ -138,10 +138,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
         return ValloxState(metric_cache, profile)
 
-    coordinator = DataUpdateCoordinator[ValloxState](
+    coordinator = ValloxDataUpdateCoordinator(
         hass,
         _LOGGER,
-        name=f"{name} DataUpdateCoordinator",
+        name=f"Vallox {name}",
         update_interval=STATE_SCAN_INTERVAL,
         update_method=async_update_data,
     )
@@ -174,11 +174,17 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
+class ValloxDataUpdateCoordinator(DataUpdateCoordinator):
+    """The DataUpdateCoordinator for Vallox."""
+
+    data: ValloxState
+
+
 class ValloxServiceHandler:
     """Services implementation."""
 
     def __init__(
-        self, client: Vallox, coordinator: DataUpdateCoordinator[ValloxState]
+        self, client: Vallox, coordinator: ValloxDataUpdateCoordinator
     ) -> None:
         """Initialize the proxy."""
         self._client = client

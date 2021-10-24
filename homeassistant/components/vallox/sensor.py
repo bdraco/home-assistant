@@ -27,7 +27,7 @@ from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
 )
 
-from . import ValloxState
+from . import ValloxDataUpdateCoordinator, ValloxState
 from .const import DOMAIN, METRIC_KEY_MODE, MODE_ON, VALLOX_PROFILE_TO_STR_REPORTABLE
 
 _LOGGER = logging.getLogger(__name__)
@@ -37,11 +37,12 @@ class ValloxSensor(CoordinatorEntity[ValloxState], SensorEntity):
     """Representation of a Vallox sensor."""
 
     entity_description: ValloxSensorEntityDescription
+    coordinator: ValloxDataUpdateCoordinator
 
     def __init__(
         self,
         name: str,
-        coordinator: DataUpdateCoordinator[ValloxState],
+        coordinator: DataUpdateCoordinator,
         description: ValloxSensorEntityDescription,
     ) -> None:
         """Initialize the Vallox sensor."""
