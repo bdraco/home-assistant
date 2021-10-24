@@ -775,17 +775,25 @@ class YeelightGenericLight(YeelightEntity, LightEntity):
         duration = int(self.config[CONF_TRANSITION])  # in ms
         if ATTR_TRANSITION in kwargs:  # passed kwarg overrides config
             duration = int(kwargs.get(ATTR_TRANSITION) * 1000)  # kwarg in s
-
-        if not self.is_on:
-            await self._async_turn_on(duration)
+        on_duration = duration
 
         if self.config[CONF_MODE_MUSIC] and not self._bulb.music_mode:
             await self.async_set_music_mode(True)
+
+        if not self.is_on:
+            # If the light is off, set all the properties immediately
+            # and then set the duration on the turn on since we aren't
+            # transitioning from one on state to another
+            duration = 0
 
         await self.async_set_hs(hs_color, duration)
         await self.async_set_rgb(rgb, duration)
         await self.async_set_colortemp(colortemp, duration)
         await self.async_set_brightness(brightness, duration)
+
+        if not self.is_on:
+            await self._async_turn_on(on_duration)
+
         await self.async_set_flash(flash)
         await self.async_set_effect(effect)
 
