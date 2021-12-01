@@ -1,11 +1,12 @@
 """Support for Nanoleaf Lights."""
 from __future__ import annotations
 
+import asyncio
 import logging
 import math
 from typing import Any
 
-from aionanoleaf import Nanoleaf, Unavailable
+from aionanoleaf import EffectsEvent, Nanoleaf, StateEvent
 import voluptuous as vol
 
 from homeassistant.components.light import (
@@ -80,6 +81,7 @@ class NanoleafLight(NanoleafEntity, LightEntity):
     def __init__(self, nanoleaf: Nanoleaf) -> None:
         """Initialize the Nanoleaf light."""
         super().__init__(nanoleaf)
+        self._event_listener: asyncio.Task | None = None
         self._attr_unique_id = nanoleaf.serial_no
         self._attr_name = nanoleaf.name
         self._attr_min_mireds = math.ceil(1000000 / nanoleaf.color_temperature_max)
@@ -176,15 +178,24 @@ class NanoleafLight(NanoleafEntity, LightEntity):
         transition: float | None = kwargs.get(ATTR_TRANSITION)
         await self._nanoleaf.turn_off(None if transition is None else int(transition))
 
-    async def async_update(self) -> None:
-        """Fetch new state data for this light."""
-        try:
-            await self._nanoleaf.get_info()
-        except Unavailable:
-            if self.available:
-                _LOGGER.warning("Could not connect to %s", self.name)
-            self._attr_available = False
-            return
-        if not self.available:
-            _LOGGER.info("Fetching %s data recovered", self.name)
-        self._attr_available = True
+    async def _callback_update_light_state(
+        self, event: StateEvent | EffectsEvent
+    ) -> None:
+        """Receive state and effect event."""
+        self.async_write_ha_state()
+
+    async def async_added_to_hass(self) -> None:
+        """Handle entity being added to Home Assistant."""
+        self._event_listener = asyncio.create_task(
+            self._nanoleaf.listen_events(
+                state_callback=self._callback_update_light_state,
+                effects_callback=self._callback_update_light_state,
+            )
+        )
+        await super().async_added_to_hass()
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Handle entity being remove from Home Assistant."""
+        assert self._event_listener is not None
+        self._event_listener.cancel()
+        await super().async_will_remove_from_hass()
