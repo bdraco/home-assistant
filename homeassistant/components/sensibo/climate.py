@@ -100,14 +100,14 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up the Sensibo climate entry."""
+    data = hass.data[DOMAIN][entry.entry_id]
+    client = data["client"]
+    devicelist = data["devices"]
 
-    client = hass.data[DOMAIN][entry.entry_id]["client"]
-
-    devicelist = hass.data[DOMAIN][entry.entry_id]["devices"]
-
-    devices = []
-    for dev in devicelist:
-        devices.append(SensiboClimate(client, dev, hass.config.units.temperature_unit))
+    devices = [
+        SensiboClimate(client, dev, hass.config.units.temperature_unit)
+        for dev in devicelist
+    ]
 
     async_add_entities(devices)
 
