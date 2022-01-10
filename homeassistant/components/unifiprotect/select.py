@@ -19,6 +19,7 @@ from pyunifiprotect.data import (
     RecordingMode,
     Viewer,
 )
+from pyunifiprotect.data.base import ProtectDeviceModel
 import voluptuous as vol
 
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
@@ -122,12 +123,12 @@ def _get_paired_camera_options(api: ProtectApiClient) -> list[dict[str, Any]]:
     return options
 
 
-def _get_viewer_current(obj: Any) -> str:
+def _get_viewer_current(obj: ProtectDeviceModel) -> str:
     assert isinstance(obj, Viewer)
     return obj.liveview_id
 
 
-def _get_light_motion_current(obj: Any) -> str:
+def _get_light_motion_current(obj: ProtectDeviceModel) -> str:
     assert isinstance(obj, Light)
     # a bit of extra to allow On Motion Always/Dark
     if (
@@ -138,14 +139,14 @@ def _get_light_motion_current(obj: Any) -> str:
     return obj.light_mode_settings.mode.value
 
 
-def _get_doorbell_current(obj: Any) -> str | None:
+def _get_doorbell_current(obj: ProtectDeviceModel) -> str | None:
     assert isinstance(obj, Camera)
     if obj.lcd_message is None:
         return None
     return obj.lcd_message.text
 
 
-async def _set_light_mode(obj: Any, mode: str) -> None:
+async def _set_light_mode(obj: ProtectDeviceModel, mode: str) -> None:
     assert isinstance(obj, Light)
     lightmode, timing = LIGHT_MODE_TO_SETTINGS[mode]
     await obj.set_light_settings(
@@ -154,7 +155,7 @@ async def _set_light_mode(obj: Any, mode: str) -> None:
     )
 
 
-async def _set_paired_camera(obj: Any, camera_id: str) -> None:
+async def _set_paired_camera(obj: ProtectDeviceModel, camera_id: str) -> None:
     assert isinstance(obj, Light)
     if camera_id == TYPE_EMPTY_VALUE:
         camera: Camera | None = None
@@ -163,7 +164,7 @@ async def _set_paired_camera(obj: Any, camera_id: str) -> None:
     await obj.set_paired_camera(camera)
 
 
-async def _set_doorbell_message(obj: Any, message: str) -> None:
+async def _set_doorbell_message(obj: ProtectDeviceModel, message: str) -> None:
     assert isinstance(obj, Camera)
     if message.startswith(DoorbellMessageType.CUSTOM_MESSAGE.value):
         await obj.set_lcd_text(DoorbellMessageType.CUSTOM_MESSAGE, text=message)
@@ -173,7 +174,7 @@ async def _set_doorbell_message(obj: Any, message: str) -> None:
         await obj.set_lcd_text(DoorbellMessageType(message))
 
 
-async def _set_liveview(obj: Any, liveview_id: str) -> None:
+async def _set_liveview(obj: ProtectDeviceModel, liveview_id: str) -> None:
     assert isinstance(obj, Viewer)
     liveview = obj.api.bootstrap.liveviews[liveview_id]
     await obj.set_liveview(liveview)

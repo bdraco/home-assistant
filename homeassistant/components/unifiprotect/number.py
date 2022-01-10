@@ -3,8 +3,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Any
 
+from pyunifiprotect.data.base import ProtectDeviceModel
 from pyunifiprotect.data.devices import Camera, Light
 
 from homeassistant.components.number import NumberEntity, NumberEntityDescription
@@ -35,12 +35,12 @@ class ProtectNumberEntityDescription(
     """Describes UniFi Protect Number entity."""
 
 
-def _get_pir_duration(obj: Any) -> int:
+def _get_pir_duration(obj: ProtectDeviceModel) -> int:
     assert isinstance(obj, Light)
     return int(obj.light_device_settings.pir_duration.total_seconds())
 
 
-async def _set_pir_duration(obj: Any, value: float) -> None:
+async def _set_pir_duration(obj: ProtectDeviceModel, value: float) -> None:
     assert isinstance(obj, Light)
     await obj.set_duration(timedelta(seconds=value))
 

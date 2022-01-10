@@ -6,7 +6,7 @@ import logging
 from typing import Any
 
 from pyunifiprotect.data import Camera, RecordingMode, VideoMode
-from pyunifiprotect.data.base import ProtectAdoptableDeviceModel
+from pyunifiprotect.data.base import ProtectAdoptableDeviceModel, ProtectDeviceModel
 
 from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
 from homeassistant.config_entries import ConfigEntry
@@ -30,12 +30,12 @@ class ProtectSwitchEntityDescription(ProtectSetableKeysMixin, SwitchEntityDescri
 _KEY_PRIVACY_MODE = "privacy_mode"
 
 
-def _get_is_highfps(obj: Any) -> bool:
+def _get_is_highfps(obj: ProtectDeviceModel) -> bool:
     assert isinstance(obj, Camera)
     return bool(obj.video_mode == VideoMode.HIGH_FPS)
 
 
-async def _set_highfps(obj: Any, value: bool) -> None:
+async def _set_highfps(obj: ProtectDeviceModel, value: bool) -> None:
     assert isinstance(obj, Camera)
     if value:
         await obj.set_video_mode(VideoMode.HIGH_FPS)

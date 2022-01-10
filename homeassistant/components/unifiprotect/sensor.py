@@ -7,7 +7,7 @@ import logging
 from typing import Any
 
 from pyunifiprotect.data import NVR, Camera, Event
-from pyunifiprotect.data.base import ProtectAdoptableDeviceModel
+from pyunifiprotect.data.base import ProtectAdoptableDeviceModel, ProtectDeviceModel
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -70,7 +70,7 @@ def _get_uptime(obj: ProtectAdoptableDeviceModel | NVR) -> datetime | None:
     return obj.up_since.replace(second=0, microsecond=0)
 
 
-def _get_nvr_recording_capacity(obj: Any) -> int:
+def _get_nvr_recording_capacity(obj: ProtectDeviceModel) -> int:
     assert isinstance(obj, NVR)
 
     if obj.storage_stats.capacity is None:
@@ -79,7 +79,7 @@ def _get_nvr_recording_capacity(obj: Any) -> int:
     return int(obj.storage_stats.capacity.total_seconds())
 
 
-def _get_nvr_memory(obj: Any) -> float | None:
+def _get_nvr_memory(obj: ProtectDeviceModel) -> float | None:
     assert isinstance(obj, NVR)
 
     memory = obj.system_info.memory
