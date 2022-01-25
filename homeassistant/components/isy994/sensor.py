@@ -3,7 +3,11 @@ from __future__ import annotations
 
 from pyisy.constants import ISY_VALUE_UNKNOWN
 
-from homeassistant.components.sensor import DOMAIN as SENSOR, SensorEntity
+from homeassistant.components.sensor import (
+    DOMAIN as SENSOR,
+    SensorEntity,
+    SensorStateClass,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import TEMP_CELSIUS, TEMP_FAHRENHEIT
 from homeassistant.core import HomeAssistant
@@ -44,6 +48,12 @@ async def async_setup_entry(
 
 class ISYSensorEntity(ISYNodeEntity, SensorEntity):
     """Representation of an ISY994 sensor device."""
+
+    def __init__(self, node) -> None:
+        """Initialize the insteon device."""
+        super().__init__(node)
+        if self.native_unit_of_measurement:
+            self._attr_state_class = SensorStateClass.MEASUREMENT
 
     @property
     def raw_unit_of_measurement(self) -> dict | str:
