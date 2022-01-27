@@ -115,7 +115,7 @@ EXCLUDE_MODULES = {
     *sys.builtin_module_names,
     *sys.modules,
     *NO_LOGGER_MODULES,
-    *[req for req in get_requirements() if req != "requests"],
+    *get_requirements(),
     *get_python_library(),
 }
 
