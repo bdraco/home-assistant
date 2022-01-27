@@ -24,6 +24,7 @@ component_dir = pathlib.Path("homeassistant/components")
 # These are builtin or generate a lot of noise
 NO_LOGGER_MODULES = {
     "attr",
+    "xmltodict",
     "iso8601",
     "simplejson",
     "colorlog",
