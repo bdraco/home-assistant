@@ -27,6 +27,7 @@ NO_LOGGER_MODULES = {
     "pytest",
     "click_log",
     "defusedxml",
+    "aiofiles",
     "yaml",
     "rsa",
     "pyparsing",
