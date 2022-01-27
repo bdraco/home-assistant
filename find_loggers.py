@@ -25,6 +25,7 @@ component_dir = pathlib.Path("homeassistant/components")
 NO_LOGGER_MODULES = {
     "attr",
     "pytest",
+    "numpy",
     "click_log",
     "defusedxml",
     "aiofiles",
