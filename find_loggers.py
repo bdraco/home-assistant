@@ -17,6 +17,8 @@ import sys
 import pkg_resources
 import setuptools
 
+from homeassistant.util import json as json_util
+
 LOGGER_NAMES = {
     "beautifulsoup4": "bs4",
 }
@@ -305,5 +307,12 @@ if __name__ == "__main__":
         loggers_by_integration[name] = {
             LOGGER_NAMES.get(logger, logger) for logger in loggers
         }
+
+    for name, loggers in loggers_by_integration.items():
+        if loggers:
+            manifest_path = f"homeassistant/components/{name}/manifest.json"
+            manifest = json_util.load_json(manifest_path)
+            manifest["loggers"] = list(loggers)
+            json_util.save_json(manifest_path, manifest)
 
     pprint.pprint(loggers_by_integration)
