@@ -24,21 +24,37 @@ component_dir = pathlib.Path("homeassistant/components")
 # These are builtin or generate a lot of noise
 NO_LOGGER_MODULES = {
     "attr",
+    "pytest",
+    "click_log",
+    "defusedxml",
+    "yaml",
+    "rsa",
+    "pyparsing",
     "xmltodict",
+    "cachetools",
     "iso8601",
     "simplejson",
     "colorlog",
+    "msgpack",
+    "aiocache",
+    "dicttoxml",
     "python-singleton",
+    "python_singleton",
     "future",
     "click-plugins",
+    "click_plugins",
     "cached-property",
+    "cached_property",
     "isodate",
     "platformdirs",
     "click",
     "python-dotenv",
+    "python_dotenv",
     "voluptuous_serialize",
     "python-dateutil",
+    "python_dateutil",
     "charset-normalizer",
+    "charset_normalizer",
     "pytz",
     "vol",
     "six",
@@ -139,7 +155,7 @@ def get_imports(path) -> Generator[Import]:
 
 
 def get_level_zero_imports(integration: str) -> set[str]:
-    python_files = component_dir.glob(f"{integration}/*.py")
+    python_files = component_dir.glob(f"{integration}/**/*.py")
     modules = set()
     for py_file in python_files:
         for py_import in get_imports(py_file):
@@ -168,7 +184,8 @@ if __name__ == "__main__":
             loggers.add(pkg)
             if mod := pip_dep_tree.get(pkg):
                 if deps := mod.get("dependencies"):
-                    loggers |= {dep for dep in deps if dep not in EXCLUDE_MODULES}
+                    real_deps = {dep.replace("-", "_") for dep in deps}
+                    loggers |= {dep for dep in real_deps if dep not in EXCLUDE_MODULES}
         loggers_by_integration[name] = loggers
 
     pprint.pprint(loggers_by_integration)
