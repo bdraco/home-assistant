@@ -25,9 +25,13 @@ component_dir = pathlib.Path("homeassistant/components")
 NO_LOGGER_MODULES = {
     "attr",
     "future",
+    "click-plugins",
+    "click",
+    "python-dotenv",
     "voluptuous_serialize",
     "python-dateutil",
     "charset-normalizer",
+    "pytz",
     "vol",
     "six",
     "pydantic",
