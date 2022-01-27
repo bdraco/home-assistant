@@ -17,6 +17,10 @@ import sys
 import pkg_resources
 import setuptools
 
+LOGGER_NAMES = {
+    "beautifulsoup4": "bs4",
+}
+
 Import = namedtuple("Import", ["module", "name", "alias", "level"])
 
 component_dir = pathlib.Path("homeassistant/components")
@@ -25,10 +29,50 @@ component_dir = pathlib.Path("homeassistant/components")
 NO_LOGGER_MODULES = {
     "attr",
     "pytest",
+    "asyncstdlib",
+    "protobuf",
+    "jsonpickle",
+    "natsort",
+    "colour",
+    "aioshutil",
+    "pillow",
+    "PIL",
+    "typer",
+    "url_normalize",
+    "tests",
+    "docker",
+    "cpe",
+    "git",
+    "multidict",
+    "pulsectl",
+    "pyudev",
+    "ruamel",
+    "sentry_sdk",
+    "supervisor",
+    "enum_compat",
+    "websocket_client",
+    "pyjwt",
+    "urllib3",
+    "flask",
+    "guppy",
+    "pyprof2calltree",
+    "pytest_runner",
+    "requests_toolbelt",
+    "lxml",
+    "backoff",
+    "humps",
+    "jmespath",
     "numpy",
     "click_log",
+    "debugpy",
+    "bs4",
+    "beautifulsoup4",
+    "cattrs",
+    "python_slugify",
+    "requests_toolbelt",
     "defusedxml",
     "aiofiles",
+    "pycryptodomex",
     "yaml",
     "rsa",
     "pyparsing",
@@ -41,8 +85,14 @@ NO_LOGGER_MODULES = {
     "msgpack",
     "aiocache",
     "dicttoxml",
+    "websocket",
+    "pyobjc_core",
+    "pyobjc_framework_corebluetooth",
+    "pyobjc_framework_libdispatch",
+    "ratelimit",
     "python-singleton",
     "python_singleton",
+    "httplib2",
     "future",
     "click-plugins",
     "click_plugins",
@@ -189,6 +239,8 @@ if __name__ == "__main__":
                 if deps := mod.get("dependencies"):
                     real_deps = {dep.replace("-", "_") for dep in deps}
                     loggers |= {dep for dep in real_deps if dep not in EXCLUDE_MODULES}
-        loggers_by_integration[name] = loggers
+        loggers_by_integration[name] = {
+            LOGGER_NAMES.get(logger, logger) for logger in loggers
+        }
 
     pprint.pprint(loggers_by_integration)
