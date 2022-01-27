@@ -21,7 +21,19 @@ Import = namedtuple("Import", ["module", "name", "alias", "level"])
 
 component_dir = pathlib.Path("homeassistant/components")
 
+# These are builtin or generate a lot of noise
 NO_LOGGER_MODULES = {
+    "attr",
+    "future",
+    "voluptuous_serialize",
+    "python-dateutil",
+    "charset-normalizer",
+    "vol",
+    "six",
+    "pydantic",
+    "packaging",
+    "certifi",
+    "idna",
     "pycryptodome",
     "typing_extensions",
     "typing-extensions",
@@ -73,7 +85,7 @@ EXCLUDE_MODULES = {
     *sys.builtin_module_names,
     *sys.modules,
     *NO_LOGGER_MODULES,
-    *get_requirements(),
+    *[req for req in get_requirements() if req != "requests"],
     *get_python_library(),
 }
 
