@@ -32,6 +32,7 @@ NO_LOGGER_MODULES = {
     "pyparsing",
     "xmltodict",
     "cachetools",
+    "tzlocal",
     "iso8601",
     "simplejson",
     "colorlog",
