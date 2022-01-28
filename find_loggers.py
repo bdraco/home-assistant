@@ -5,12 +5,12 @@ from collections import namedtuple
 from collections.abc import Generator
 import distutils
 import glob
-import imp
 import json
 import os
 import pathlib
 import pkgutil
 import pprint
+import re
 import subprocess
 import sys
 
@@ -18,6 +18,7 @@ import pkg_resources
 import setuptools
 
 from homeassistant.util import json as json_util
+from homeassistant.util.file import write_utf8_file
 
 LOGGER_NAMES = {
     "beautifulsoup4": "bs4",
@@ -289,6 +290,9 @@ def get_level_zero_imports(integration: str) -> set[str]:
     return modules
 
 
+INDENT_LEVEL_RE = re.compile(r"^(\s+)", re.MULTILINE)
+END_OF_JSON = re.compile("(\n}\n*)$")
+
 if __name__ == "__main__":
     # Show the PyInstaller imports used in this file
     integrations = component_dir.glob("*/manifest.json")
@@ -304,15 +308,26 @@ if __name__ == "__main__":
                 if deps := mod.get("dependencies"):
                     real_deps = {dep.replace("-", "_") for dep in deps}
                     loggers |= {dep for dep in real_deps if dep not in EXCLUDE_MODULES}
-        loggers_by_integration[name] = {
-            LOGGER_NAMES.get(logger, logger) for logger in loggers
-        }
+        if loggers:
+            loggers_by_integration[name] = {
+                LOGGER_NAMES.get(logger, logger) for logger in loggers
+            }
 
     for name, loggers in loggers_by_integration.items():
-        if loggers:
-            manifest_path = f"homeassistant/components/{name}/manifest.json"
-            manifest = json_util.load_json(manifest_path)
-            manifest["loggers"] = list(loggers)
-            json_util.save_json(manifest_path, manifest)
-
-    pprint.pprint(loggers_by_integration)
+        manifest_path = f"homeassistant/components/{name}/manifest.json"
+        manifest = json_util.load_json(manifest_path)
+        manifest["loggers"] = sorted(list(loggers))
+        loggers_json = json.dumps(manifest["loggers"])
+        with pathlib.Path(manifest_path).open() as mh:
+            text = mh.read()
+            indent = INDENT_LEVEL_RE.search(text)[0]
+            end_of_json = END_OF_JSON.search(text)
+            new_json = END_OF_JSON.sub(
+                f',\n{indent}"loggers": {loggers_json}{end_of_json[0]}', text, 1
+            )
+            try:
+                assert json.loads(new_json) == manifest
+            except json.JSONDecodeError:
+                print(new_json)
+                raise
+        write_utf8_file(manifest_path, new_json)
