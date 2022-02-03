@@ -1148,6 +1148,7 @@ tests/components/workday/* @fabaff
 homeassistant/components/worldclock/* @fabaff
 tests/components/worldclock/* @fabaff
 homeassistant/components/ws66i/* @ssaenger
+tests/components/ws66i/* @ssaenger
 homeassistant/components/xbox/* @hunterjm
 tests/components/xbox/* @hunterjm
 homeassistant/components/xbox_live/* @MartinHjelmare
