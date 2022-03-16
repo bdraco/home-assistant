@@ -523,6 +523,7 @@ class Recorder(threading.Thread):
         self._keepalive_count = 0
         self._old_states: dict[str, States] = {}
         self._state_attributes_ids: LRU = LRU(2048)
+        self._pending_state_attributes: dict[str, StateAttributes] = {}
         self._pending_expunge: list[States] = []
         self.event_session = None
         self.get_session = None
@@ -921,7 +922,7 @@ class Recorder(threading.Thread):
         if event.event_type == EVENT_STATE_CHANGED:
             try:
                 dbstate = States.from_event(event)
-                dbstate.attributes = "{}"
+                dbstate.attributes = "{}"  # make this None so transition can do StateAttributes.attributes or State.attributes
                 dbstate_attributes = StateAttributes.from_event(event)
             except (TypeError, ValueError) as ex:
                 _LOGGER.warning(
@@ -930,16 +931,24 @@ class Recorder(threading.Thread):
                     ex,
                 )
 
-            attributes_id = self._state_attributes_ids.get(
+            save_attributes = True
+            if pending_attributes := self._pending_state_attributes.get(
                 dbstate_attributes.attributes
-            )
-            if attributes_id is None and (
+            ):
+                dbstate_attributes = pending_attributes
+                save_attributes = False
+            elif attributes_id := self._state_attributes_ids.get(
+                dbstate_attributes.attributes
+            ):
+                save_attributes = False
+            elif (
                 attributes := self.event_session.query(StateAttributes.attributes_id)
                 .filter(StateAttributes.hash == dbstate_attributes.hash)
                 .filter(StateAttributes.attributes == dbstate_attributes.attributes)
                 .first()
             ):
                 attributes_id = attributes[0]
+                save_attributes = False
 
             has_new_state = event.data.get("new_state")
             if dbstate.entity_id in self._old_states:
@@ -956,6 +965,10 @@ class Recorder(threading.Thread):
                 dbstate.attributes_id = attributes_id
             else:
                 dbstate.state_attributes = dbstate_attributes
+            if save_attributes:
+                self._pending_state_attributes[
+                    dbstate_attributes.attributes
+                ] = dbstate_attributes
                 self.event_session.add(dbstate_attributes)
             if has_new_state:
                 self._old_states[dbstate.entity_id] = dbstate
@@ -1009,6 +1022,7 @@ class Recorder(threading.Thread):
                 if dbstate in self.event_session:
                     self.event_session.expunge(dbstate)
             self._pending_expunge = []
+        self._pending_state_attributes = {}
         self.event_session.commit()
 
         # Expire is an expensive operation (frequently more expensive
@@ -1030,6 +1044,7 @@ class Recorder(threading.Thread):
         """Close the event session."""
         self._old_states = {}
         self._state_attributes_ids = {}
+        self._pending_state_attributes = {}
 
         if not self.event_session:
             return

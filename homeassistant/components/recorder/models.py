@@ -257,7 +257,6 @@ class StateAttributes(Base):  # type: ignore[misc,valid-type]
                 dict(state.attributes),
                 cls=JSONEncoder,
                 separators=(",", ":"),
-                sort_keys=True,
             )
         dbstate.hash = fnv1a_32(dbstate.attributes.encode("utf-8"))
         return dbstate
