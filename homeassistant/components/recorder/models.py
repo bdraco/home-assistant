@@ -6,6 +6,7 @@ import json
 import logging
 from typing import TypedDict, overload
 
+from fnvhash import fnv1a_32
 from sqlalchemy import (
     Boolean,
     Column,
@@ -48,6 +49,7 @@ DB_TIMEZONE = "+00:00"
 
 TABLE_EVENTS = "events"
 TABLE_STATES = "states"
+TABLE_STATE_ATTRIBUTES = "state_attributes"
 TABLE_RECORDER_RUNS = "recorder_runs"
 TABLE_SCHEMA_CHANGES = "schema_changes"
 TABLE_STATISTICS = "statistics"
@@ -161,8 +163,12 @@ class States(Base):  # type: ignore[misc,valid-type]
     last_changed = Column(DATETIME_TYPE, default=dt_util.utcnow)
     last_updated = Column(DATETIME_TYPE, default=dt_util.utcnow, index=True)
     old_state_id = Column(Integer, ForeignKey("states.state_id"), index=True)
+    attributes_id = Column(
+        Integer, ForeignKey("state_attributes.attributes_id"), index=True
+    )
     event = relationship("Events", uselist=False)
     old_state = relationship("States", remote_side=[state_id])
+    state_attributes = relationship("StateAttributes")
 
     def __repr__(self) -> str:
         """Return string representation of instance for debugging."""
@@ -182,6 +188,7 @@ class States(Base):  # type: ignore[misc,valid-type]
         state = event.data.get("new_state")
 
         dbstate = States(entity_id=entity_id)
+        dbstate.attributes = "{}"
 
         # State got deleted
         if state is None:
@@ -193,9 +200,6 @@ class States(Base):  # type: ignore[misc,valid-type]
         else:
             dbstate.domain = state.domain
             dbstate.state = state.state
-            dbstate.attributes = json.dumps(
-                dict(state.attributes), cls=JSONEncoder, separators=(",", ":")
-            )
             dbstate.last_changed = state.last_changed
             dbstate.last_updated = state.last_updated
 
@@ -215,6 +219,53 @@ class States(Base):  # type: ignore[misc,valid-type]
                 context=Context(id=None),
                 validate_entity_id=validate_entity_id,
             )
+        except ValueError:
+            # When json.loads fails
+            _LOGGER.exception("Error converting row to state: %s", self)
+            return None
+
+
+class StateAttributes(Base):  # type: ignore[misc,valid-type]
+    """State attribute change history."""
+
+    __table_args__ = (
+        {"mysql_default_charset": "utf8mb4", "mysql_collate": "utf8mb4_unicode_ci"},
+    )
+    __tablename__ = TABLE_STATE_ATTRIBUTES
+    attributes_id = Column(Integer, Identity(), primary_key=True)
+    hash = Column(Integer, index=True)
+    attributes = Column(Text().with_variant(mysql.LONGTEXT, "mysql"))
+
+    def __repr__(self) -> str:
+        """Return string representation of instance for debugging."""
+        return (
+            f"<recorder.StateAttributes("
+            f"id={self.attributes_id}, hash='{self.hash}', attributes='{self.attributes}'"
+            f")>"
+        )
+
+    @staticmethod
+    def from_event(event):
+        """Create object from a state_changed event."""
+        state = event.data.get("new_state")
+        dbstate = StateAttributes()
+        # State got deleted
+        if state is None:
+            dbstate.attributes = "{}"
+        else:
+            dbstate.attributes = json.dumps(
+                dict(state.attributes),
+                cls=JSONEncoder,
+                separators=(",", ":"),
+                sort_keys=True,
+            )
+        dbstate.hash = fnv1a_32(dbstate.attributes.encode("utf-8"))
+        return dbstate
+
+    def to_native(self):
+        """Convert to an HA state object."""
+        try:
+            return json.loads(self.attributes)
         except ValueError:
             # When json.loads fails
             _LOGGER.exception("Error converting row to state: %s", self)
