@@ -120,35 +120,24 @@ class Ws66iZone(CoordinatorEntity, MediaPlayerEntity):
 
         # Save a reference to the zone status that this entity represents
         self._status = self.coordinator.data[self._zone_id_idx]
+        self._set_attrs_from_status()
 
         # Parent will notify HA that our fields were updated
         super()._handle_coordinator_update()
 
-    @property
-    def state(self) -> str:
-        """State of the player."""
-        return STATE_ON if self._status.power else STATE_OFF
+    @callback
+    def _set_attrs_from_status(self) -> None:
+        status = self._status
+        sources = self._ws66i_data.sources.id_name
+        self._attr_state = STATE_ON if status.power else STATE_OFF
+        self._attr_volume_level = status.volume / float(MAX_VAL)
+        self._attr_is_volume_muted = status.mute
+        self._attr_source = self._attr_media_title = sources[status.source]
 
-    @property
-    def volume_level(self) -> float:
-        """Volume level of the media player (0..1)."""
-        return self._status.volume / float(MAX_VAL)
-
-    @property
-    def is_volume_muted(self) -> bool:
-        """Boolean if volume is currently muted."""
-        return self._status.mute
-
-    @property
-    def media_title(self) -> str:
-        """Title of current playing media."""
-        return self._ws66i_data.sources.id_name[self._status.source]
-
-    @property
-    def source(self) -> str:
-        """Name of the current input source."""
-        # Source name is found from the dataclass
-        return self._ws66i_data.sources.id_name[self._status.source]
+    @callback
+    def _async_update_attrs_write_ha_state(self) -> None:
+        self._set_attrs_from_status()
+        self.async_write_ha_state()
 
     @callback
     def snapshot(self):
@@ -181,7 +170,7 @@ class Ws66iZone(CoordinatorEntity, MediaPlayerEntity):
             self._ws66i.set_power, self._zone_id, True
         )
         self._status.power = True
-        self.async_write_ha_state()
+        self._async_update_attrs_write_ha_state()
 
     async def async_turn_off(self):
         """Turn the media player off."""
@@ -197,7 +186,7 @@ class Ws66iZone(CoordinatorEntity, MediaPlayerEntity):
             self._ws66i.set_mute, self._zone_id, mute
         )
         self._status.mute = bool(mute)
-        self.async_write_ha_state()
+        self._async_update_attrs_write_ha_state()
 
     async def async_set_volume_level(self, volume):
         """Set volume level, range 0..1."""
@@ -205,7 +194,7 @@ class Ws66iZone(CoordinatorEntity, MediaPlayerEntity):
             self._ws66i.set_volume, self._zone_id, int(volume * MAX_VAL)
         )
         self._status.volume = int(volume * MAX_VAL)
-        self.async_write_ha_state()
+        self._async_update_attrs_write_ha_state()
 
     async def async_volume_up(self):
         """Volume up the media player."""
@@ -213,7 +202,7 @@ class Ws66iZone(CoordinatorEntity, MediaPlayerEntity):
             self._ws66i.set_volume, self._zone_id, min(self._status.volume + 1, MAX_VAL)
         )
         self._status.volume = min(self._status.volume + 1, MAX_VAL)
-        self.async_write_ha_state()
+        self._async_update_attrs_write_ha_state()
 
     async def async_volume_down(self):
         """Volume down media player."""
@@ -221,4 +210,4 @@ class Ws66iZone(CoordinatorEntity, MediaPlayerEntity):
             self._ws66i.set_volume, self._zone_id, max(self._status.volume - 1, 0)
         )
         self._status.volume = max(self._status.volume - 1, 0)
-        self.async_write_ha_state()
+        self._async_update_attrs_write_ha_state()
