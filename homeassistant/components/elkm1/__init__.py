@@ -5,7 +5,7 @@ import asyncio
 import logging
 import re
 from types import MappingProxyType
-from typing import Any, TypeVar, cast
+from typing import Any, Union, cast
 from urllib.parse import urlparse
 
 import async_timeout
@@ -507,7 +507,9 @@ class ElkAttachedEntity(ElkEntity):
         return device_info
 
 
-_T = TypeVar("_T", bound=ElkEntity)
+ELK_ENTITIES_TYPE = list[  # pylint: disable=invalid-name
+    Union[ElkEntity, ElkAttachedEntity]
+]
 
 
 def create_elk_entities(
@@ -515,8 +517,8 @@ def create_elk_entities(
     elk_elements: list[Element],
     element_type: str,
     class_: Any,
-    entities: list[_T],
-) -> list[_T] | None:
+    entities: ELK_ENTITIES_TYPE,
+) -> ELK_ENTITIES_TYPE | None:
     """Create the ElkM1 devices of a particular class."""
     auto_configure = elk_data["auto_configure"]
 

@@ -18,7 +18,7 @@ from homeassistant.const import PRECISION_WHOLE, STATE_ON
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import ElkEntity, create_elk_entities
+from . import ELK_ENTITIES_TYPE, ElkEntity, create_elk_entities
 from .const import DOMAIN
 
 SUPPORT_HVAC = [
@@ -37,7 +37,7 @@ async def async_setup_entry(
 ) -> None:
     """Create the Elk-M1 thermostat platform."""
     elk_data = hass.data[DOMAIN][config_entry.entry_id]
-    entities: list[ElkThermostat] = []
+    entities: ELK_ENTITIES_TYPE = []
     elk = elk_data["elk"]
     create_elk_entities(
         elk_data, elk.thermostats, "thermostat", ElkThermostat, entities
