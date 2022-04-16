@@ -1089,7 +1089,7 @@ async def async_api_set_range(hass, config, directive, context):
             service = cover.SERVICE_SET_COVER_TILT_POSITION
             data[cover.ATTR_TILT_POSITION] = range_value
 
-    # Fan Speed
+    # Fan Speed Percentage
     elif instance == f"{fan.DOMAIN}.{fan.ATTR_PERCENTAGE}":
         range_value = int(range_value)
         if range_value == 0:
@@ -1099,6 +1099,22 @@ async def async_api_set_range(hass, config, directive, context):
             if supported and fan.FanEntityFeature.SET_SPEED:
                 service = fan.SERVICE_SET_PERCENTAGE
                 data[fan.ATTR_PERCENTAGE] = range_value
+            else:
+                service = fan.SERVICE_TURN_ON
+
+    # Fan Speed Percentage Step
+    elif instance == f"{fan.DOMAIN}.{fan.ATTR_PERCENTAGE_STEP}":
+        range_value = int(range_value)
+        if range_value == 0:
+            service = fan.SERVICE_TURN_OFF
+        else:
+            supported = entity.attributes.get(ATTR_SUPPORTED_FEATURES, 0)
+            if supported and fan.FanEntityFeature.SET_SPEED:
+                service = fan.SERVICE_SET_PERCENTAGE
+                percentage_step = entity.attributes.get(fan.ATTR_PERCENTAGE_STEP, 1)
+                data[fan.ATTR_PERCENTAGE] = max(
+                    percentage_step, min(100, range_value * percentage_step)
+                )
             else:
                 service = fan.SERVICE_TURN_ON
 
@@ -1205,6 +1221,17 @@ async def async_api_adjust_range(hass, config, directive, context):
             data[fan.ATTR_PERCENTAGE] = percentage
         else:
             service = fan.SERVICE_TURN_OFF
+
+    # Fan Speed Percentage Step
+    elif instance == f"{fan.DOMAIN}.{fan.ATTR_PERCENTAGE_STEP}":
+        range_delta = int(range_delta)
+        current = entity.attributes[fan.ATTR_PERCENTAGE]
+        percentage = min(100, max(0, (range_delta * percentage_step) + current))
+        if percentage == 0:
+            service = fan.SERVICE_TURN_OFF
+        else:
+            service = fan.SERVICE_SET_PERCENTAGE
+            data[fan.ATTR_PERCENTAGE] = percentage
 
     # Input Number Value
     elif instance == f"{input_number.DOMAIN}.{input_number.ATTR_VALUE}":

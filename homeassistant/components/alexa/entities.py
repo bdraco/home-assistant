@@ -62,6 +62,7 @@ from .capabilities import (
     AlexaLockController,
     AlexaModeController,
     AlexaMotionSensor,
+    AlexaPercentageController,
     AlexaPlaybackController,
     AlexaPlaybackStateReporter,
     AlexaPowerController,
@@ -575,10 +576,12 @@ class FanCapabilities(AlexaEntity):
         # fan impossible to turn on or off through Alexa, most likely due to a bug in Alexa.
         # As a workaround, we add a range controller which can only be set to 0% or 100%.
         if force_range_controller or supported & fan.FanEntityFeature.SET_SPEED:
-            yield AlexaRangeController(
+            yield AlexaPercentageController(
                 self.entity, instance=f"{fan.DOMAIN}.{fan.ATTR_PERCENTAGE}"
             )
-
+            yield AlexaRangeController(
+                self.entity, instance=f"{fan.DOMAIN}.{fan.ATTR_PERCENTAGE_STEP}"
+            )
         yield AlexaEndpointHealth(self.hass, self.entity)
         yield Alexa(self.hass)
 

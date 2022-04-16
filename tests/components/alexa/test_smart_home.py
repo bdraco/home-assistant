@@ -368,6 +368,7 @@ async def test_fan(hass):
     # Alexa.RangeController is added to make a fan controllable when no other controllers are available
     capabilities = assert_endpoint_capabilities(
         appliance,
+        "Alexa.PercentageController",
         "Alexa.RangeController",
         "Alexa.PowerController",
         "Alexa.EndpointHealth",
@@ -424,6 +425,7 @@ async def test_fan2(hass):
     # Alexa.RangeController is added to make a fan controllable when no other controllers are available
     capabilities = assert_endpoint_capabilities(
         appliance,
+        "Alexa.PercentageController",
         "Alexa.RangeController",
         "Alexa.PowerController",
         "Alexa.EndpointHealth",
@@ -457,6 +459,7 @@ async def test_variable_fan(hass):
 
     capabilities = assert_endpoint_capabilities(
         appliance,
+        "Alexa.PercentageController",
         "Alexa.RangeController",
         "Alexa.PowerController",
         "Alexa.EndpointHealth",
@@ -555,6 +558,7 @@ async def test_variable_fan_no_current_speed(hass, caplog):
     # Alexa.RangeController is added to make a van controllable when no other controllers are available
     capabilities = assert_endpoint_capabilities(
         appliance,
+        "Alexa.PercentageController",
         "Alexa.RangeController",
         "Alexa.PowerController",
         "Alexa.EndpointHealth",

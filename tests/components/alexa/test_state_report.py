@@ -237,6 +237,7 @@ async def test_report_state_instance(hass, aioclient_mock):
             "oscillating": True,
             "preset_mode": "smart",
             "preset_modes": ["auto", "smart"],
+            "percentage_step": 10,
             "percentage": 90,
         },
     )
@@ -265,12 +266,17 @@ async def test_report_state_instance(hass, aioclient_mock):
             assert report["instance"] == "fan.preset_mode"
             assert report["namespace"] == "Alexa.ModeController"
             checks += 1
-        if report["name"] == "rangeValue":
+        if report["name"] == "percentage":
             assert report["value"] == 90
             assert report["instance"] == "fan.percentage"
+            assert report["namespace"] == "Alexa.PercentageController"
+            checks += 1
+        if report["name"] == "rangeValue":
+            assert report["value"] == 9
+            assert report["instance"] == "fan.percentage_step"
             assert report["namespace"] == "Alexa.RangeController"
             checks += 1
-    assert checks == 3
+    assert checks == 4
 
     assert call_json["event"]["endpoint"]["endpointId"] == "fan#test_fan"
 

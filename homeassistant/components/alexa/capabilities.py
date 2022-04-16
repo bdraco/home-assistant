@@ -661,8 +661,12 @@ class AlexaPercentageController(AlexaCapability):
         if name != "percentage":
             raise UnsupportedProperty(name)
 
-        if self.entity.domain == fan.DOMAIN:
-            return self.entity.attributes.get(fan.ATTR_PERCENTAGE) or 0
+        # Fan speed percentage
+        if self.instance == f"{fan.DOMAIN}.{fan.ATTR_PERCENTAGE}":
+            supported = self.entity.attributes.get(ATTR_SUPPORTED_FEATURES, 0)
+            if supported and fan.FanEntityFeature.SET_SPEED:
+                return self.entity.attributes.get(fan.ATTR_PERCENTAGE)
+            return 100 if self.entity.state == fan.STATE_ON else 0
 
         if self.entity.domain == cover.DOMAIN:
             return self.entity.attributes.get(cover.ATTR_CURRENT_POSITION, 0)
@@ -1489,12 +1493,16 @@ class AlexaRangeController(AlexaCapability):
         if self.instance == f"{cover.DOMAIN}.tilt":
             return self.entity.attributes.get(cover.ATTR_CURRENT_TILT_POSITION)
 
-        # Fan speed percentage
-        if self.instance == f"{fan.DOMAIN}.{fan.ATTR_PERCENTAGE}":
+        # Fan speed percentage step
+        if self.instance == f"{fan.DOMAIN}.{fan.ATTR_PERCENTAGE_STEP}":
             supported = self.entity.attributes.get(ATTR_SUPPORTED_FEATURES, 0)
             if supported and fan.FanEntityFeature.SET_SPEED:
-                return self.entity.attributes.get(fan.ATTR_PERCENTAGE)
-            return 100 if self.entity.state == fan.STATE_ON else 0
+                percentage_step = self.entity.attributes.get(
+                    fan.ATTR_PERCENTAGE_STEP, 1
+                )
+                percentage = self.entity.attributes.get(fan.ATTR_PERCENTAGE, 100)
+                return round(percentage / percentage_step)
+            return 1 if self.entity.state == fan.STATE_ON else 0
 
         # Input Number Value
         if self.instance == f"{input_number.DOMAIN}.{input_number.ATTR_VALUE}":
@@ -1526,13 +1534,24 @@ class AlexaRangeController(AlexaCapability):
         if self.instance == f"{fan.DOMAIN}.{fan.ATTR_PERCENTAGE}":
             percentage_step = self.entity.attributes.get(fan.ATTR_PERCENTAGE_STEP)
             self._resource = AlexaPresetResource(
-                labels=["Percentage", AlexaGlobalCatalog.SETTING_FAN_SPEED],
+                labels=["Percentage"],
                 min_value=0,
                 max_value=100,
                 # precision must be a divider of 100 and must be an integer; set step
                 # size to 1 for a consistent behavior except for on/off fans
                 precision=1 if percentage_step else 100,
                 unit=AlexaGlobalCatalog.UNIT_PERCENT,
+            )
+            return self._resource.serialize_capability_resources()
+
+        # Fan Speed Percentage Step Resources
+        if self.instance == f"{fan.DOMAIN}.{fan.ATTR_PERCENTAGE_STEP}":
+            percentage_step = self.entity.attributes.get(fan.ATTR_PERCENTAGE_STEP) or 1
+            self._resource = AlexaPresetResource(
+                labels=[AlexaGlobalCatalog.SETTING_FAN_SPEED],
+                min_value=0,
+                max_value=min(1, round(100 / percentage_step)),
+                precision=1,
             )
             return self._resource.serialize_capability_resources()
 

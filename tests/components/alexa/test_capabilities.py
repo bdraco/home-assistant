@@ -353,6 +353,7 @@ async def test_report_fan_speed_state(hass):
             "friendly_name": "Off fan",
             "supported_features": 1,
             "percentage": 0,
+            "percentage_step": 33.33333,
         },
     )
     hass.states.async_set(
@@ -362,6 +363,7 @@ async def test_report_fan_speed_state(hass):
             "friendly_name": "Low speed fan",
             "supported_features": 1,
             "percentage": 33,
+            "percentage_step": 33.33333,
         },
     )
     hass.states.async_set(
@@ -371,6 +373,7 @@ async def test_report_fan_speed_state(hass):
             "friendly_name": "Medium speed fan",
             "supported_features": 1,
             "percentage": 66,
+            "percentage_step": 33.33333,
         },
     )
     hass.states.async_set(
@@ -380,6 +383,7 @@ async def test_report_fan_speed_state(hass):
             "friendly_name": "High speed fan",
             "supported_features": 1,
             "percentage": 100,
+            "percentage_step": 33.33333,
         },
     )
     hass.states.async_set(
@@ -399,21 +403,27 @@ async def test_report_fan_speed_state(hass):
         },
     )
     properties = await reported_properties(hass, "fan.off")
+    properties.assert_equal("Alexa.PercentageController", "percentage", 0)
     properties.assert_equal("Alexa.RangeController", "rangeValue", 0)
 
     properties = await reported_properties(hass, "fan.low_speed")
-    properties.assert_equal("Alexa.RangeController", "rangeValue", 33)
+    properties.assert_equal("Alexa.PercentageController", "percentage", 33)
+    properties.assert_equal("Alexa.RangeController", "rangeValue", 1)
 
     properties = await reported_properties(hass, "fan.medium_speed")
-    properties.assert_equal("Alexa.RangeController", "rangeValue", 66)
+    properties.assert_equal("Alexa.PercentageController", "percentage", 66)
+    properties.assert_equal("Alexa.RangeController", "rangeValue", 2)
 
     properties = await reported_properties(hass, "fan.high_speed")
-    properties.assert_equal("Alexa.RangeController", "rangeValue", 100)
+    properties.assert_equal("Alexa.PercentageController", "percentage", 100)
+    properties.assert_equal("Alexa.RangeController", "rangeValue", 3)
 
     properties = await reported_properties(hass, "fan.speed_less_on")
-    properties.assert_equal("Alexa.RangeController", "rangeValue", 100)
+    properties.assert_equal("Alexa.PercentageController", "percentage", 100)
+    properties.assert_equal("Alexa.RangeController", "rangeValue", 1)
 
     properties = await reported_properties(hass, "fan.speed_less_off")
+    properties.assert_equal("Alexa.PercentageController", "percentage", 0)
     properties.assert_equal("Alexa.RangeController", "rangeValue", 0)
 
 
