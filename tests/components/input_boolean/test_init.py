@@ -43,7 +43,9 @@ def storage_setup(hass, hass_storage):
             hass_storage[DOMAIN] = items
         if config is None:
             config = {DOMAIN: {}}
-        return await async_setup_component(hass, DOMAIN, config)
+        ret = await async_setup_component(hass, DOMAIN, config)
+        await hass.async_block_till_done()
+        return ret
 
     return _storage
 
@@ -59,6 +61,7 @@ async def test_config(hass):
 async def test_methods(hass):
     """Test is_on, turn_on, turn_off methods."""
     assert await async_setup_component(hass, DOMAIN, {DOMAIN: {"test_1": None}})
+    await hass.async_block_till_done()
     entity_id = "input_boolean.test_1"
 
     assert not is_on(hass, entity_id)
@@ -98,7 +101,7 @@ async def test_config_options(hass):
             }
         },
     )
-
+    await hass.async_block_till_done()
     _LOGGER.debug("ENTITIES: %s", hass.states.async_entity_ids())
 
     assert count_start + 2 == len(hass.states.async_entity_ids())
@@ -133,6 +136,7 @@ async def test_restore_state(hass):
     mock_component(hass, "recorder")
 
     await async_setup_component(hass, DOMAIN, {DOMAIN: {"b1": None, "b2": None}})
+    await hass.async_block_till_done()
 
     state = hass.states.get("input_boolean.b1")
     assert state
@@ -156,6 +160,7 @@ async def test_initial_state_overrules_restore_state(hass):
         DOMAIN,
         {DOMAIN: {"b1": {CONF_INITIAL: False}, "b2": {CONF_INITIAL: True}}},
     )
+    await hass.async_block_till_done()
 
     state = hass.states.get("input_boolean.b1")
     assert state
@@ -171,7 +176,7 @@ async def test_input_boolean_context(hass, hass_admin_user):
     assert await async_setup_component(
         hass, "input_boolean", {"input_boolean": {"ac": {CONF_INITIAL: True}}}
     )
-
+    await hass.async_block_till_done()
     state = hass.states.get("input_boolean.ac")
     assert state is not None
 
@@ -206,6 +211,7 @@ async def test_reload(hass, hass_admin_user):
             }
         },
     )
+    await hass.async_block_till_done()
 
     _LOGGER.debug("ENTITIES: %s", hass.states.async_entity_ids())
 

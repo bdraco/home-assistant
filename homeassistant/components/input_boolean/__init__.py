@@ -11,13 +11,14 @@ from homeassistant.const import (
     CONF_ICON,
     CONF_ID,
     CONF_NAME,
+    EVENT_COMPONENT_LOADED,
     SERVICE_RELOAD,
     SERVICE_TOGGLE,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
     STATE_ON,
 )
-from homeassistant.core import HomeAssistant, ServiceCall, callback
+from homeassistant.core import Event, HomeAssistant, ServiceCall, callback
 from homeassistant.helpers import collection
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import ToggleEntity
@@ -27,6 +28,7 @@ import homeassistant.helpers.service
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.loader import bind_hass
+from homeassistant.setup import ATTR_COMPONENT
 
 DOMAIN = "input_boolean"
 
@@ -104,11 +106,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         hass, DOMAIN, DOMAIN, component, storage_collection, InputBoolean
     )
 
-    await yaml_collection.async_load(
-        [{CONF_ID: id_, **(conf or {})} for id_, conf in config.get(DOMAIN, {}).items()]
-    )
-    await storage_collection.async_load()
-
     collection.StorageCollectionWebsocket(
         storage_collection, DOMAIN, DOMAIN, CREATE_FIELDS, UPDATE_FIELDS
     ).async_setup(hass)
@@ -138,6 +135,31 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     component.async_register_entity_service(SERVICE_TURN_OFF, {}, "async_turn_off")
 
     component.async_register_entity_service(SERVICE_TOGGLE, {}, "async_toggle")
+
+    loaded_listener = None
+
+    async def _async_finish_load(event: Event | None) -> None:
+        """Wait for the component to be fully loaded before creating entities."""
+        nonlocal loaded_listener
+        if event and event.data[ATTR_COMPONENT] != DOMAIN:
+            return
+        if loaded_listener is not None:
+            loaded_listener()
+            loaded_listener = None
+        await yaml_collection.async_load(
+            [
+                {CONF_ID: id_, **(conf or {})}
+                for id_, conf in config.get(DOMAIN, {}).items()
+            ]
+        )
+        await storage_collection.async_load()
+
+    if DOMAIN in hass.config.components:
+        await _async_finish_load(None)
+    else:
+        loaded_listener = hass.bus.async_listen(
+            EVENT_COMPONENT_LOADED, _async_finish_load
+        )
 
     return True
 

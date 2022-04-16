@@ -16,6 +16,7 @@ async def test_reproducing_states(hass):
             }
         },
     )
+    await hass.async_block_till_done()
     await async_reproduce_state(
         hass,
         [
