@@ -34,6 +34,8 @@ from .common import (
 
 from tests.common import SetupRecorderInstanceT
 
+SQLITE_MAX_UNIONS = 500
+
 
 @pytest.fixture(name="use_sqlite")
 def mock_use_sqlite(request):
@@ -41,6 +43,8 @@ def mock_use_sqlite(request):
     with patch(
         "homeassistant.components.recorder.Recorder.using_sqlite",
         return_value=request.param,
+    ), patch(
+        "homeassistant.components.recorder.purge.MAX_ROWS_TO_PURGE", SQLITE_MAX_UNIONS
     ):
         yield
 
@@ -168,6 +172,8 @@ async def test_purge_old_states_encounters_temporary_mysql_error(
         side_effect=[mysql_exception, None],
     ), patch.object(
         instance.engine.dialect, "name", "mysql"
+    ), patch(
+        "homeassistant.components.recorder.purge.MAX_ROWS_TO_PURGE", SQLITE_MAX_UNIONS
     ):
         await hass.services.async_call(
             recorder.DOMAIN, recorder.SERVICE_PURGE, {"keep_days": 0}

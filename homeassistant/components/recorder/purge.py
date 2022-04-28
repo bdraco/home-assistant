@@ -151,13 +151,15 @@ def _select_unused_attributes_ids(
         # > explain select min(attributes_id) from states where attributes_id = 136723;
         # ...Select tables optimized away
         #
+        attrs_ids: list[int | None] = list(attributes_ids)
+        attrs_ids += [None] * (MAX_ROWS_TO_PURGE - len(attrs_ids))
         id_query = session.query(column("id")).from_statement(
             union(
                 *[
                     select(func.min(States.attributes_id).label("id")).where(
-                        States.attributes_id == attributes_id
+                        States.attributes_id == attr_id
                     )
-                    for attributes_id in attributes_ids
+                    for attr_id in attrs_ids
                 ]
             )
         )
