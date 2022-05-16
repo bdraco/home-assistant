@@ -64,6 +64,8 @@ async def async_setup_entry(
 class NUTSensor(CoordinatorEntity, SensorEntity):
     """Representation of a sensor entity for NUT status values."""
 
+    coordinator: DataUpdateCoordinator[dict[str, str]]
+
     def __init__(
         self,
         coordinator: DataUpdateCoordinator,
@@ -87,7 +89,7 @@ class NUTSensor(CoordinatorEntity, SensorEntity):
     @property
     def native_value(self) -> str | None:
         """Return entity state from ups."""
-        status: dict[str, str] = self.coordinator.data
+        status = self.coordinator.data
         if self.entity_description.key == KEY_STATUS_DISPLAY:
             return _format_display_state(status)
         return status.get(self.entity_description.key)
