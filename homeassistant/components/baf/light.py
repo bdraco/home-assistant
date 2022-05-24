@@ -31,13 +31,9 @@ async def async_setup_entry(
 ) -> None:
     """Set up BAF lights."""
     data: BAFData = hass.data[DOMAIN][entry.entry_id]
-    device = data.device
-    if not device.has_light:
-        return
-    if not device.has_fan:
-        async_add_entities([BAFStandaloneLight(device)])
-    else:
-        async_add_entities([BAFFanLight(device)])
+    if data.device.has_light:
+        klass = BAFFanLight if data.device.has_fan else BAFStandaloneLight
+        async_add_entities([klass(data.device)])
 
 
 class BAFLight(BAFEntity, LightEntity):
@@ -46,20 +42,16 @@ class BAFLight(BAFEntity, LightEntity):
     @callback
     def _async_update_attrs(self) -> None:
         """Update attrs from device."""
-        device = self._device
-        self._attr_is_on = device.light_mode == OffOnAuto.ON
+        self._attr_is_on = self._device.light_mode == OffOnAuto.ON
         if self._device.light_brightness_level is not None:
-            self._attr_brightness = int(
-                min(255, self._device.light_brightness_level * 16)
+            self._attr_brightness = round(
+                self._device.light_brightness_level / 16 * 255
             )
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the light."""
         if (brightness := kwargs.get(ATTR_BRIGHTNESS)) is not None:
-            # set the brightness, which will also turn on/off light
-            if brightness == 255:
-                brightness = 256  # this will end up as 16 which is max
-            self._device.light_brightness_level = int(brightness / 16)
+            self._device.light_brightness_level = max(int(brightness / 255 * 16), 1)
         else:
             self._device.light_mode = OffOnAuto.ON
 
