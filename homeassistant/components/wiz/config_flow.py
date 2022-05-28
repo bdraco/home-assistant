@@ -1,8 +1,10 @@
 """Config flow for WiZ Platform."""
 from __future__ import annotations
 
+import asyncio
 import logging
-from typing import Any
+import socket
+from typing import Any, cast
 
 from pywizlight import wizlight
 from pywizlight.discovery import DiscoveredBulb
@@ -22,6 +24,19 @@ from .utils import _short_mac, name_from_bulb_type_and_mac
 _LOGGER = logging.getLogger(__name__)
 
 CONF_DEVICE = "device"
+
+
+async def _async_resolve(host: str) -> str | None:
+    """Resolve a host to an ip address."""
+    res = await asyncio.get_event_loop().getaddrinfo(
+        host, None, type=socket.SOCK_STREAM, proto=socket.IPPROTO_TCP
+    )
+    for family, _, _, _, raw in res:
+        if family == socket.AF_INET:
+            raw = cast(tuple[str, int], raw)
+            address, _ = raw
+            return address
+    return None
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -155,10 +170,17 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             if not (host := user_input[CONF_HOST]):
                 return await self.async_step_pick_device()
-            if not is_ip_address(user_input[CONF_HOST]):
-                errors["base"] = "no_ip"
+
+            if is_ip_address(host):
+                ip_addr = host
             else:
-                bulb = wizlight(host)
+                try:
+                    ip_addr = await _async_resolve(host)
+                except OSError:
+                    errors["base"] = "resolve_error"
+
+            if not errors:
+                bulb = wizlight(ip_addr)
                 try:
                     bulbtype = await bulb.get_bulbtype()
                     mac = await bulb.getMac()
