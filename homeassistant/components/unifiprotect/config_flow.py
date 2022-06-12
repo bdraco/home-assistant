@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from ipaddress import IPv4Network, ip_address
 import logging
 from typing import Any
 
@@ -11,7 +12,7 @@ from pyunifiprotect.data import NVR
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.components import dhcp, ssdp
+from homeassistant.components import dhcp, network, ssdp
 from homeassistant.const import (
     CONF_HOST,
     CONF_ID,
@@ -54,6 +55,23 @@ def _host_is_direct_connect(host: str) -> bool:
     return host.endswith(".ui.direct")
 
 
+async def _async_shares_same_subnet_as_instance(
+    hass: HomeAssistant, ip_address_str: str
+) -> bool:
+    """Check if an ip address is on the same subnet as one of the configured network addresses."""
+    adapters = await network.async_get_adapters(hass)
+    ip_addr = ip_address(ip_address_str)
+    for adapter in adapters:
+        if not adapter["enabled"]:
+            continue
+        for ip_info in adapter["ipv4"]:
+            if ip_addr in IPv4Network(
+                f"{ip_info['address']}/{ip_info['network_prefix']}"
+            ):
+                return True
+    return False
+
+
 class ProtectFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a UniFi Protect config flow."""
 
@@ -92,6 +110,7 @@ class ProtectFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         await self.async_set_unique_id(mac)
         source_ip = discovery_info["source_ip"]
         direct_connect_domain = discovery_info["direct_connect_domain"]
+
         for entry in self._async_current_entries():
             if entry.source == config_entries.SOURCE_IGNORE:
                 if entry.unique_id == mac:
@@ -111,6 +130,9 @@ class ProtectFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     not entry_has_direct_connect
                     and is_ip_address(entry_host)
                     and entry_host != source_ip
+                    and await _async_shares_same_subnet_as_instance(
+                        self.hass, source_ip
+                    )
                 ):
                     new_host = source_ip
                 if new_host:
