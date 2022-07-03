@@ -4,6 +4,7 @@ from __future__ import annotations
 from collections.abc import Callable
 import logging
 from typing import Any
+import weakref
 
 from homeassistant.core import HassJob, HomeAssistant, callback
 from homeassistant.loader import bind_hass
@@ -12,6 +13,7 @@ from homeassistant.util.logging import catch_log_exception
 
 _LOGGER = logging.getLogger(__name__)
 DATA_DISPATCHER = "dispatcher"
+WRAP_CACHE: weakref.WeakKeyDictionary[Callable, Any] = weakref.WeakKeyDictionary({})
 
 
 @bind_hass
@@ -42,8 +44,8 @@ def async_dispatcher_connect(
     if DATA_DISPATCHER not in hass.data:
         hass.data[DATA_DISPATCHER] = {}
 
-    job = HassJob(
-        catch_log_exception(
+    if not (wrapped := WRAP_CACHE.get(target)):
+        WRAP_CACHE[target] = wrapped = catch_log_exception(
             target,
             lambda *args: "Exception in {} when dispatching '{}': {}".format(
                 # Functions wrapped in partial do not have a __name__
@@ -52,7 +54,8 @@ def async_dispatcher_connect(
                 args,
             ),
         )
-    )
+
+    job = HassJob(wrapped)
 
     hass.data[DATA_DISPATCHER].setdefault(signal, []).append(job)
 
