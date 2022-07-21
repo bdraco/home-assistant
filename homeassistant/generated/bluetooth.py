@@ -8,11 +8,43 @@ from __future__ import annotations
 
 BLUETOOTH: list[dict[str, str | int | list[int]]] = [
     {
+        "domain": "govee_ble",
+        "local_name": "Govee*"
+    },
+    {
+        "domain": "govee_ble",
+        "local_name": "GVH5*"
+    },
+    {
+        "domain": "govee_ble",
+        "local_name": "B5178*"
+    },
+    {
         "domain": "homekit_controller",
         "manufacturer_id": 76,
         "manufacturer_data_start": [
             6
         ]
+    },
+    {
+        "domain": "inkbird",
+        "local_name": "sps"
+    },
+    {
+        "domain": "inkbird",
+        "local_name": "Inkbird*"
+    },
+    {
+        "domain": "inkbird",
+        "local_name": "iBBQ*"
+    },
+    {
+        "domain": "inkbird",
+        "local_name": "tps"
+    },
+    {
+        "domain": "sensorpush",
+        "local_name": "SensorPush*"
     },
     {
         "domain": "switchbot",

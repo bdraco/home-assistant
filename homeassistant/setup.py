@@ -403,6 +403,7 @@ def _async_when_setup(
             _LOGGER.exception("Error handling when_setup callback for %s", component)
 
     if component in hass.config.components:
+        # The task must be tracked so it will be seen by hass.async_block_till_done()
         hass.async_create_task(when_setup())
         return
 

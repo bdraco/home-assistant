@@ -504,6 +504,10 @@ def check_significant_states(hass, zero, four, states, config):
         filters.included_domains = include.get(CONF_DOMAINS, [])
 
     hist = get_significant_states(hass, zero, four, filters=filters)
+
+    import pprint
+
+    pprint.pprint([filters, "states", states, "hist", hist])
     assert states == hist
 
 

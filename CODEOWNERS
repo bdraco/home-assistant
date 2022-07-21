@@ -131,6 +131,8 @@ build.json @home-assistant/supervisor
 /homeassistant/components/binary_sensor/ @home-assistant/core
 /tests/components/binary_sensor/ @home-assistant/core
 /homeassistant/components/bizkaibus/ @UgaitzEtxebarria
+/homeassistant/components/ble_parser/ @bdraco
+/tests/components/ble_parser/ @bdraco
 /homeassistant/components/blebox/ @bbx-a @riokuu
 /tests/components/blebox/ @bbx-a @riokuu
 /homeassistant/components/blink/ @fronzbot
@@ -161,6 +163,8 @@ build.json @home-assistant/supervisor
 /tests/components/buienradar/ @mjj4791 @ties @Robbie1221
 /homeassistant/components/button/ @home-assistant/core
 /tests/components/button/ @home-assistant/core
+/homeassistant/components/caldav/ @cyr-ius
+/tests/components/caldav/ @cyr-ius
 /homeassistant/components/calendar/ @home-assistant/core
 /tests/components/calendar/ @home-assistant/core
 /homeassistant/components/camera/ @home-assistant/core
@@ -411,6 +415,8 @@ build.json @home-assistant/supervisor
 /homeassistant/components/google_cloud/ @lufton
 /homeassistant/components/google_travel_time/ @eifinger
 /tests/components/google_travel_time/ @eifinger
+/homeassistant/components/govee_ble/ @bdraco
+/tests/components/govee_ble/ @bdraco
 /homeassistant/components/gpsd/ @fabaff
 /homeassistant/components/gree/ @cmroche
 /tests/components/gree/ @cmroche
@@ -498,6 +504,8 @@ build.json @home-assistant/supervisor
 /homeassistant/components/incomfort/ @zxdavb
 /homeassistant/components/influxdb/ @mdegat01
 /tests/components/influxdb/ @mdegat01
+/homeassistant/components/inkbird/ @bdraco
+/tests/components/inkbird/ @bdraco
 /homeassistant/components/input_boolean/ @home-assistant/core
 /tests/components/input_boolean/ @home-assistant/core
 /homeassistant/components/input_button/ @home-assistant/core
@@ -922,6 +930,8 @@ build.json @home-assistant/supervisor
 /tests/components/sensibo/ @andrey-git @gjohansson-ST
 /homeassistant/components/sensor/ @home-assistant/core
 /tests/components/sensor/ @home-assistant/core
+/homeassistant/components/sensorpush/ @bdraco
+/tests/components/sensorpush/ @bdraco
 /homeassistant/components/sentry/ @dcramer @frenck
 /tests/components/sentry/ @dcramer @frenck
 /homeassistant/components/senz/ @milanmeu
