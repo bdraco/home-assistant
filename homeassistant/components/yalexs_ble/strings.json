@@ -1,0 +1,28 @@
+{
+  "config": {
+    "flow_title": "{name} ({local_name}) {address}",
+    "step": {
+      "user": {
+        "description": "Check the documentation at {docs_url} for how to find the offline key.",
+        "data": {
+          "local_name": "Bluetooth local name",
+          "key": "Offline Key",
+          "slot": "Offline Key Slot (Key Index)"
+        }
+      },
+      "integration_discovery_confirm": {
+        "description": "Do you want to setup {name} ({local_name}) over Bluetooth with address {address}?"
+      }
+    },
+    "error": {
+      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
+      "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
+      "unknown": "[%key:common::config_flow::error::unknown%]"
+    },
+    "abort": {
+      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
+      "no_unconfigured_devices": "No unconfigured devices found.",
+      "no_devices_found": "[%key:common::config_flow::abort::no_devices_found%]"
+    }
+  }
+}
