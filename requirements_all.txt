@@ -961,6 +961,9 @@ lakeside==0.12
 # homeassistant.components.laundrify
 laundrify_aio==1.1.2
 
+# homeassistant.components.led_ble
+led-ble==0.5.4
+
 # homeassistant.components.foscam
 libpyfoscam==1.0
 
@@ -1650,7 +1653,7 @@ pylibrespot-java==0.1.0
 pylitejet==0.3.0
 
 # homeassistant.components.litterrobot
-pylitterbot==2022.8.0
+pylitterbot==2022.8.2
 
 # homeassistant.components.lutron_caseta
 pylutron-caseta==0.13.1
@@ -1776,6 +1779,9 @@ pyprof2calltree==1.4.5
 
 # homeassistant.components.prosegur
 pyprosegur==0.0.5
+
+# homeassistant.components.prusalink
+pyprusalink==1.0.1
 
 # homeassistant.components.ps4
 pyps4-2ndscreen==1.3.1
@@ -2022,7 +2028,7 @@ pytrafikverket==0.2.0.1
 pyudev==0.23.2
 
 # homeassistant.components.unifiprotect
-pyunifiprotect==4.1.8
+pyunifiprotect==4.1.9
 
 # homeassistant.components.uptimerobot
 pyuptimerobot==22.2.0
@@ -2548,7 +2554,7 @@ zengge==0.2
 zeroconf==0.39.0
 
 # homeassistant.components.zha
-zha-quirks==0.0.78
+zha-quirks==0.0.79
 
 # homeassistant.components.zhong_hong
 zhong_hong_hvac==1.0.9
