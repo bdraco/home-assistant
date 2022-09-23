@@ -162,6 +162,7 @@ omit =
     homeassistant/components/buienradar/sensor.py
     homeassistant/components/buienradar/util.py
     homeassistant/components/buienradar/weather.py
+    homeassistant/components/caldav/__init__.py
     homeassistant/components/caldav/calendar.py
     homeassistant/components/canary/camera.py
     homeassistant/components/cert_expiry/helper.py
@@ -238,7 +239,9 @@ omit =
     homeassistant/components/doorbird/util.py
     homeassistant/components/dovado/*
     homeassistant/components/downloader/*
-    homeassistant/components/dsmr_reader/*
+    homeassistant/components/dsmr_reader/__init__.py
+    homeassistant/components/dsmr_reader/definitions.py
+    homeassistant/components/dsmr_reader/sensor.py
     homeassistant/components/dte_energy_bridge/sensor.py
     homeassistant/components/dublin_bus_transport/sensor.py
     homeassistant/components/dunehd/__init__.py
@@ -400,6 +403,7 @@ omit =
     homeassistant/components/flick_electric/sensor.py
     homeassistant/components/flock/notify.py
     homeassistant/components/flume/__init__.py
+    homeassistant/components/flume/binary_sensor.py
     homeassistant/components/flume/coordinator.py
     homeassistant/components/flume/entity.py
     homeassistant/components/flume/sensor.py
@@ -1232,7 +1236,6 @@ omit =
     homeassistant/components/switchbot/cover.py
     homeassistant/components/switchbot/entity.py
     homeassistant/components/switchbot/light.py
-    homeassistant/components/switchbot/sensor.py
     homeassistant/components/switchbot/switch.py
     homeassistant/components/switchmate/switch.py
     homeassistant/components/syncthing/__init__.py

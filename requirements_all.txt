@@ -418,6 +418,9 @@ bleak==0.18.0
 # homeassistant.components.blebox
 blebox_uniapi==2.0.2
 
+# homeassistant.components.ble_parser
+bleparser==3.3.0
+
 # homeassistant.components.blink
 blinkpy==0.19.2
 

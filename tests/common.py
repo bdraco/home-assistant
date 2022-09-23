@@ -42,7 +42,7 @@ from homeassistant.const import (
     STATE_OFF,
     STATE_ON,
 )
-from homeassistant.core import BLOCK_LOG_TIMEOUT, HomeAssistant
+from homeassistant.core import BLOCK_LOG_TIMEOUT, Event, HomeAssistant
 from homeassistant.helpers import (
     area_registry,
     device_registry,
@@ -801,6 +801,8 @@ class MockConfigEntry(config_entries.ConfigEntry):
         super().__init__(**kwargs)
         if reason is not None:
             self.reason = reason
+        # Reload lock to prevent conflicting reloads
+        self.reload_lock = asyncio.Lock()
 
     def add_to_hass(self, hass):
         """Test helper to add entry to hass."""
@@ -1199,7 +1201,7 @@ def mock_platform(hass, platform_path, module=None):
     module_cache[platform_path] = module or Mock()
 
 
-def async_capture_events(hass, event_name):
+def async_capture_events(hass, event_name: str) -> list[Event]:
     """Create a helper that captures events."""
     events = []
 

@@ -1182,7 +1182,7 @@ async def test_sending_mqtt_commands_and_explicit_optimistic(
     mqtt_mock.async_publish.reset_mock()
 
     await common.async_turn_on(hass, "fan.test", preset_mode="whoosh")
-    assert mqtt_mock.async_publish.call_count == 2
+    assert mqtt_mock.async_publish.call_count == 3
     mqtt_mock.async_publish.assert_any_call("command-topic", "ON", 0, False)
     mqtt_mock.async_publish.assert_any_call(
         "preset-mode-command-topic", "whoosh", 0, False

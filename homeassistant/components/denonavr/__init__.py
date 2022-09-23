@@ -2,7 +2,6 @@
 import logging
 
 from denonavr.exceptions import AvrNetworkError, AvrTimoutError
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, Platform
 from homeassistant.core import HomeAssistant
