@@ -54,7 +54,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Check out code from GitHub
-        uses: actions/checkout@v3.0.2
+        uses: actions/checkout@v3.1.0
       - name: Generate partial Python venv restore key
         id: generate_python_cache_key
         run: >-
@@ -163,7 +163,7 @@ jobs:
       - info
     steps:
       - name: Check out code from GitHub
-        uses: actions/checkout@v3.0.2
+        uses: actions/checkout@v3.1.0
       - name: Set up Python ${{ env.DEFAULT_PYTHON }}
         id: python
         uses: actions/setup-python@v4.1.0
@@ -202,7 +202,7 @@ jobs:
       - pre-commit
     steps:
       - name: Check out code from GitHub
-        uses: actions/checkout@v3.0.2
+        uses: actions/checkout@v3.1.0
       - name: Set up Python ${{ env.DEFAULT_PYTHON }}
         uses: actions/setup-python@v4.1.0
         id: python
@@ -251,7 +251,7 @@ jobs:
       - pre-commit
     steps:
       - name: Check out code from GitHub
-        uses: actions/checkout@v3.0.2
+        uses: actions/checkout@v3.1.0
       - name: Set up Python ${{ env.DEFAULT_PYTHON }}
         uses: actions/setup-python@v4.1.0
         id: python
@@ -303,7 +303,7 @@ jobs:
       - pre-commit
     steps:
       - name: Check out code from GitHub
-        uses: actions/checkout@v3.0.2
+        uses: actions/checkout@v3.1.0
       - name: Set up Python ${{ env.DEFAULT_PYTHON }}
         uses: actions/setup-python@v4.1.0
         id: python
@@ -344,7 +344,7 @@ jobs:
       - pre-commit
     steps:
       - name: Check out code from GitHub
-        uses: actions/checkout@v3.0.2
+        uses: actions/checkout@v3.1.0
       - name: Set up Python ${{ env.DEFAULT_PYTHON }}
         uses: actions/setup-python@v4.1.0
         id: python
@@ -466,7 +466,7 @@ jobs:
         python-version: ["3.9", "3.10"]
     steps:
       - name: Check out code from GitHub
-        uses: actions/checkout@v3.0.2
+        uses: actions/checkout@v3.1.0
       - name: Set up Python ${{ matrix.python-version }}
         id: python
         uses: actions/setup-python@v4.1.0
@@ -529,7 +529,7 @@ jobs:
       - base
     steps:
       - name: Check out code from GitHub
-        uses: actions/checkout@v3.0.2
+        uses: actions/checkout@v3.1.0
       - name: Set up Python ${{ env.DEFAULT_PYTHON }}
         id: python
         uses: actions/setup-python@v4.1.0
@@ -561,7 +561,7 @@ jobs:
       - base
     steps:
       - name: Check out code from GitHub
-        uses: actions/checkout@v3.0.2
+        uses: actions/checkout@v3.1.0
       - name: Set up Python ${{ env.DEFAULT_PYTHON }}
         id: python
         uses: actions/setup-python@v4.1.0
@@ -594,7 +594,7 @@ jobs:
       - base
     steps:
       - name: Check out code from GitHub
-        uses: actions/checkout@v3.0.2
+        uses: actions/checkout@v3.1.0
       - name: Set up Python ${{ env.DEFAULT_PYTHON }}
         id: python
         uses: actions/setup-python@v4.1.0
@@ -638,7 +638,7 @@ jobs:
       - base
     steps:
       - name: Check out code from GitHub
-        uses: actions/checkout@v3.0.2
+        uses: actions/checkout@v3.1.0
       - name: Set up Python ${{ env.DEFAULT_PYTHON }}
         id: python
         uses: actions/setup-python@v4.1.0
@@ -686,7 +686,7 @@ jobs:
     name: Run pip check ${{ matrix.python-version }}
     steps:
       - name: Check out code from GitHub
-        uses: actions/checkout@v3.0.2
+        uses: actions/checkout@v3.1.0
       - name: Set up Python ${{ matrix.python-version }}
         id: python
         uses: actions/setup-python@v4.1.0
@@ -740,7 +740,7 @@ jobs:
             bluez \
             ffmpeg
       - name: Check out code from GitHub
-        uses: actions/checkout@v3.0.2
+        uses: actions/checkout@v3.1.0
       - name: Set up Python ${{ matrix.python-version }}
         id: python
         uses: actions/setup-python@v4.1.0
@@ -833,7 +833,7 @@ jobs:
       - pytest
     steps:
       - name: Check out code from GitHub
-        uses: actions/checkout@v3.0.2
+        uses: actions/checkout@v3.1.0
       - name: Download all coverage artifacts
         uses: actions/download-artifact@v3
       - name: Upload coverage to Codecov (full coverage)
