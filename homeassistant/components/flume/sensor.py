@@ -17,7 +17,6 @@ from .const import (
     DEVICE_SCAN_INTERVAL,
     DOMAIN,
     FLUME_AUTH,
-    FLUME_DEVICES,
     FLUME_HTTP_SESSION,
     FLUME_TYPE_SENSOR,
     KEY_DEVICE_ID,
@@ -28,6 +27,7 @@ from .const import (
 )
 from .coordinator import FlumeDeviceDataUpdateCoordinator
 from .entity import FlumeEntity
+from .util import get_valid_flume_devices
 
 FLUME_QUERIES_SENSOR: tuple[SensorEntityDescription, ...] = (
     SensorEntityDescription(
@@ -84,9 +84,8 @@ async def async_setup_entry(
     http_session = flume_domain_data[FLUME_HTTP_SESSION]
     flume_devices = [
         device
-        for device in flume_domain_data[FLUME_DEVICES].device_list
-        if KEY_DEVICE_LOCATION_NAME in device[KEY_DEVICE_LOCATION]
-        and device[KEY_DEVICE_TYPE] == FLUME_TYPE_SENSOR
+        for device in get_valid_flume_devices(flume_domain_data)
+        if device[KEY_DEVICE_TYPE] == FLUME_TYPE_SENSOR
     ]
 
     flume_entity_list = []

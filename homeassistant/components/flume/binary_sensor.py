@@ -31,6 +31,7 @@ from .coordinator import (
     FlumeNotificationDataUpdateCoordinator,
 )
 from .entity import FlumeEntity
+from .util import get_valid_flume_devices
 
 
 @dataclass
@@ -88,13 +89,7 @@ async def async_setup_entry(
         hass=hass, auth=flume_auth
     )
 
-    flume_devices = [
-        device
-        for device in flume_domain_data[FLUME_DEVICES].device_list
-        if KEY_DEVICE_LOCATION_NAME in device[KEY_DEVICE_LOCATION]
-    ]
-
-    for device in flume_devices:
+    for device in get_valid_flume_devices(flume_domain_data[FLUME_DEVICES]):
         device_id = device[KEY_DEVICE_ID]
         device_location_name = device[KEY_DEVICE_LOCATION][KEY_DEVICE_LOCATION_NAME]
 
