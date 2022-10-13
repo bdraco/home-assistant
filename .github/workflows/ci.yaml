@@ -68,7 +68,7 @@ jobs:
           echo "::set-output name=key::${{ env.CACHE_VERSION }}-${{ env.DEFAULT_PYTHON }}-${{
             hashFiles('.pre-commit-config.yaml') }}"
       - name: Filter for core changes
-        uses: dorny/paths-filter@v2.10.2
+        uses: dorny/paths-filter@v2.11.1
         id: core
         with:
           filters: .core_files.yaml
@@ -83,7 +83,7 @@ jobs:
           echo "Result:"
           cat .integration_paths.yaml
       - name: Filter for integration changes
-        uses: dorny/paths-filter@v2.10.2
+        uses: dorny/paths-filter@v2.11.1
         id: integrations
         with:
           filters: .integration_paths.yaml
