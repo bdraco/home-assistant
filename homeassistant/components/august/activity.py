@@ -2,7 +2,7 @@
 import asyncio
 import logging
 
-from aiohttp import ClientError
+from httpx import RequestError
 
 from homeassistant.core import callback
 from homeassistant.helpers.debounce import Debouncer
@@ -137,7 +137,7 @@ class ActivityStream(AugustSubscriberMixin):
             activities = await self._api.async_get_house_activities(
                 self._august_gateway.access_token, house_id, limit=limit
             )
-        except ClientError as ex:
+        except RequestError as ex:
             _LOGGER.error(
                 "Request error trying to retrieve activity for house id %s: %s",
                 house_id,

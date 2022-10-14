@@ -5,12 +5,13 @@ from http import HTTPStatus
 import logging
 import os
 
-from aiohttp import ClientError, ClientResponseError
+import httpx
+from httpx import HTTPStatusError, RequestError
 from yalexs.api_async import ApiAsync
 from yalexs.authenticator_async import AuthenticationState, AuthenticatorAsync
 
 from homeassistant.const import CONF_PASSWORD, CONF_TIMEOUT, CONF_USERNAME
-from homeassistant.helpers import aiohttp_client
+from homeassistant.core import HomeAssistant
 
 from .const import (
     CONF_ACCESS_TOKEN_CACHE_FILE,
@@ -28,9 +29,9 @@ _LOGGER = logging.getLogger(__name__)
 class AugustGateway:
     """Handle the connection to August."""
 
-    def __init__(self, hass):
+    def __init__(self, hass: HomeAssistant, client: httpx.AsyncClient) -> None:
         """Init the connection."""
-        self._aiohttp_session = aiohttp_client.async_get_clientsession(hass)
+        self._client = client
         self._token_refresh_lock = asyncio.Lock()
         self._access_token_cache_file = None
         self._hass = hass
@@ -65,7 +66,7 @@ class AugustGateway:
         self._config = conf
 
         self.api = ApiAsync(
-            self._aiohttp_session,
+            self._client,
             timeout=self._config.get(CONF_TIMEOUT, DEFAULT_TIMEOUT),
         )
 
@@ -92,12 +93,12 @@ class AugustGateway:
                 # authenticated because we can be authenticated
                 # by have no access
                 await self.api.async_get_operable_locks(self.access_token)
-        except ClientResponseError as ex:
-            if ex.status == HTTPStatus.UNAUTHORIZED:
+        except HTTPStatusError as ex:
+            if ex.response.status_code == HTTPStatus.UNAUTHORIZED:
                 raise InvalidAuth from ex
 
             raise CannotConnect from ex
-        except ClientError as ex:
+        except RequestError as ex:
             _LOGGER.error("Unable to connect to August service: %s", str(ex))
             raise CannotConnect from ex
 

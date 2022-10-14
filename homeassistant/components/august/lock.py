@@ -2,7 +2,7 @@
 import logging
 from typing import Any
 
-from aiohttp import ClientResponseError
+from httpx import HTTPStatusError
 from yalexs.activity import SOURCE_PUBNUB, ActivityType
 from yalexs.lock import LockStatus
 from yalexs.util import update_lock_detail_from_activity
@@ -62,8 +62,8 @@ class AugustLock(AugustEntityMixin, RestoreEntity, LockEntity):
     async def _call_lock_operation(self, lock_operation):
         try:
             activities = await lock_operation(self._device_id)
-        except ClientResponseError as err:
-            if err.status == LOCK_JAMMED_ERR:
+        except HTTPStatusError as err:
+            if err.response.status_code == LOCK_JAMMED_ERR:
                 self._detail.lock_status = LockStatus.JAMMED
                 self._detail.lock_status_datetime = dt_util.utcnow()
             else:

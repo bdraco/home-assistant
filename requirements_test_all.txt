@@ -665,6 +665,9 @@ homepluscontrol==0.0.5
 # homeassistant.components.remember_the_milk
 httplib2==0.20.4
 
+# homeassistant.components.august
+httpx[http2]==0.23.0
+
 # homeassistant.components.huawei_lte
 huawei-lte-api==1.6.3
 

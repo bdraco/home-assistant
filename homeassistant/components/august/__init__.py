@@ -6,7 +6,7 @@ from collections.abc import ValuesView
 from itertools import chain
 import logging
 
-from aiohttp import ClientError, ClientResponseError
+from httpx import RequestError
 from yalexs.doorbell import Doorbell, DoorbellDetail
 from yalexs.exceptions import AugustApiAIOHTTPError
 from yalexs.lock import Lock, LockDetail
@@ -23,6 +23,7 @@ from homeassistant.exceptions import (
     HomeAssistantError,
 )
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.httpx_client import create_async_httpx_client
 
 from .activity import ActivityStream
 from .const import DOMAIN, MIN_TIME_BETWEEN_DETAIL_UPDATES, PLATFORMS
@@ -42,8 +43,8 @@ API_CACHED_ATTRS = {
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up August from a config entry."""
-
-    august_gateway = AugustGateway(hass)
+    httpx_client = create_async_httpx_client(hass, http2=True)
+    august_gateway = AugustGateway(hass, httpx_client)
 
     try:
         await august_gateway.async_setup(entry.data)
@@ -52,7 +53,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         raise ConfigEntryAuthFailed from err
     except asyncio.TimeoutError as err:
         raise ConfigEntryNotReady("Timed out connecting to august api") from err
-    except (AugustApiAIOHTTPError, ClientResponseError, CannotConnect) as err:
+    except (AugustApiAIOHTTPError, RequestError, CannotConnect) as err:
         raise ConfigEntryNotReady from err
 
 
@@ -203,7 +204,7 @@ class AugustData(AugustSubscriberMixin):
             return_exceptions=True,
         ):
             if isinstance(result, Exception) and not isinstance(
-                result, (asyncio.TimeoutError, ClientResponseError, CannotConnect)
+                result, (asyncio.TimeoutError, RequestError, CannotConnect)
             ):
                 _LOGGER.warning(
                     "Unexpected exception during initial sync: %s",
@@ -261,7 +262,7 @@ class AugustData(AugustSubscriberMixin):
                     "Timed out calling august api during refresh of device: %s",
                     device_id,
                 )
-            except (ClientResponseError, CannotConnect) as err:
+            except (RequestError, CannotConnect) as err:
                 _LOGGER.warning(
                     "Error from august api during refresh of device: %s",
                     device_id,
@@ -305,7 +306,7 @@ class AugustData(AugustSubscriberMixin):
             self._device_detail_by_id[device.device_id] = await api_call(
                 self._august_gateway.access_token, device.device_id
             )
-        except ClientError as ex:
+        except RequestError as ex:
             _LOGGER.error(
                 "Request error trying to retrieve %s details for %s. %s",
                 device.device_id,
