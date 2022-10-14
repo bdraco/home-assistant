@@ -9,6 +9,7 @@ from yalexs.authenticator import ValidationResult
 from homeassistant import config_entries
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers.httpx_client import create_async_httpx_client
 
 from .const import CONF_LOGIN_METHOD, DOMAIN, LOGIN_METHODS, VERIFICATION_CODE_KEY
 from .exceptions import CannotConnect, InvalidAuth, RequireValidation
@@ -17,13 +18,14 @@ from .gateway import AugustGateway
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_validate_input(data, august_gateway):
+async def async_validate_input(data, august_gateway: AugustGateway) -> dict[str, Any]:
     """Validate the user input allows us to connect.
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
 
     Request configuration steps from the user.
     """
+    assert august_gateway.authenticator is not None
     if (code := data.get(VERIFICATION_CODE_KEY)) is not None:
         result = await august_gateway.authenticator.async_validate_verification_code(
             code
@@ -65,7 +67,8 @@ class AugustConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(self, user_input=None):
         """Handle the initial step."""
-        self._august_gateway = AugustGateway(self.hass)
+        httpx_client = create_async_httpx_client(self.hass, http2=True)
+        self._august_gateway = AugustGateway(self.hass, httpx_client)
         return await self.async_step_user_validate()
 
     async def async_step_user_validate(self, user_input=None):
@@ -117,7 +120,8 @@ class AugustConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._user_auth_details = dict(entry_data)
         self._mode = "reauth"
         self._needs_reset = True
-        self._august_gateway = AugustGateway(self.hass)
+        httpx_client = create_async_httpx_client(self.hass, http2=True)
+        self._august_gateway = AugustGateway(self.hass, httpx_client)
         return await self.async_step_reauth_validate()
 
     async def async_step_reauth_validate(self, user_input=None):
