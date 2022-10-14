@@ -613,6 +613,9 @@ gspread==5.5.0
 # homeassistant.components.profiler
 guppy3==3.1.2
 
+# homeassistant.components.august
+h2==4.1.0
+
 # homeassistant.components.generic
 # homeassistant.components.stream
 ha-av==10.0.0b5
@@ -664,9 +667,6 @@ homepluscontrol==0.0.5
 
 # homeassistant.components.remember_the_milk
 httplib2==0.20.4
-
-# homeassistant.components.august
-httpx[http2]==0.23.0
 
 # homeassistant.components.huawei_lte
 huawei-lte-api==1.6.3
