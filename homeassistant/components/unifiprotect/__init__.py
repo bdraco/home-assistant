@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import asyncio
-from contextlib import suppress
 from datetime import timedelta
 import logging
 
@@ -93,10 +92,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, data_service.async_stop)
     )
 
-    if (
-        not entry.options.get(CONF_ALLOW_EA, False)
-        and await nvr_info.get_is_prerelease()
-    ):
+    is_pre_release = await nvr_info.get_is_prerelease()
+    if is_pre_release and not entry.options.get(CONF_ALLOW_EA, False):
         ir.async_create_issue(
             hass,
             DOMAIN,
@@ -110,22 +107,31 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             data={"entry_id": entry.entry_id},
         )
 
-        # EA versions can cause any number of potiental errors
-        # suppress them here so the repair flows still function
-        with suppress(BaseException):
-            await _async_setup_entry(hass, entry, data_service)
-    else:
-        await _async_setup_entry(hass, entry, data_service)
-
-    return True
-
-
-async def _async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, data_service: ProtectData
-) -> None:
     await async_migrate_data(hass, entry, data_service.api)
 
-    await data_service.async_setup()
+    try:
+        await data_service.async_setup()
+    except Exception as err:  # pylint: disable=broad-except
+        if is_pre_release:
+            # If they are running a pre-release, its quite common for setup
+            # to fail so we want to create a repair issue for them so its
+            # obvious what the problem is.
+            ir.async_create_issue(
+                hass,
+                DOMAIN,
+                "ea_setup_failed",
+                is_fixable=False,
+                is_persistent=True,
+                learn_more_url="https://www.home-assistant.io/integrations/unifiprotect#about-unifi-early-access",
+                severity=IssueSeverity.ERROR,
+                translation_key="ea_setup_failed",
+                translation_placeholders={"error": str(err)},
+                data={"entry_id": entry.entry_id},
+            )
+            ir.async_delete_issue(hass, DOMAIN, "ea_block")
+            _LOGGER.exception("Error setting up UniFi Protect integration: %s", err)
+        raise
+
     if not data_service.last_update_success:
         raise ConfigEntryNotReady
 
@@ -134,6 +140,7 @@ async def _async_setup_entry(
     async_setup_services(hass)
     hass.http.register_view(ThumbnailProxyView(hass))
     hass.http.register_view(VideoProxyView(hass))
+    return True
 
 
 async def _async_options_updated(hass: HomeAssistant, entry: ConfigEntry) -> None:
