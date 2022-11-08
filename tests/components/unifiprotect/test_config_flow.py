@@ -274,6 +274,7 @@ async def test_form_options(hass: HomeAssistant, ufp_client: ProtectApiClient) -
             "disable_rtsp": True,
             "override_connection_host": True,
             "max_media": 1000,
+            "allow_ea": False,
         }
         await hass.config_entries.async_unload(mock_config.entry_id)
 

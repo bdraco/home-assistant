@@ -27,6 +27,7 @@ from homeassistant.helpers.issue_registry import IssueSeverity
 
 from .const import (
     CONF_ALL_UPDATES,
+    CONF_ALLOW_EA,
     CONF_OVERRIDE_CHOST,
     DEFAULT_SCAN_INTERVAL,
     DEVICES_FOR_SUBSCRIBE,
@@ -83,9 +84,40 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         return False
 
-    await async_migrate_data(hass, entry, protect)
     if entry.unique_id is None:
         hass.config_entries.async_update_entry(entry, unique_id=nvr_info.mac)
+
+    entry.async_on_unload(entry.add_update_listener(_async_options_updated))
+    entry.async_on_unload(
+        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, data_service.async_stop)
+    )
+
+    if (
+        entry.options.get(CONF_ALLOW_EA, False)
+        or not await nvr_info.get_is_prerelease()
+    ):
+        await _async_setup_entry(hass, entry, data_service)
+    else:
+        ir.async_create_issue(
+            hass,
+            DOMAIN,
+            "ea_block",
+            is_fixable=True,
+            is_persistent=True,
+            learn_more_url="https://www.home-assistant.io/integrations/unifiprotect#about-unifi-early-access",
+            severity=IssueSeverity.ERROR,
+            translation_key="ea_block",
+            translation_placeholders={"version": str(nvr_info.version)},
+            data={"entry_id": entry.entry_id},
+        )
+
+    return True
+
+
+async def _async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, data_service: ProtectData
+) -> None:
+    await async_migrate_data(hass, entry, data_service.api)
 
     await data_service.async_setup()
     if not data_service.last_update_success:
@@ -97,27 +129,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.http.register_view(ThumbnailProxyView(hass))
     hass.http.register_view(VideoProxyView(hass))
 
-    entry.async_on_unload(entry.add_update_listener(_async_options_updated))
-    entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, data_service.async_stop)
-    )
-
-    if await data_service.api.bootstrap.get_is_prerelease():
-        protect_version = data_service.api.bootstrap.nvr.version
-        ir.async_create_issue(
-            hass,
-            DOMAIN,
-            f"ea_warning_{protect_version}",
-            is_fixable=False,
-            is_persistent=False,
-            learn_more_url="https://www.home-assistant.io/integrations/unifiprotect#about-unifi-early-access",
-            severity=IssueSeverity.WARNING,
-            translation_key="ea_warning",
-            translation_placeholders={"version": str(protect_version)},
-        )
-
-    return True
-
 
 async def _async_options_updated(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Update options."""
@@ -126,6 +137,11 @@ async def _async_options_updated(hass: HomeAssistant, entry: ConfigEntry) -> Non
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload UniFi Protect config entry."""
+
+    # entry was never fully set up (EA repair active)
+    if entry.entry_id not in hass.data[DOMAIN]:
+        return True
+
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         data: ProtectData = hass.data[DOMAIN][entry.entry_id]
         await data.async_stop()
