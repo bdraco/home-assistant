@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 from aiohttp import CookieJar
 from pyunifiprotect import ProtectApiClient
 import voluptuous as vol
 
 from homeassistant import data_entry_flow
-from homeassistant.components.repairs import RepairsFlow
+from homeassistant.components.repairs import ConfirmRepairFlow, RepairsFlow
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     CONF_HOST,
@@ -103,19 +105,23 @@ async def async_create_fix_flow(
     data: dict[str, str | int | float | None] | None,
 ) -> RepairsFlow:
     """Create flow."""
-    if issue_id == "ea_block":
-        entry = hass.config_entries.async_get_entry(data["entry_id"])
-        session = async_create_clientsession(hass, cookie_jar=CookieJar(unsafe=True))
-        api = ProtectApiClient(
-            host=entry.data[CONF_HOST],
-            port=entry.data[CONF_PORT],
-            username=entry.data[CONF_USERNAME],
-            password=entry.data[CONF_PASSWORD],
-            verify_ssl=entry.data[CONF_VERIFY_SSL],
-            session=session,
-            subscribed_models=DEVICES_FOR_SUBSCRIBE,
-            override_connection_host=entry.options.get(CONF_OVERRIDE_CHOST, False),
-            ignore_stats=not entry.options.get(CONF_ALL_UPDATES, False),
-            ignore_unadopted=False,
-        )
-        return EAConfirm(hass, api, entry)
+    if data is not None and issue_id == "ea_block":
+        entry_id = cast(str, data["entry_id"])
+        if (entry := hass.config_entries.async_get_entry(entry_id)) is not None:
+            session = async_create_clientsession(
+                hass, cookie_jar=CookieJar(unsafe=True)
+            )
+            api = ProtectApiClient(
+                host=entry.data[CONF_HOST],
+                port=entry.data[CONF_PORT],
+                username=entry.data[CONF_USERNAME],
+                password=entry.data[CONF_PASSWORD],
+                verify_ssl=entry.data[CONF_VERIFY_SSL],
+                session=session,
+                subscribed_models=DEVICES_FOR_SUBSCRIBE,
+                override_connection_host=entry.options.get(CONF_OVERRIDE_CHOST, False),
+                ignore_stats=not entry.options.get(CONF_ALL_UPDATES, False),
+                ignore_unadopted=False,
+            )
+            return EAConfirm(hass, api, entry)
+    return ConfirmRepairFlow()
