@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import suppress
 from datetime import timedelta
 import logging
 
@@ -93,11 +94,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     if (
-        entry.options.get(CONF_ALLOW_EA, False)
-        or not await nvr_info.get_is_prerelease()
+        not entry.options.get(CONF_ALLOW_EA, False)
+        and await nvr_info.get_is_prerelease()
     ):
-        await _async_setup_entry(hass, entry, data_service)
-    else:
         ir.async_create_issue(
             hass,
             DOMAIN,
@@ -110,6 +109,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             translation_placeholders={"version": str(nvr_info.version)},
             data={"entry_id": entry.entry_id},
         )
+
+        # EA versions can cause any number of potiental errors
+        # suppress them here so the repair flows still function
+        with suppress(BaseException):
+            await _async_setup_entry(hass, entry, data_service)
+    else:
+        await _async_setup_entry(hass, entry, data_service)
 
     return True
 
