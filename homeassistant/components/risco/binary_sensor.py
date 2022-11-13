@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, cast
 
 from pyrisco.common import Zone
 
@@ -17,33 +17,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from . import LocalData, RiscoDataUpdateCoordinator, is_local
 from .const import DATA_COORDINATOR, DOMAIN
 from .entity import RiscoCloudZoneEntity, RiscoLocalZoneEntity
-
-
-async def async_setup_entry(
-    hass: HomeAssistant,
-    config_entry: ConfigEntry,
-    async_add_entities: AddEntitiesCallback,
-) -> None:
-    """Set up the Risco alarm control panel."""
-    if is_local(config_entry):
-        local_data: LocalData = hass.data[DOMAIN][config_entry.entry_id]
-        async_add_entities(
-            entity
-            for zone_id, zone in local_data.system.zones.items()
-            for entity in (
-                RiscoLocalBinarySensor(local_data.system.id, zone_id, zone),
-                RiscoLocalAlarmedBinarySensor(local_data.system.id, zone_id, zone),
-                RiscoLocalArmedBinarySensor(local_data.system.id, zone_id, zone),
-            )
-        )
-    else:
-        coordinator: RiscoDataUpdateCoordinator = hass.data[DOMAIN][
-            config_entry.entry_id
-        ][DATA_COORDINATOR]
-        async_add_entities(
-            RiscoCloudBinarySensor(coordinator, zone_id, zone)
-            for zone_id, zone in coordinator.data.zones.items()
-        )
 
 
 class RiscoCloudBinarySensor(RiscoCloudZoneEntity, BinarySensorEntity):
@@ -126,3 +99,34 @@ class RiscoLocalArmedBinarySensor(RiscoLocalZoneEntity, BinarySensorEntity):
     def is_on(self) -> bool | None:
         """Return true if sensor is on."""
         return self._zone.armed
+
+
+LOCAL_BINARY_SENSOR_CLASSES = (
+    RiscoLocalBinarySensor,
+    RiscoLocalAlarmedBinarySensor,
+    RiscoLocalArmedBinarySensor,
+)
+
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up the Risco alarm control panel."""
+    entry_data = hass.data[DOMAIN][config_entry.entry_id]
+
+    if is_local(config_entry):
+        local_data = cast(LocalData, entry_data)
+        async_add_entities(
+            cls(local_data.system.id, zone_id, zone)
+            for zone_id, zone in local_data.system.zones.items()
+            for cls in LOCAL_BINARY_SENSOR_CLASSES
+        )
+        return
+
+    coordinator: RiscoDataUpdateCoordinator = entry_data[DATA_COORDINATOR]
+    async_add_entities(
+        RiscoCloudBinarySensor(coordinator, zone_id, zone)
+        for zone_id, zone in coordinator.data.zones.items()
+    )
