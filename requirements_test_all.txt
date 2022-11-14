@@ -370,7 +370,6 @@ bluetooth-adapters==0.7.0
 bluetooth-auto-recovery==0.3.6
 
 # homeassistant.components.bluetooth
-# homeassistant.components.shelly
 bluetooth-data-tools==0.3.0
 
 # homeassistant.components.bond
@@ -1790,7 +1789,7 @@ wolf_smartset==0.1.11
 xbox-webapi==2.0.11
 
 # homeassistant.components.xiaomi_ble
-xiaomi-ble==0.10.0
+xiaomi-ble==0.12.1
 
 # homeassistant.components.knx
 xknx==1.2.0
