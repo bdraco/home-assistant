@@ -169,11 +169,29 @@ class HistoryStats:
         # state_changes_during_period is called with include_start_time_state=True
         # which is the default and always provides the state at the start
         # of the period
-        previous_state_matches = (
-            self._history_current_period
-            and self._history_current_period[0].state in self._entity_states
+        import pprint
+
+        pprint.pprint(
+            [
+                "now_timestamp",
+                now_timestamp,
+                "start_timestamp",
+                start_timestamp,
+                "end_timestamp",
+                end_timestamp,
+                "self._history_current_period",
+                self._history_current_period,
+            ]
         )
-        last_state_change_timestamp = start_timestamp
+
+        if self._history_current_period:
+            first_state = self._history_current_period[0]
+            previous_state_matches = first_state.state in self._entity_states
+            last_state_change_timestamp = first_state.last_changed
+        else:
+            previous_state_matches = False
+            last_state_change_timestamp = start_timestamp
+
         elapsed = 0.0
         match_count = 1 if previous_state_matches else 0
 
