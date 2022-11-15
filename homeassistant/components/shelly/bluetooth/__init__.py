@@ -1,6 +1,8 @@
 """Bluetooth support for shelly."""
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from aioshelly.ble import async_start_scanner
 from aioshelly.ble.const import (
     BLE_SCAN_RESULT_EVENT,
@@ -18,14 +20,17 @@ from homeassistant.components.bluetooth import (
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback as hass_callback
 from homeassistant.helpers.device_registry import format_mac
 
-from ..coordinator import ShellyRpcCoordinator
+from ..const import BLEScannerMode
 from .scanner import ShellyBLEScanner
+
+if TYPE_CHECKING:
+    from ..coordinator import ShellyRpcCoordinator
 
 
 async def async_connect_scanner(
     hass: HomeAssistant,
     coordinator: ShellyRpcCoordinator,
-    active: bool,
+    scanner_mode: BLEScannerMode,
 ) -> CALLBACK_TYPE:
     """Connect scanner."""
     device = coordinator.device
@@ -45,7 +50,7 @@ async def async_connect_scanner(
     ]
     await async_start_scanner(
         device=device,
-        active=active,
+        active=scanner_mode == BLEScannerMode.ACTIVE,
         event_type=BLE_SCAN_RESULT_EVENT,
         data_version=BLE_SCAN_RESULT_VERSION,
         interval_ms=DEFAULT_INTERVAL_MS,

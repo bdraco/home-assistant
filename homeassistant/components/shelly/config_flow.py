@@ -17,11 +17,17 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.components import zeroconf
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers import aiohttp_client
+from homeassistant.helpers import aiohttp_client, selector
 
-from .const import CONF_SLEEP_PERIOD, DOMAIN, LOGGER
+from .const import (
+    CONF_BLE_SCANNER_MODE,
+    CONF_SLEEP_PERIOD,
+    DOMAIN,
+    LOGGER,
+    BLEScannerMode,
+)
 from .utils import (
     get_block_device_name,
     get_block_device_sleep_period,
@@ -35,6 +41,13 @@ from .utils import (
 )
 
 HOST_SCHEMA: Final = vol.Schema({vol.Required(CONF_HOST): str})
+
+
+BLE_SCANNER_OPTIONS = [
+    selector.SelectOptionDict(value=BLEScannerMode.DISABLED, label="Disabled"),
+    selector.SelectOptionDict(value=BLEScannerMode.ACTIVE, label="Active"),
+    selector.SelectOptionDict(value=BLEScannerMode.PASSIVE, label="Passive"),
+]
 
 
 async def validate_input(
@@ -309,4 +322,51 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Get info from shelly device."""
         return await aioshelly.common.get_info(
             aiohttp_client.async_get_clientsession(self.hass), host
+        )
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(
+        config_entry: config_entries.ConfigEntry,
+    ) -> OptionsFlowHandler:
+        """Get the options flow for this handler."""
+        return OptionsFlowHandler(config_entry)
+
+    @classmethod
+    @callback
+    def async_supports_options_flow(
+        cls, config_entry: config_entries.ConfigEntry
+    ) -> bool:
+        """Return options flow support for this handler."""
+        return config_entry.data.get("gen") == 2
+
+
+class OptionsFlowHandler(config_entries.OptionsFlow):
+    """Handle the option flow for shelly."""
+
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        """Initialize options flow."""
+        self.config_entry = config_entry
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle options flow."""
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_BLE_SCANNER_MODE,
+                        default=self.config_entry.options.get(
+                            CONF_BLE_SCANNER_MODE, BLEScannerMode.DISABLED
+                        ),
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(options=BLE_SCANNER_OPTIONS),
+                    ),
+                }
+            ),
         )
