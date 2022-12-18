@@ -458,7 +458,7 @@ class Scanner:
             if _async_headers_match(combined_headers, lower_match_dict)
         ]
 
-    async def _ssdp_listener_callback(
+    def _ssdp_listener_callback(
         self,
         ssdp_device: SsdpDevice,
         dst: DeviceOrServiceType,
@@ -473,11 +473,59 @@ class Scanner:
         info_desc = None
         combined_headers = ssdp_device.combined_headers(dst)
         callbacks = self._async_get_matching_callbacks(combined_headers)
+
+        # If there are no changes from a search, do not trigger a config flow
+        if not callbacks and source == SsdpSource.SEARCH_ALIVE:
+            return
+
+        if info_desc is None:
+            _, info_desc = self._description_cache.peek_description_dict(location)
+
+        if info_desc is not None:
+            self._ssdp_listener_processor(
+                source, combined_headers, info_desc, callbacks, location
+            )
+            return
+
+        self.hass.async_create_task(
+            self._ssdp_listener_processor_with_lookup(
+                source, combined_headers, info_desc, callbacks, location
+            )
+        )
+
+    async def _ssdp_listener_processor_with_lookup(
+        self,
+        source: SsdpSource,
+        combined_headers: CaseInsensitiveDict,
+        info_desc: dict[str, Any],
+        matching_domains: set[str],
+        callbacks: list[SsdpCallback],
+        location: str,
+    ) -> None:
+        """Handle a device/service change."""
+        self._ssdp_listener_processor(
+            source,
+            combined_headers,
+            await self._async_get_description_dict(location),
+            matching_domains,
+            callbacks,
+            location,
+        )
+
+    def _ssdp_listener_processor(
+        self,
+        source: SsdpSource,
+        combined_headers: CaseInsensitiveDict,
+        info_desc: dict[str, Any],
+        matching_domains: set[str],
+        callbacks: list[SsdpCallback],
+        location: str,
+    ) -> None:
+        """Handle a device/service change."""
         matching_domains: set[str] = set()
 
         # If there are no changes from a search, do not trigger a config flow
         if source != SsdpSource.SEARCH_ALIVE:
-            info_desc = await self._async_get_description_dict(location)
             matching_domains = self.integration_matchers.async_matching_domains(
                 CaseInsensitiveDict(combined_headers.as_dict(), **info_desc)
             )
@@ -485,14 +533,15 @@ class Scanner:
         if not callbacks and not matching_domains:
             return
 
-        if info_desc is None:
-            info_desc = await self._async_get_description_dict(location)
         discovery_info = discovery_info_from_headers_and_description(
             combined_headers, info_desc
         )
         discovery_info.x_homeassistant_matching_domains = matching_domains
         ssdp_change = SSDP_SOURCE_SSDP_CHANGE_MAPPING[source]
-        await _async_process_callbacks(callbacks, discovery_info, ssdp_change)
+        if callbacks:
+            self.hass.async_create_task(
+                _async_process_callbacks(callbacks, discovery_info, ssdp_change)
+            )
 
         # Config flows should only be created for alive/update messages from alive devices
         if ssdp_change == SsdpChange.BYEBYE:
