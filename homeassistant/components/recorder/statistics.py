@@ -1081,37 +1081,6 @@ def _reduce_statistics(
     return result
 
 
-def reduce_day_factory() -> (
-    tuple[
-        Callable[[datetime, datetime], bool],
-        Callable[[datetime], tuple[datetime, datetime]],
-    ]
-):
-    """Return functions to match same day and day start end."""
-    # We create _as_local_cached in the closure in case the timezone changes
-    _as_local_cached = lru_cache(maxsize=6)(dt_util.as_local)
-
-    def _as_local_date(time: datetime) -> date:
-        """Return the local date of a datetime."""
-        return dt_util.as_local(time).date()
-
-    _as_local_date_cached = lru_cache(maxsize=6)(_as_local_date)
-
-    def _same_day(time1: datetime, time2: datetime) -> bool:
-        """Return True if time1 and time2 are in the same date."""
-        return _as_local_date_cached(time1) == _as_local_date_cached(time2)
-
-    def _day_start_end(time: datetime) -> tuple[datetime, datetime]:
-        """Return the start and end of the period (day) time is within."""
-        start = dt_util.as_utc(
-            _as_local_cached(time).replace(hour=0, minute=0, second=0, microsecond=0)
-        )
-        end = start + timedelta(days=1)
-        return (start, end)
-
-    return _same_day, _day_start_end
-
-
 def reduce_day_ts_factory() -> (
     tuple[
         Callable[[float, float], bool],
@@ -1152,43 +1121,6 @@ def _reduce_statistics_per_day(
     return _reduce_statistics(
         stats, _same_day_ts, _day_start_end_ts, timedelta(days=1), types
     )
-
-
-def reduce_week_factory() -> (
-    tuple[
-        Callable[[datetime, datetime], bool],
-        Callable[[datetime], tuple[datetime, datetime]],
-    ]
-):
-    """Return functions to match same week and week start end."""
-    # We create _as_local_cached in the closure in case the timezone changes
-    _as_local_cached = lru_cache(maxsize=6)(dt_util.as_local)
-
-    def _as_local_isocalendar(
-        time: datetime,
-    ) -> tuple:  # Need python3.11 for isocalendar typing
-        """Return the local isocalendar of a datetime."""
-        return dt_util.as_local(time).isocalendar()
-
-    _as_local_isocalendar_cached = lru_cache(maxsize=6)(_as_local_isocalendar)
-
-    def _same_week(time1: datetime, time2: datetime) -> bool:
-        """Return True if time1 and time2 are in the same year and week."""
-        date1 = _as_local_isocalendar_cached(time1)
-        date2 = _as_local_isocalendar_cached(time2)
-        return (date1.year, date1.week) == (date2.year, date2.week)  # type: ignore[attr-defined]
-
-    def _week_start_end(time: datetime) -> tuple[datetime, datetime]:
-        """Return the start and end of the period (week) time is within."""
-        time_local = _as_local_cached(time)
-        start_local = time_local.replace(
-            hour=0, minute=0, second=0, microsecond=0
-        ) - timedelta(days=time_local.weekday())
-        start = dt_util.as_utc(start_local)
-        end = dt_util.as_utc(start_local + timedelta(days=7))
-        return (start, end)
-
-    return _same_week, _week_start_end
 
 
 def reduce_week_ts_factory() -> (
@@ -1237,40 +1169,6 @@ def _reduce_statistics_per_week(
     return _reduce_statistics(
         stats, _same_week_ts, _week_start_end_ts, timedelta(days=7), types
     )
-
-
-def reduce_month_factory() -> (
-    tuple[
-        Callable[[datetime, datetime], bool],
-        Callable[[datetime], tuple[datetime, datetime]],
-    ]
-):
-    """Return functions to match same month and month start end."""
-    # We create _as_local_cached in the closure in case the timezone changes
-    _as_local_cached = lru_cache(maxsize=6)(dt_util.as_local)
-
-    def _same_month(time1: datetime, time2: datetime) -> bool:
-        """Return True if time1 and time2 are in the same year and month."""
-        if 2 < time1.day < 26 and 2 < time2.day < 26:
-            # No need to convert to local time if both dates are far
-            # enough from possible start or end of the month as time zones
-            # can't change more than 24 hours in a month.
-            return (time1.year, time1.month) == (time1.year, time1.month)
-        date1 = _as_local_cached(time1)
-        date2 = _as_local_cached(time2)
-        return (date1.year, date1.month) == (date2.year, date2.month)
-
-    def _month_start_end(time: datetime) -> tuple[datetime, datetime]:
-        """Return the start and end of the period (month) time is within."""
-        start_local = _as_local_cached(time).replace(
-            day=1, hour=0, minute=0, second=0, microsecond=0
-        )
-        start = dt_util.as_utc(start_local)
-        end_local = (start_local + timedelta(days=31)).replace(day=1)
-        end = dt_util.as_utc(end_local)
-        return (start, end)
-
-    return _same_month, _month_start_end
 
 
 def reduce_month_ts_factory() -> (
