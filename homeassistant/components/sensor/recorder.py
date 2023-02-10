@@ -22,7 +22,6 @@ from homeassistant.components.recorder.models import (
     StatisticData,
     StatisticMetaData,
     StatisticResult,
-    timestamp_to_datetime_or_none,
 )
 from homeassistant.const import (
     ATTR_UNIT_OF_MEASUREMENT,
@@ -370,6 +369,13 @@ def _last_reset_as_utc_isoformat(last_reset_s: Any, entity_id: str) -> str | Non
     return dt_util.as_utc(last_reset).isoformat()
 
 
+def _timestamp_to_isoformat_or_none(timestamp: float | None) -> str | None:
+    """Convert a timestamp to ISO format or return None."""
+    if timestamp is None:
+        return None
+    return dt_util.utc_from_timestamp(timestamp).isoformat()
+
+
 def compile_statistics(
     hass: HomeAssistant, start: datetime.datetime, end: datetime.datetime
 ) -> statistics.PlatformCompiledStatistics:
@@ -527,11 +533,9 @@ def _compile_statistics(  # noqa: C901
             if entity_id in last_stats:
                 # We have compiled history for this sensor before,
                 # use that as a starting point.
-                old_last_reset_dt = timestamp_to_datetime_or_none(
+                last_reset = old_last_reset = _timestamp_to_isoformat_or_none(
                     last_stats[entity_id][0]["last_reset"]
                 )
-                if old_last_reset_dt is not None:
-                    last_reset = old_last_reset = old_last_reset_dt.isoformat()
                 new_state = old_state = last_stats[entity_id][0]["state"]
                 _sum = last_stats[entity_id][0]["sum"] or 0.0
 
