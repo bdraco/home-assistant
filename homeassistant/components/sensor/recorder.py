@@ -22,6 +22,7 @@ from homeassistant.components.recorder.models import (
     StatisticData,
     StatisticMetaData,
     StatisticResult,
+    timestamp_to_datetime_or_none,
 )
 from homeassistant.const import (
     ATTR_UNIT_OF_MEASUREMENT,
@@ -526,9 +527,11 @@ def _compile_statistics(  # noqa: C901
             if entity_id in last_stats:
                 # We have compiled history for this sensor before,
                 # use that as a starting point.
-                last_reset = old_last_reset = last_stats[entity_id][0]["last_reset"]
-                if old_last_reset is not None:
-                    last_reset = old_last_reset = old_last_reset.isoformat()
+                old_last_reset_dt = timestamp_to_datetime_or_none(
+                    last_stats[entity_id][0]["last_reset"]
+                )
+                if old_last_reset_dt is not None:
+                    last_reset = old_last_reset = old_last_reset_dt.isoformat()
                 new_state = old_state = last_stats[entity_id][0]["state"]
                 _sum = last_stats[entity_id][0]["sum"] or 0.0
 
