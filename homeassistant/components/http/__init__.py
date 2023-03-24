@@ -256,8 +256,8 @@ class HomeAssistantRequest(web.Request):
         return json_loads(await self.read())
 
 
-class HomeAssistantApplication(web.Application):
-    """Home Assistant application."""
+class HomeAssistantAppRunner(web.AppRunner):
+    """Home Assistant app runner."""
 
     def _make_request(
         self,
@@ -275,8 +275,8 @@ class HomeAssistantApplication(web.Application):
             protocol,
             writer,
             task,
-            loop=self._loop,
-            client_max_size=self._client_max_size,
+            loop=asyncio.get_running_loop(),
+            client_max_size=self.app._client_max_size,
         )
 
 
@@ -295,7 +295,7 @@ class HomeAssistantHTTP:
         ssl_profile: str,
     ) -> None:
         """Initialize the HTTP Home Assistant server."""
-        self.app = HomeAssistantApplication(
+        self.app = web.Application(
             middlewares=[],
             client_max_size=MAX_CLIENT_SIZE,
             handler_args={
@@ -311,7 +311,7 @@ class HomeAssistantHTTP:
         self.server_port = server_port
         self.trusted_proxies = trusted_proxies
         self.ssl_profile = ssl_profile
-        self.runner: web.AppRunner | None = None
+        self.runner: HomeAssistantAppRunner | None = None
         self.site: HomeAssistantTCPSite | None = None
         self.context: ssl.SSLContext | None = None
 
@@ -522,7 +522,7 @@ class HomeAssistantHTTP:
         # pylint: disable-next=protected-access
         self.app._router.freeze = lambda: None  # type: ignore[method-assign]
 
-        self.runner = web.AppRunner(
+        self.runner = HomeAssistantAppRunner(
             self.app, access_log_class=HomeAssistantAccessLogger
         )
         await self.runner.setup()
