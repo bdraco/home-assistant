@@ -705,9 +705,8 @@ class WebHookManager:
         any = xsd.AnyObject(
             topic_exp,
             topic_expression_type(
-                _value_1=xsd.AnyObject(
-                    xsd.String(), "tns1:VideoAnalytics//.|tns1:RuleEngine//."
-                ),
+                # _value_1="tns1:VideoAnalytics//.|tns1:RuleEngine//.",
+                _value_1="tns1:RuleEngine/CellMotionDetector/Motion",
                 Dialect="http://www.onvif.org/ver10/tev/topicExpression/ConcreteSet",
             ),
         )
