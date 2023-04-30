@@ -126,6 +126,7 @@ class EventManager:
     async def async_start(self) -> bool:
         """Start polling events."""
         # Always start pull point first, since it will populate the event list
+
         event_via_pull_point = await self.pullpoint_manager.async_start()
         events_via_webhook = await self.webhook_manager.async_start()
         return events_via_webhook or event_via_pull_point
@@ -656,10 +657,66 @@ class WebHookManager:
     async def _async_create_webhook_subscription(self) -> None:
         """Create webhook subscription."""
         LOGGER.debug("%s: Creating webhook subscription", self._name)
+        events = self._device.create_events_service()
+        props = await events.GetEventProperties()
+        import pprint
+
+        pprint.pprint(props)
+        from lxml import etree
+
+        pprint.pprint(props.TopicSet)
+        for topic_set in props.TopicSet._value_1:
+            pprint.pprint(
+                ["topic_set", topic_set.tag, etree.QName(topic_set).localname]
+            )
+            for topic in topic_set:
+                pprint.pprint(["topic", topic.tag, etree.QName(topic).localname])
+                for element in topic:
+                    pprint.pprint(
+                        ["element", element.tag, etree.QName(element).localname]
+                    )
+                    path = "/".join(
+                        [
+                            etree.QName(topic_set).localname,
+                            etree.QName(topic).localname,
+                            etree.QName(element).localname,
+                        ]
+                    )
+                    pprint.pprint(path)
+        pprint.pprint(props.TopicSet._value_1)
+        LOGGER.warning("EMPTY FILTER!")
+        LOGGER.warning("EMPTY FILTER!")
+        LOGGER.warning("EMPTY FILTER!")
+        LOGGER.warning("EMPTY FILTER!")
+        LOGGER.warning("EMPTY FILTER!")
+        LOGGER.warning("EMPTY FILTER!")
+
+        notification = self._device.create_notification_service()
+        topic_expression_type = notification.zeep_client.wsdl.types.get_type(
+            "{http://docs.oasis-open.org/wsn/b-2}TopicExpressionType"
+        )
+        from zeep import xsd
+
+        topic_exp = xsd.Element(
+            "{http://docs.oasis-open.org/wsn/b-2}TopicExpression",
+            xsd.ComplexType(topic_expression_type),
+        )
+
+        any = xsd.AnyObject(
+            topic_exp,
+            topic_expression_type(
+                _value_1=xsd.AnyObject(
+                    xsd.String(), "tns1:VideoAnalytics//.|tns1:RuleEngine//."
+                ),
+                Dialect="http://www.onvif.org/ver10/tev/topicExpression/ConcreteSet",
+            ),
+        )
+
         self._notification_manager = self._device.create_notification_manager(
             {
                 "InitialTerminationTime": SUBSCRIPTION_RELATIVE_TIME,
                 "ConsumerReference": {"Address": self._webhook_url},
+                "Filter": {"_value_1": any},
             }
         )
         self._webhook_subscription = await self._notification_manager.setup()
