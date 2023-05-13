@@ -316,6 +316,25 @@ class HomeAssistant:
         # Timeout handler for Core/Helper namespace
         self.timeout: TimeoutManager = TimeoutManager()
         self._stop_future: concurrent.futures.Future[None] | None = None
+        self._thread_id = threading.get_ident()
+
+    def _check_thread(self):
+        """Check that the current thread is the thread running the event loop.
+
+        Non-thread-safe methods of this class make this assumption and will
+        likely behave incorrectly when the assumption is violated.
+
+        Should only be called when (self._debug == True).  The caller is
+        responsible for checking this condition for performance reasons.
+        """
+        if self._thread_id is None:
+            return
+        thread_id = threading.get_ident()
+        if thread_id != self._thread_id:
+            raise RuntimeError(
+                "Non-thread-safe operation invoked on an event loop other "
+                "than the current one"
+            )
 
     @property
     def is_running(self) -> bool:
@@ -1008,6 +1027,7 @@ class EventBus:
 
         This method must be run in the event loop.
         """
+        self._hass._check_thread()
         if len(event_type) > MAX_LENGTH_EVENT_EVENT_TYPE:
             raise MaxLengthExceeded(
                 event_type, "event_type", MAX_LENGTH_EVENT_EVENT_TYPE
@@ -1088,6 +1108,7 @@ class EventBus:
 
         This method must be run in the event loop.
         """
+        self._hass._check_thread()
         if event_filter is not None and not is_callback(event_filter):
             raise HomeAssistantError(f"Event filter {event_filter} is not a callback")
         if run_immediately and not is_callback(listener):
@@ -1578,6 +1599,7 @@ class StateMachine:
 
         This method must be run in the event loop.
         """
+        self._bus._hass._check_thread()
         entity_id = entity_id.lower()
         new_state = str(new_state)
         attributes = attributes or {}
