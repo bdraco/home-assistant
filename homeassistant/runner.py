@@ -2,17 +2,19 @@
 from __future__ import annotations
 
 import asyncio
-from asyncio import events
+from collections.abc import Awaitable, Callable, Generator
 import dataclasses
 import logging
 import os
 import subprocess
 import threading
 import traceback
-from typing import Any
+from typing import Any, ParamSpecArgs, TypeVar
+
+import uvloop
 
 from . import bootstrap
-from .core import callback
+from .core import HassJob, callback
 from .helpers.frame import warn_use
 from .util.executor import InterruptibleThreadPoolExecutor
 from .util.thread import deadlock_safe_shutdown
@@ -32,6 +34,8 @@ TASK_CANCELATION_TIMEOUT = 5
 ALPINE_RELEASE_FILE = "/etc/alpine-release"
 
 _LOGGER = logging.getLogger(__name__)
+
+_T = TypeVar("_T")
 
 
 @dataclasses.dataclass(slots=True)
@@ -69,39 +73,22 @@ def can_use_pidfd() -> bool:
     return True
 
 
-class HassEventLoopPolicy(asyncio.DefaultEventLoopPolicy):
+class HassEventLoopPolicy(uvloop.EventLoopPolicy):
     """Event loop policy for Home Assistant."""
 
     def __init__(self, debug: bool) -> None:
         """Init the event loop policy."""
         super().__init__()
         self.debug = debug
-        self._watcher: asyncio.AbstractChildWatcher | None = None
-
-    def _init_watcher(self) -> None:
-        """Initialize the watcher for child processes.
-
-        Back ported from cpython 3.12
-        """
-        with events._lock:  # type: ignore[attr-defined] # pylint: disable=protected-access
-            if self._watcher is None:  # pragma: no branch
-                if can_use_pidfd():
-                    self._watcher = asyncio.PidfdChildWatcher()
-                else:
-                    self._watcher = asyncio.ThreadedChildWatcher()
-                if threading.current_thread() is threading.main_thread():
-                    self._watcher.attach_loop(
-                        self._local._loop  # type: ignore[attr-defined] # pylint: disable=protected-access
-                    )
 
     @property
     def loop_name(self) -> str:
         """Return name of the loop."""
-        return self._loop_factory.__name__  # type: ignore[no-any-return,attr-defined]
+        return super()._loop_factory.__module__
 
     def new_event_loop(self) -> asyncio.AbstractEventLoop:
         """Get the event loop."""
-        loop: asyncio.AbstractEventLoop = super().new_event_loop()
+        loop: asyncio.AbstractEventLoop = HassEventLoop()
         loop.set_exception_handler(_async_loop_exception_handler)
         if self.debug:
             loop.set_debug(True)
@@ -114,6 +101,88 @@ class HassEventLoopPolicy(asyncio.DefaultEventLoopPolicy):
             loop.set_default_executor, "sets default executor on the event loop"
         )
         return loop
+
+
+class HassEventLoop(uvloop.Loop):
+    """Loop which exposes timer handles."""
+
+    def __init__(self) -> None:
+        """Initialize the event loop."""
+        super().__init__()
+        self._scheduled: set[asyncio.TimerHandle] = set()
+
+    def _prune_cancellable_timers(self) -> None:
+        temp_timers = self._scheduled.copy()
+        for handle in temp_timers:
+            if handle.cancelled() or handle.when() < self.time():
+                self._scheduled.remove(handle)
+
+    def _handle_cancellable_timer(
+        self, timer: asyncio.TimerHandle, *args: ParamSpecArgs
+    ) -> None:
+        if (
+            timer not in self._scheduled
+            and args is not None
+            and len(args) > 0
+            and isinstance(args[0], HassJob)
+            and args[0].cancel_on_shutdown
+        ):
+            self._scheduled.add(timer)
+
+    def call_at(
+        self,
+        when: float,
+        cb: Callable[[Any, Any], Any],
+        *args: Any,
+        context: Any | None = None,
+    ) -> asyncio.TimerHandle:
+        # pylint: disable=arguments-differ
+        """Call callback at a future time.
+
+        Overridden from base class to track cancellable timers
+        """
+        self._prune_cancellable_timers()
+        timer = super().call_at(when, cb, *args, context=context)
+        self._handle_cancellable_timer(timer, *args)
+        return timer
+
+    def call_later(
+        self,
+        delay: float,
+        cb: Callable[[Any, Any], Any],
+        *args: ParamSpecArgs,
+        context: Any | None = None,
+    ) -> asyncio.TimerHandle:
+        # pylint: disable=arguments-differ
+        """Call coroutine later.
+
+        Overridden from base class to track cancellable timers
+        """
+        self._prune_cancellable_timers()
+        timer = super().call_later(delay, cb, *args, context=context)
+        self._handle_cancellable_timer(timer, *args)
+        return timer
+
+    def create_future(self) -> asyncio.Future[Any]:
+        """Create future.
+
+        Overridden from base class to call _prune_cancellable_timers()
+        """
+        self._prune_cancellable_timers()
+        return super().create_future()
+
+    def create_task(
+        self,
+        coro: Awaitable[_T] | Generator[Any, None, _T],
+        *args: ParamSpecArgs,
+        name: str | None = None,
+    ) -> asyncio.Task[Any]:
+        """Create task.
+
+        Overridden from base class to call _prune_cancellable_timers()
+        """
+        self._prune_cancellable_timers()
+        return super().create_task(coro, *args, name=name)
 
 
 @callback
@@ -171,11 +240,10 @@ def _enable_posix_spawn() -> None:
 def run(runtime_config: RuntimeConfig) -> int:
     """Run Home Assistant."""
     _enable_posix_spawn()
-    asyncio.set_event_loop_policy(HassEventLoopPolicy(runtime_config.debug))
     # Backport of cpython 3.9 asyncio.run with a _cancel_all_tasks that times out
+    asyncio.set_event_loop_policy(HassEventLoopPolicy(runtime_config.debug))
     loop = asyncio.new_event_loop()
     try:
-        asyncio.set_event_loop(loop)
         return loop.run_until_complete(setup_and_run_hass(runtime_config))
     finally:
         try:
