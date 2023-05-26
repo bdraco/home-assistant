@@ -11,7 +11,7 @@ import functools as ft
 import logging
 import math
 import sys
-from timeit import default_timer as timer
+from time import time
 from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict, final
 
 import voluptuous as vol
@@ -640,7 +640,7 @@ class Entity(ABC):
                 )
             return
 
-        start = timer()
+        start = time()
 
         attr = self.capability_attributes
         attr = dict(attr) if attr else {}
@@ -679,7 +679,7 @@ class Entity(ABC):
         if (supported_features := self.supported_features) is not None:
             attr[ATTR_SUPPORTED_FEATURES] = supported_features
 
-        end = timer()
+        end = time()
 
         if end - start > 0.4 and not self._slow_reported:
             self._slow_reported = True
@@ -698,7 +698,8 @@ class Entity(ABC):
 
         if (
             self._context_set is not None
-            and dt_util.utcnow() - self._context_set > self.context_recent_time
+            and dt_util.utc_from_timestamp(end) - self._context_set
+            > self.context_recent_time
         ):
             self._context = None
             self._context_set = None
