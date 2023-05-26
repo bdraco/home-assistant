@@ -729,7 +729,7 @@ async def test_warn_slow_write_state(
     mock_entity.entity_id = "comp_test.test_entity"
     mock_entity.platform = MagicMock(platform_name="hue")
 
-    with patch("homeassistant.helpers.entity.timer", side_effect=[0, 10]):
+    with patch("homeassistant.helpers.entity.time", side_effect=[0, 10]):
         mock_entity.async_write_ha_state()
 
     assert (
@@ -756,7 +756,7 @@ async def test_warn_slow_write_state_custom_component(
     mock_entity.entity_id = "comp_test.test_entity"
     mock_entity.platform = MagicMock(platform_name="hue")
 
-    with patch("homeassistant.helpers.entity.timer", side_effect=[0, 10]):
+    with patch("homeassistant.helpers.entity.time", side_effect=[0, 10]):
         mock_entity.async_write_ha_state()
 
     assert (
