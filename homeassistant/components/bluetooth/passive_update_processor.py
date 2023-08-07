@@ -11,6 +11,7 @@ from homeassistant import config_entries
 from homeassistant.const import (
     ATTR_IDENTIFIERS,
     ATTR_NAME,
+    CONF_ENTITY_CATEGORY,
     EVENT_HOMEASSISTANT_STOP,
     EntityCategory,
 )
@@ -41,6 +42,12 @@ if TYPE_CHECKING:
         BluetoothServiceInfoBleak,
     )
 
+STORAGE_KEY = "bluetooth.passive_update_processor"
+STORAGE_VERSION = 1
+STORAGE_SAVE_INTERVAL = timedelta(minutes=15)
+PASSIVE_UPDATE_PROCESSOR = "passive_update_processor"
+_T = TypeVar("_T")
+
 
 @dataclasses.dataclass(slots=True, frozen=True)
 class PassiveBluetoothEntityKey:
@@ -65,23 +72,12 @@ class PassiveBluetoothEntityKey:
         return cls(key, device_id or None)
 
 
-_T = TypeVar("_T")
-
-STORAGE_KEY = "bluetooth.passive_update_processor"
-STORAGE_SAVE_INTERVAL = timedelta(minutes=15)
-PASSIVE_UPDATE_PROCESSOR = "passive_update_processor"
-
-
 @dataclasses.dataclass(slots=True, frozen=False)
 class PassiveBluetoothProcessorData:
     """Data for the passive bluetooth processor."""
 
-    coordinators: set[PassiveBluetoothProcessorCoordinator] = dataclasses.field(
-        default_factory=set
-    )
-    all_restore_data: dict[
-        str, dict[str, RestoredPassiveBluetoothDataUpdate]
-    ] = dataclasses.field(default_factory=dict)
+    coordinators: set[PassiveBluetoothProcessorCoordinator]
+    all_restore_data: dict[str, dict[str, RestoredPassiveBluetoothDataUpdate]]
 
 
 class RestoredPassiveBluetoothDataUpdate(TypedDict):
@@ -110,7 +106,7 @@ def deserialize_entity_description(
         # out, but it doesn't. If we end up using this in more
         # places we can add a `as_dict` and a `from_dict`
         # method to these classes
-        if field_name == "entity_category":
+        if field_name == CONF_ENTITY_CATEGORY:
             value = try_parse_enum(EntityCategory, data.get(field_name))
         else:
             value = data.get(field_name)
@@ -120,12 +116,12 @@ def deserialize_entity_description(
 
 def serialize_entity_description(description: EntityDescription) -> dict[str, Any]:
     """Serialize an entity description."""
-    result: dict[str, Any] = dataclasses.asdict(description)
-    for field in cached_fields(type(description)):  # type: ignore[arg-type]
-        field_name = field.name
-        if field.default == result.get(field_name):
-            del result[field_name]
-    return result
+    as_dict = dataclasses.asdict(description)
+    return {
+        field.name: as_dict[field.name]
+        for field in cached_fields(type(description))  # type: ignore[arg-type]
+        if field.default != as_dict.get(field.name)
+    }
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -209,28 +205,31 @@ def async_register_coordinator_for_restore(
 ) -> CALLBACK_TYPE:
     """Register a coordinator to have its processors data restored."""
     data: PassiveBluetoothProcessorData = hass.data[PASSIVE_UPDATE_PROCESSOR]
-    data.coordinators.add(coordinator)
+    coordinators = data.coordinators
+    coordinators.add(coordinator)
     if restore_key := coordinator.restore_key:
         coordinator.restore_data = data.all_restore_data.setdefault(restore_key, {})
 
     @callback
     def _unregister_coordinator_for_restore() -> None:
         """Unregister a coordinator."""
-        data.coordinators.remove(coordinator)
+        coordinators.remove(coordinator)
 
     return _unregister_coordinator_for_restore
 
 
 async def async_setup(hass: HomeAssistant) -> None:
     """Set up the passive update processor coordinators."""
-    data = PassiveBluetoothProcessorData()
-    hass.data[PASSIVE_UPDATE_PROCESSOR] = data
     storage: Store[dict[str, dict[str, RestoredPassiveBluetoothDataUpdate]]] = Store(
-        hass, 1, STORAGE_KEY
+        hass, STORAGE_VERSION, STORAGE_KEY
     )
-    if restore_data := await storage.async_load():
-        data.all_restore_data = restore_data
-    coordinators = data.coordinators
+    coordinators: set[PassiveBluetoothProcessorCoordinator] = set()
+    all_restore_data: dict[str, dict[str, RestoredPassiveBluetoothDataUpdate]] = (
+        await storage.async_load() or {}
+    )
+    hass.data[PASSIVE_UPDATE_PROCESSOR] = PassiveBluetoothProcessorData(
+        coordinators, all_restore_data
+    )
 
     async def _async_save_processor_data(_: Any) -> None:
         """Save the processor data."""
@@ -396,7 +395,7 @@ class PassiveBluetoothDataProcessor(Generic[_T]):
     """
 
     coordinator: PassiveBluetoothProcessorCoordinator
-    data: PassiveBluetoothDataUpdate[_T] = PassiveBluetoothDataUpdate()
+    data: PassiveBluetoothDataUpdate[_T]
     entity_names: dict[PassiveBluetoothEntityKey, str | None]
     entity_data: dict[PassiveBluetoothEntityKey, _T]
     entity_descriptions: dict[PassiveBluetoothEntityKey, EntityDescription]
@@ -431,8 +430,8 @@ class PassiveBluetoothDataProcessor(Generic[_T]):
     ) -> None:
         """Register a coordinator."""
         self.coordinator = coordinator
-        data: PassiveBluetoothDataUpdate[_T] = PassiveBluetoothDataUpdate()
-        self.data = data
+        self.data = PassiveBluetoothDataUpdate()
+        data = self.data
         # These attributes to access the data in
         # self.data are for backwards compatibility.
         self.entity_names = data.entity_names
