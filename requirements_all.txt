@@ -2,7 +2,7 @@
 -r requirements.txt
 
 # homeassistant.components.aemet
-AEMET-OpenData==0.4.1
+AEMET-OpenData==0.4.2
 
 # homeassistant.components.aladdin_connect
 AIOAladdinConnect==0.1.57
@@ -1632,7 +1632,7 @@ pycsspeechtts==1.0.8
 # pycups==1.9.73
 
 # homeassistant.components.daikin
-pydaikin==2.10.5
+pydaikin==2.11.1
 
 # homeassistant.components.danfoss_air
 pydanfossair==0.1.0
@@ -1653,7 +1653,7 @@ pydiscovergy==2.0.3
 pydoods==1.0.2
 
 # homeassistant.components.hydrawise
-pydrawise==2023.7.1
+pydrawise==2023.8.0
 
 # homeassistant.components.android_ip_webcam
 pydroid-ipcam==2.0.0
