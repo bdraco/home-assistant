@@ -1,8 +1,7 @@
-"""Data constants for the ScreenLogic integration."""
+"""Support for configurable supported data values for the ScreenLogic integration."""
 from collections.abc import Callable, Generator
 from dataclasses import dataclass
 from enum import StrEnum
-import logging
 from typing import Any
 
 from screenlogicpy import ScreenLogicGateway
@@ -10,12 +9,9 @@ from screenlogicpy.const.data import ATTR, DEVICE, VALUE
 from screenlogicpy.const.msg import CODE
 from screenlogicpy.device_const.system import EQUIPMENT_FLAG
 
-from homeassistant.helpers import entity_registry as er
+from homeassistant.const import EntityCategory
 
-from .const import DOMAIN as SL_DOMAIN, SL_UNIT_TO_HA_UNIT, ScreenLogicDataPath
-from .coordinator import ScreenlogicDataUpdateCoordinator
-
-_LOGGER = logging.getLogger(__name__)
+from .const import SL_UNIT_TO_HA_UNIT, ScreenLogicDataPath
 
 
 class PathPart(StrEnum):
@@ -75,6 +71,7 @@ class SupportedValueParameters:
     enabled: ScreenLogicRule = ScreenLogicRule()
     included: ScreenLogicRule = ScreenLogicRule()
     subscription_code: int | None = None
+    entity_category: EntityCategory | None = EntityCategory.DIAGNOSTIC
 
 
 SupportedValueDescriptions = dict[str, SupportedValueParameters]
@@ -113,8 +110,12 @@ def get_ha_unit(entity_data: dict) -> StrEnum | str | None:
 # partial run-time
 def realize_path_template(
     template_path: ScreenLogicDataPathTemplate, data_path: ScreenLogicDataPath
-) -> tuple[str | int, ...]:
-    """Make data path from template and current."""
+) -> ScreenLogicDataPath:
+    """Create a new data path using a template and an existing data path.
+
+    Construct new ScreenLogicDataPath from data_path using
+    template_path to specify values from data_path.
+    """
     if not data_path or len(data_path) < 3:
         raise KeyError(
             f"Missing or invalid required parameter: 'data_path' for template path '{template_path}'"
@@ -133,24 +134,6 @@ def realize_path_template(
                 realized_path.append(part)
 
     return tuple(realized_path)
-
-
-def cleanup_excluded_entity(
-    coordinator: ScreenlogicDataUpdateCoordinator,
-    platform_domain: str,
-    entity_key: str,
-) -> None:
-    """Remove excluded entity if it exists."""
-    assert coordinator.config_entry
-    entity_registry = er.async_get(coordinator.hass)
-    unique_id = f"{coordinator.config_entry.unique_id}_{entity_key}"
-    if entity_id := entity_registry.async_get_entity_id(
-        platform_domain, SL_DOMAIN, unique_id
-    ):
-        _LOGGER.debug(
-            "Removing existing entity '%s' per data inclusion rule", entity_id
-        )
-        entity_registry.async_remove(entity_id)
 
 
 def preprocess_supported_values(
@@ -178,6 +161,28 @@ def iterate_expand_group_wildcard(
                 yield ((device, index, value_key), value_params)
         else:
             yield (data_path, value_params)
+
+
+def build_base_entity_description(
+    gateway: ScreenLogicGateway,
+    entity_key: str,
+    data_path: ScreenLogicDataPath,
+    value_data: dict,
+    value_params: SupportedValueParameters,
+) -> dict:
+    """Build base entity description.
+
+    Returns a dict of entity description key value pairs common to all entities.
+    """
+    return {
+        "data_path": data_path,
+        "key": entity_key,
+        "entity_category": value_params.entity_category,
+        "entity_registry_enabled_default": value_params.enabled.test(
+            gateway, data_path
+        ),
+        "name": value_data.get(ATTR.NAME),
+    }
 
 
 ENTITY_MIGRATIONS = {
