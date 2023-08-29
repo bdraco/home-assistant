@@ -2,7 +2,7 @@
 from unittest.mock import patch
 
 from screenlogicpy import ScreenLogicError
-from screenlogicpy.const.common import (
+from screenlogicpy.const import (
     SL_GATEWAY_IP,
     SL_GATEWAY_NAME,
     SL_GATEWAY_PORT,

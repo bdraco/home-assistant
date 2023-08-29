@@ -2,10 +2,9 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from screenlogicpy import ScreenLogicError, discovery
-from screenlogicpy.const.common import SL_GATEWAY_IP, SL_GATEWAY_NAME, SL_GATEWAY_PORT
+from screenlogicpy.const import SL_GATEWAY_IP, SL_GATEWAY_NAME, SL_GATEWAY_PORT
 from screenlogicpy.requests import login
 import voluptuous as vol
 
@@ -65,10 +64,10 @@ class ScreenlogicConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
-    def __init__(self) -> None:
+    def __init__(self):
         """Initialize ScreenLogic ConfigFlow."""
-        self.discovered_gateways: dict[str, dict[str, Any]] = {}
-        self.discovered_ip: str | None = None
+        self.discovered_gateways = {}
+        self.discovered_ip = None
 
     @staticmethod
     @callback
@@ -78,7 +77,7 @@ class ScreenlogicConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Get the options flow for ScreenLogic."""
         return ScreenLogicOptionsFlowHandler(config_entry)
 
-    async def async_step_user(self, user_input=None) -> FlowResult:
+    async def async_step_user(self, user_input=None):
         """Handle the start of the config flow."""
         self.discovered_gateways = await async_discover_gateways_by_unique_id(self.hass)
         return await self.async_step_gateway_select()
@@ -94,7 +93,7 @@ class ScreenlogicConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self.context["title_placeholders"] = {"name": discovery_info.hostname}
         return await self.async_step_gateway_entry()
 
-    async def async_step_gateway_select(self, user_input=None) -> FlowResult:
+    async def async_step_gateway_select(self, user_input=None):
         """Handle the selection of a discovered ScreenLogic gateway."""
         existing = self._async_current_ids()
         unconfigured_gateways = {
@@ -106,7 +105,7 @@ class ScreenlogicConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if not unconfigured_gateways:
             return await self.async_step_gateway_entry()
 
-        errors: dict[str, str] = {}
+        errors = {}
         if user_input is not None:
             if user_input[GATEWAY_SELECT_KEY] == GATEWAY_MANUAL_ENTRY:
                 return await self.async_step_gateway_entry()
@@ -141,9 +140,9 @@ class ScreenlogicConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             description_placeholders={},
         )
 
-    async def async_step_gateway_entry(self, user_input=None) -> FlowResult:
+    async def async_step_gateway_entry(self, user_input=None):
         """Handle the manual entry of a ScreenLogic gateway."""
-        errors: dict[str, str] = {}
+        errors = {}
         ip_address = self.discovered_ip
         port = 80
 
@@ -187,7 +186,7 @@ class ScreenLogicOptionsFlowHandler(config_entries.OptionsFlow):
         """Init the screen logic options flow."""
         self.config_entry = config_entry
 
-    async def async_step_init(self, user_input=None) -> FlowResult:
+    async def async_step_init(self, user_input=None):
         """Manage the options."""
         if user_input is not None:
             return self.async_create_entry(
