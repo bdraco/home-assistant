@@ -4,7 +4,7 @@
 -r requirements_test.txt
 
 # homeassistant.components.aemet
-AEMET-OpenData==0.4.0
+AEMET-OpenData==0.4.1
 
 # homeassistant.components.aladdin_connect
 AIOAladdinConnect==0.1.57
@@ -2056,7 +2056,7 @@ zigpy-znp==0.11.4
 zigpy==0.56.4
 
 # homeassistant.components.zwave_js
-zwave-js-server-python==0.50.1
+zwave-js-server-python==0.51.0
 
 # homeassistant.components.zwave_me
 zwave-me-ws==0.4.3
