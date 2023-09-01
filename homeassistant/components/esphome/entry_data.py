@@ -332,6 +332,9 @@ class RuntimeEntryData:
                 possible_unique_id_migrations[unique_id] = info
 
         if possible_unique_id_migrations:
+            _LOGGER.warning(
+                "Possible unique id migrations: %s", possible_unique_id_migrations
+            )
             self._migrate_unique_ids_if_needed(ent_reg, possible_unique_id_migrations)
 
         await self._ensure_platforms_loaded(hass, entry, needed_platforms)
