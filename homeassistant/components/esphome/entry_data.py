@@ -301,16 +301,20 @@ class RuntimeEntryData:
 
         # First, load all platforms
         needed_platforms = set()
+        new_unique_id_prefix: str | None = None
 
         if async_get_dashboard(hass):
             needed_platforms.add(Platform.UPDATE)
 
-        if self.device_info is not None and self.device_info.voice_assistant_version:
-            needed_platforms.add(Platform.BINARY_SENSOR)
-            needed_platforms.add(Platform.SELECT)
+        if self.device_info is not None:
+            new_unique_id_prefix = (
+                f"{dr.format_mac(self.device_info.mac_address).upper()}-"
+            )
 
-        assert self.device_info is not None
-        new_unique_id_prefix = f"{dr.format_mac(self.device_info.mac_address).upper()}-"
+            if self.device_info.voice_assistant_version:
+                needed_platforms.add(Platform.BINARY_SENSOR)
+                needed_platforms.add(Platform.SELECT)
+
         possible_unique_id_migrations: dict[str, EntityInfo] = {}
 
         for info in infos:
@@ -320,7 +324,8 @@ class RuntimeEntryData:
             # If the unique id is in the new format and does not already exist in the entity registry
             # then we need to migrate it from the old format if there is an entity with the old format
             if (
-                unique_id.startswith(new_unique_id_prefix)
+                new_unique_id_prefix
+                and unique_id.startswith(new_unique_id_prefix)
                 and unique_id.count("-") == 2
                 and not ent_reg.async_get_entity_id(platform, DOMAIN, info.unique_id)
             ):
