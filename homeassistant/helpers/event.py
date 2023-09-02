@@ -1440,12 +1440,6 @@ def _run_async_call_action(
 
 
 @callback
-def _cancel_timer_handle(timer_handle: asyncio.TimerHandle) -> None:
-    """Cancel an asyncio.TimerHandle."""
-    timer_handle.cancel()
-
-
-@callback
 @bind_hass
 def async_call_at(
     hass: HomeAssistant,
@@ -1459,10 +1453,7 @@ def async_call_at(
         if isinstance(action, HassJob)
         else HassJob(action, f"call_at {loop_time}")
     )
-    return ft.partial(
-        _cancel_timer_handle,
-        hass.loop.call_at(loop_time, _run_async_call_action, hass, job),
-    )
+    return hass.loop.call_at(loop_time, _run_async_call_action, hass, job).cancel
 
 
 @callback
@@ -1481,10 +1472,8 @@ def async_call_later(
         if isinstance(action, HassJob)
         else HassJob(action, f"call_later {delay}")
     )
-    return ft.partial(
-        _cancel_timer_handle,
-        hass.loop.call_at(hass.loop.time() + delay, _run_async_call_action, hass, job),
-    )
+    loop = hass.loop
+    return loop.call_at(loop.time() + delay, _run_async_call_action, hass, job).cancel
 
 
 call_later = threaded_listener_factory(async_call_later)
