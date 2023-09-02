@@ -1288,6 +1288,11 @@ def hass_recorder(
     hass = get_test_home_assistant()
     nightly = recorder.Recorder.async_nightly_tasks if enable_nightly_purge else None
     stats = recorder.Recorder.async_periodic_statistics if enable_statistics else None
+    compile_missing = (
+        recorder.Recorder._schedule_compile_missing_statistics
+        if enable_statistics
+        else None
+    )
     schema_validate = (
         migration._find_schema_errors
         if enable_schema_validation
@@ -1338,6 +1343,10 @@ def hass_recorder(
     ), patch(
         "homeassistant.components.recorder.Recorder._migrate_entity_ids",
         side_effect=migrate_entity_ids,
+        autospec=True,
+    ), patch(
+        "homeassistant.components.recorder.Recorder._schedule_compile_missing_statistics",
+        side_effect=compile_missing,
         autospec=True,
     ):
 
@@ -1411,6 +1420,11 @@ async def async_setup_recorder_instance(
         if enable_schema_validation
         else itertools.repeat(set())
     )
+    compile_missing = (
+        recorder.Recorder._schedule_compile_missing_statistics
+        if enable_statistics
+        else None
+    )
     migrate_states_context_ids = (
         recorder.Recorder._migrate_states_context_ids
         if enable_migrate_context_ids
@@ -1456,6 +1470,10 @@ async def async_setup_recorder_instance(
     ), patch(
         "homeassistant.components.recorder.Recorder._migrate_entity_ids",
         side_effect=migrate_entity_ids,
+        autospec=True,
+    ), patch(
+        "homeassistant.components.recorder.Recorder._schedule_compile_missing_statistics",
+        side_effect=compile_missing,
         autospec=True,
     ):
 
