@@ -66,6 +66,7 @@ def _generate_job(
     signal: str, target: Callable[..., Any]
 ) -> HassJob[..., None | Coroutine[Any, Any, None]]:
     """Generate a HassJob for a signal and target."""
+    _LOGGER.error("Generating job %s for signal %s", target, signal)
     return HassJob(
         catch_log_exception(
             target,
