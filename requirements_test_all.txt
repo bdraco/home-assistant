@@ -779,7 +779,7 @@ hole==0.8.0
 holidays==0.28
 
 # homeassistant.components.frontend
-home-assistant-frontend==20230901.0
+home-assistant-frontend==20230904.0
 
 # homeassistant.components.conversation
 home-assistant-intents==2023.8.2
@@ -1482,7 +1482,7 @@ pyrympro==0.0.7
 pysabnzbd==1.1.1
 
 # homeassistant.components.schlage
-pyschlage==2023.8.1
+pyschlage==2023.9.0
 
 # homeassistant.components.sensibo
 pysensibo==1.0.33
