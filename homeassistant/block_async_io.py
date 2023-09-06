@@ -1,6 +1,5 @@
 """Block blocking calls being done in asyncio."""
 from http.client import HTTPConnection
-from ssl import SSLContext
 import time
 
 from .util.async_ import protect_loop
@@ -20,6 +19,6 @@ def enable() -> None:
     # Prevent files being opened inside the event loop
     # builtins.open = protect_loop(builtins.open)
 
-    SSLContext.load_default_certs = protect_loop(  # type: ignore[method-assign]
-        SSLContext.load_default_certs, strict=False
-    )
+    # SSLContext.load_default_certs = protect_loop(  # type: ignore[method-assign]
+    #    SSLContext.load_default_certs, strict=False, debug=True
+    # )
