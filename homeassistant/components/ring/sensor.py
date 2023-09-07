@@ -68,6 +68,7 @@ class RingSensor(RingEntityMixin, SensorEntity):
 class HealthDataRingSensor(RingSensor):
     """Ring sensor that relies on health data."""
 
+    # These sensors are data hungry and not useful. Disable by default.
     _attr_entity_registry_enabled_default = False
 
     async def async_added_to_hass(self) -> None:
