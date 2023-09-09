@@ -1442,7 +1442,7 @@ plexauth==0.0.6
 plexwebsocket==0.0.13
 
 # homeassistant.components.plugwise
-plugwise==0.31.9
+plugwise==0.32.2
 
 # homeassistant.components.plum_lightpad
 plumlightpad==0.0.11
@@ -1855,7 +1855,7 @@ pymitv==1.4.3
 pymochad==0.2.0
 
 # homeassistant.components.modbus
-pymodbus==3.5.1
+pymodbus==3.5.2
 
 # homeassistant.components.monoprice
 pymonoprice==0.4
@@ -2235,7 +2235,7 @@ pyvlx==0.2.20
 pyvolumio==0.1.5
 
 # homeassistant.components.waze_travel_time
-pywaze==0.3.0
+pywaze==0.4.0
 
 # homeassistant.components.html5
 pywebpush==1.9.2
