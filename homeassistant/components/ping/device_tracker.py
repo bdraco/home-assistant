@@ -25,8 +25,7 @@ from homeassistant.util import dt as dt_util
 from homeassistant.util.async_ import gather_with_concurrency
 from homeassistant.util.process import kill_subprocess
 
-from . import PingDomainData
-from .const import DOMAIN, ICMP_TIMEOUT, PING_ATTEMPTS_COUNT, PING_TIMEOUT
+from .const import DOMAIN, ICMP_TIMEOUT, PING_ATTEMPTS_COUNT, PING_PRIVS, PING_TIMEOUT
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -98,9 +97,7 @@ async def async_setup_scanner(
 ) -> bool:
     """Set up the Host objects and return the update function."""
 
-    data: PingDomainData = hass.data[DOMAIN]
-
-    privileged = data.privileged
+    privileged = hass.data[DOMAIN][PING_PRIVS]
     ip_to_dev_id = {ip: dev_id for (dev_id, ip) in config[CONF_HOSTS].items()}
     interval = config.get(
         CONF_SCAN_INTERVAL,

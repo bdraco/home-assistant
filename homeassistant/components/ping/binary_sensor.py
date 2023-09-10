@@ -23,8 +23,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-from . import PingDomainData
-from .const import DOMAIN, ICMP_TIMEOUT, PING_TIMEOUT
+from .const import DOMAIN, ICMP_TIMEOUT, PING_PRIVS, PING_TIMEOUT
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -71,13 +70,10 @@ async def async_setup_platform(
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the Ping Binary sensor."""
-
-    data: PingDomainData = hass.data[DOMAIN]
-
     host: str = config[CONF_HOST]
     count: int = config[CONF_PING_COUNT]
     name: str = config.get(CONF_NAME, f"{DEFAULT_NAME} {host}")
-    privileged: bool | None = data.privileged
+    privileged: bool | None = hass.data[DOMAIN][PING_PRIVS]
     ping_cls: type[PingDataSubProcess | PingDataICMPLib]
     if privileged is None:
         ping_cls = PingDataSubProcess
