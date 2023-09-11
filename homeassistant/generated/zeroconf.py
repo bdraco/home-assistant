@@ -44,7 +44,7 @@ HOMEKIT = {
         "always_discover": True,
         "domain": "roku",
     },
-    "EB-*": {
+    "EB": {
         "always_discover": True,
         "domain": "ecobee",
     },
@@ -369,6 +369,11 @@ ZEROCONF = {
         {
             "domain": "modern_forms",
             "name": "wac*",
+        },
+    ],
+    "_ecobee._tcp.local.": [
+        {
+            "domain": "ecobee",
         },
     ],
     "_elg._tcp.local.": [
