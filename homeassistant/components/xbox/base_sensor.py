@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from yarl import URL
 
+from homeassistant.backports.functools import cached_property
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -62,7 +63,7 @@ class XboxBaseSensorEntity(CoordinatorEntity[XboxUpdateCoordinator]):
         query.pop("mode", None)
         return str(url.with_query(query))
 
-    @property
+    @cached_property
     def entity_registry_enabled_default(self) -> bool:
         """Return if the entity should be enabled when first added to the entity registry."""
         return self.attribute == "online"

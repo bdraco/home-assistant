@@ -107,7 +107,6 @@ class SyncThruMainSensor(SyncThruSensor):
 
     It also shows the detailed state and presents
     the displayed current status message.
-
     """
 
     _attr_entity_registry_enabled_default = False

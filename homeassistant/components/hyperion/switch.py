@@ -133,6 +133,8 @@ class HyperionComponentSwitch(SwitchEntity):
     _attr_entity_category = EntityCategory.CONFIG
     _attr_should_poll = False
     _attr_has_entity_name = True
+    # These component controls are for advanced users and are disabled by default.
+    _attr_entity_registry_enabled_default = False
 
     def __init__(
         self,
@@ -154,12 +156,6 @@ class HyperionComponentSwitch(SwitchEntity):
         self._client_callbacks = {
             f"{KEY_COMPONENTS}-{KEY_UPDATE}": self._update_components
         }
-
-    @property
-    def entity_registry_enabled_default(self) -> bool:
-        """Whether or not the entity is enabled by default."""
-        # These component controls are for advanced users and are disabled by default.
-        return False
 
     @property
     def unique_id(self) -> str:

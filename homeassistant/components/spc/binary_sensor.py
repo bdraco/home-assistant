@@ -5,7 +5,6 @@ from pyspcwebgw import SpcWebGateway
 from pyspcwebgw.const import ZoneInput, ZoneType
 from pyspcwebgw.zone import Zone
 
-from homeassistant.backports.functools import cached_property
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
@@ -54,6 +53,8 @@ class SpcBinarySensor(BinarySensorEntity):
     def __init__(self, zone: Zone) -> None:
         """Initialize the sensor device."""
         self._zone = zone
+        self._attr_name = zone.name
+        self._attr_device_class = _get_device_class(zone.type)
 
     async def async_added_to_hass(self) -> None:
         """Call for adding new entities."""
@@ -71,16 +72,6 @@ class SpcBinarySensor(BinarySensorEntity):
         self.async_schedule_update_ha_state(True)
 
     @property
-    def name(self) -> str:
-        """Return the name of the device."""
-        return self._zone.name
-
-    @property
     def is_on(self) -> bool:
         """Whether the device is switched on."""
         return self._zone.input == ZoneInput.OPEN
-
-    @cached_property
-    def device_class(self) -> BinarySensorDeviceClass | None:
-        """Return the device class."""
-        return _get_device_class(self._zone.type)

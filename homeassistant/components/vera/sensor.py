@@ -6,6 +6,7 @@ from typing import cast
 
 import pyvera as veraApi
 
+from homeassistant.backports.functools import cached_property
 from homeassistant.components.sensor import (
     ENTITY_ID_FORMAT,
     SensorDeviceClass,
@@ -56,7 +57,7 @@ class VeraSensor(VeraDevice[veraApi.VeraSensor], SensorEntity):
         VeraDevice.__init__(self, vera_device, controller_data)
         self.entity_id = ENTITY_ID_FORMAT.format(self.vera_id)
 
-    @property
+    @cached_property
     def device_class(self) -> SensorDeviceClass | None:
         """Return the class of this entity."""
         if self.vera_device.category == veraApi.CATEGORY_TEMPERATURE_SENSOR:

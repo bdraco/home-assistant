@@ -8,6 +8,7 @@ from typing import Final
 
 from pyfritzhome.fritzhomedevice import FritzhomeDevice
 
+from homeassistant.backports.functools import cached_property
 from homeassistant.components.climate import PRESET_COMFORT, PRESET_ECO
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -234,7 +235,7 @@ class FritzBoxSensor(FritzBoxDeviceEntity, SensorEntity):
         """Return the state of the sensor."""
         return self.entity_description.native_value(self.data)
 
-    @property
+    @cached_property
     def entity_category(self) -> EntityCategory | None:
         """Return the category of the entity, if any."""
         if self.entity_description.entity_category_fn is not None:
