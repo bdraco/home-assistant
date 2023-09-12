@@ -2787,10 +2787,10 @@ zhong-hong-hvac==1.0.9
 ziggo-mediabox-xl==1.1.0
 
 # homeassistant.components.zha
-zigpy-deconz==0.21.0
+zigpy-deconz==0.21.1
 
 # homeassistant.components.zha
-zigpy-xbee==0.18.1
+zigpy-xbee==0.18.2
 
 # homeassistant.components.zha
 zigpy-zigate==0.11.0
@@ -2805,7 +2805,7 @@ zigpy==0.57.1
 zm-py==0.5.2
 
 # homeassistant.components.zwave_js
-zwave-js-server-python==0.51.1
+zwave-js-server-python==0.51.2
 
 # homeassistant.components.zwave_me
 zwave-me-ws==0.4.3
