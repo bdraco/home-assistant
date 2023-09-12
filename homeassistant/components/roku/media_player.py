@@ -10,7 +10,6 @@ from rokuecp.helpers import guess_stream_format
 import voluptuous as vol
 import yarl
 
-from homeassistant.backports.functools import cached_property
 from homeassistant.components import media_source
 from homeassistant.components.media_player import (
     ATTR_MEDIA_EXTRA,
@@ -123,20 +122,19 @@ class RokuMediaPlayer(RokuEntity, MediaPlayerEntity):
         | MediaPlayerEntityFeature.BROWSE_MEDIA
     )
 
+    def __init__(self, coordinator: RokuDataUpdateCoordinator) -> None:
+        """Initialize the Roku device."""
+        super().__init__(coordinator=coordinator)
+        if self.coordinator.data.info.device_type == "tv":
+            self._attr_device_class = MediaPlayerDeviceClass.TV
+        self._attr_device_class = MediaPlayerDeviceClass.RECEIVER
+
     def _media_playback_trackable(self) -> bool:
         """Detect if we have enough media data to track playback."""
         if self.coordinator.data.media is None or self.coordinator.data.media.live:
             return False
 
         return self.coordinator.data.media.duration > 0
-
-    @cached_property
-    def device_class(self) -> MediaPlayerDeviceClass:
-        """Return the class of this device."""
-        if self.coordinator.data.info.device_type == "tv":
-            return MediaPlayerDeviceClass.TV
-
-        return MediaPlayerDeviceClass.RECEIVER
 
     @property
     def state(self) -> MediaPlayerState | None:
