@@ -1440,10 +1440,11 @@ class States(UserDict[str, State]):
 
     def __setitem__(self, key: str, entry: State) -> None:
         """Add an item."""
-        if key in self:
-            old_entry = self[key]
+        data = self.data
+        if key in data:
+            old_entry = data[key]
             del self._domain_index[old_entry.domain][old_entry.entity_id]
-        super().__setitem__(key, entry)
+        data[key] = entry
         if not (domain_index := self._domain_index.get(entry.domain)):
             domain_index = self._domain_index[entry.domain] = {}
         domain_index[entry.entity_id] = entry
