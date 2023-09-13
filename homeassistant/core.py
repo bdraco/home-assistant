@@ -6,16 +6,7 @@ of entities and react to changes.
 from __future__ import annotations
 
 import asyncio
-from collections import UserDict
-from collections.abc import (
-    Callable,
-    Collection,
-    Coroutine,
-    Iterable,
-    KeysView,
-    Mapping,
-    ValuesView,
-)
+from collections.abc import Callable, Collection, Coroutine, Iterable, Mapping
 import concurrent.futures
 from contextlib import suppress
 import datetime
@@ -1422,63 +1413,15 @@ class State:
         )
 
 
-class States(UserDict[str, State]):
-    """Container for states, maps entity_id -> State.
-
-    Maintains an additional index:
-    - domain -> dict[str, State]
-    """
-
-    def __init__(self) -> None:
-        """Initialize the container."""
-        super().__init__()
-        self._domain_index: dict[str, dict[str, State]] = {}
-
-    def values(self) -> ValuesView[State]:
-        """Return the underlying values to avoid __iter__ overhead."""
-        return self.data.values()
-
-    def __setitem__(self, key: str, entry: State) -> None:
-        """Add an item."""
-        data = self.data
-        if key in data:
-            old_entry = data[key]
-            del self._domain_index[old_entry.domain][old_entry.entity_id]
-        data[key] = entry
-        if not (domain_index := self._domain_index.get(entry.domain)):
-            domain_index = self._domain_index[entry.domain] = {}
-        domain_index[entry.entity_id] = entry
-
-    def __delitem__(self, key: str) -> None:
-        """Remove an item."""
-        entry = self[key]
-        del self._domain_index[entry.domain][entry.entity_id]
-        super().__delitem__(key)
-
-    def domain_entity_ids(self, key: str) -> KeysView[str] | tuple[()]:
-        """Get all entity_ids for a domain."""
-        if key not in self._domain_index:
-            return ()
-        return self._domain_index[key].keys()
-
-    def domain_states(self, key: str) -> ValuesView[State] | tuple[()]:
-        """Get all states for a domain."""
-        if key not in self._domain_index:
-            return ()
-        return self._domain_index[key].values()
-
-
 class StateMachine:
     """Helper class that tracks the state of different entities."""
 
-    __slots__ = ("_states", "_states_data", "_reservations", "_bus", "_loop")
+    __slots__ = ("_states", "_domain_index", "_reservations", "_bus", "_loop")
 
     def __init__(self, bus: EventBus, loop: asyncio.events.AbstractEventLoop) -> None:
         """Initialize state machine."""
-        self._states = States()
-        # _states_data is used to access the States backing dict directly to speed
-        # up read operations
-        self._states_data = self._states.data
+        self._states: dict[str, State] = {}
+        self._domain_index: dict[str, dict[str, State]] = {}
         self._reservations: set[str] = set()
         self._bus = bus
         self._loop = loop
@@ -1499,15 +1442,16 @@ class StateMachine:
         This method must be run in the event loop.
         """
         if domain_filter is None:
-            return list(self._states_data)
+            return list(self._states)
 
         if isinstance(domain_filter, str):
-            return list(self._states.domain_entity_ids(domain_filter.lower()))
+            return list(self._domain_index.get(domain_filter.lower(), ()))
 
-        entity_ids: list[str] = []
+        states: list[str] = []
         for domain in domain_filter:
-            entity_ids.extend(self._states.domain_entity_ids(domain))
-        return entity_ids
+            if domain_index := self._domain_index.get(domain):
+                states.extend(domain_index)
+        return states
 
     @callback
     def async_entity_ids_count(
@@ -1518,14 +1462,12 @@ class StateMachine:
         This method must be run in the event loop.
         """
         if domain_filter is None:
-            return len(self._states_data)
+            return len(self._states)
 
         if isinstance(domain_filter, str):
-            return len(self._states.domain_entity_ids(domain_filter.lower()))
+            return len(self._domain_index.get(domain_filter.lower(), ()))
 
-        return sum(
-            len(self._states.domain_entity_ids(domain)) for domain in domain_filter
-        )
+        return sum(len(self._domain_index.get(domain, ())) for domain in domain_filter)
 
     def all(self, domain_filter: str | Iterable[str] | None = None) -> list[State]:
         """Create a list of all states."""
@@ -1542,14 +1484,15 @@ class StateMachine:
         This method must be run in the event loop.
         """
         if domain_filter is None:
-            return list(self._states_data.values())
+            return list(self._states.values())
 
         if isinstance(domain_filter, str):
-            return list(self._states.domain_states(domain_filter.lower()))
+            return list(self._domain_index.get(domain_filter.lower(), {}).values())
 
         states: list[State] = []
         for domain in domain_filter:
-            states.extend(self._states.domain_states(domain))
+            if domain_index := self._domain_index.get(domain):
+                states.extend(domain_index.values())
         return states
 
     def get(self, entity_id: str) -> State | None:
@@ -1557,7 +1500,7 @@ class StateMachine:
 
         Async friendly.
         """
-        return self._states_data.get(entity_id.lower())
+        return self._states.get(entity_id.lower())
 
     def is_state(self, entity_id: str, state: str) -> bool:
         """Test if entity exists and is in specified state.
@@ -1591,6 +1534,7 @@ class StateMachine:
         if old_state is None:
             return False
 
+        self._domain_index[old_state.domain].pop(entity_id)
         old_state.expire()
         self._bus.async_fire(
             EVENT_STATE_CHANGED,
@@ -1635,7 +1579,7 @@ class StateMachine:
         entity_id are added.
         """
         entity_id = entity_id.lower()
-        if entity_id in self._states_data or entity_id in self._reservations:
+        if entity_id in self._states or entity_id in self._reservations:
             raise HomeAssistantError(
                 "async_reserve must not be called once the state is in the state"
                 " machine."
@@ -1647,9 +1591,7 @@ class StateMachine:
     def async_available(self, entity_id: str) -> bool:
         """Check to see if an entity_id is available to be used."""
         entity_id = entity_id.lower()
-        return (
-            entity_id not in self._states_data and entity_id not in self._reservations
-        )
+        return entity_id not in self._states and entity_id not in self._reservations
 
     @callback
     def async_set(
@@ -1672,7 +1614,7 @@ class StateMachine:
         entity_id = entity_id.lower()
         new_state = str(new_state)
         attributes = attributes or {}
-        if (old_state := self._states_data.get(entity_id)) is None:
+        if (old_state := self._states.get(entity_id)) is None:
             same_state = False
             same_attr = False
             last_changed = None
@@ -1714,6 +1656,10 @@ class StateMachine:
         if old_state is not None:
             old_state.expire()
         self._states[entity_id] = state
+        if not (domain_index := self._domain_index.get(state.domain)):
+            domain_index = {}
+            self._domain_index[state.domain] = domain_index
+        domain_index[entity_id] = state
         self._bus.async_fire(
             EVENT_STATE_CHANGED,
             {"entity_id": entity_id, "old_state": old_state, "new_state": state},
