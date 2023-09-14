@@ -8,7 +8,6 @@ from hatasmota import const as hc, sensor as tasmota_sensor, status_sensor
 from hatasmota.entity import TasmotaEntity as HATasmotaEntity
 from hatasmota.models import DiscoveryHashType
 
-from homeassistant.backports.functools import cached_property
 from homeassistant.components import sensor
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -275,6 +274,26 @@ class TasmotaSensor(TasmotaAvailability, TasmotaDiscoveryUpdate, SensorEntity):
             **kwds,
         )
 
+        class_or_icon = SENSOR_DEVICE_CLASS_ICON_MAP.get(
+            self._tasmota_entity.quantity, {}
+        )
+        self._attr_device_class = class_or_icon.get(DEVICE_CLASS)
+        self._attr_state_class = class_or_icon.get(STATE_CLASS)
+        if self._tasmota_entity.quantity in status_sensor.SENSORS:
+            self._attr_entity_category = EntityCategory.DIAGNOSTIC
+        # Hide fast changing status sensors
+        if self._tasmota_entity.quantity in (
+            hc.SENSOR_STATUS_IP,
+            hc.SENSOR_STATUS_RSSI,
+            hc.SENSOR_STATUS_SIGNAL,
+            hc.SENSOR_STATUS_VERSION,
+        ):
+            self._attr_entity_registry_enabled_default = False
+        self._attr_icon = class_or_icon.get(ICON)
+        self._attr_native_unit_of_measurement = SENSOR_UNIT_MAP.get(
+            self._tasmota_entity.unit, self._tasmota_entity.unit
+        )
+
     async def async_added_to_hass(self) -> None:
         """Subscribe to MQTT events."""
         self._tasmota_entity.set_on_state_callback(self.sensor_state_updated)
@@ -289,58 +308,9 @@ class TasmotaSensor(TasmotaAvailability, TasmotaDiscoveryUpdate, SensorEntity):
             self._state = state
         self.async_write_ha_state()
 
-    @cached_property
-    def device_class(self) -> SensorDeviceClass | None:
-        """Return the device class of the sensor."""
-        class_or_icon = SENSOR_DEVICE_CLASS_ICON_MAP.get(
-            self._tasmota_entity.quantity, {}
-        )
-        return class_or_icon.get(DEVICE_CLASS)
-
-    @property
-    def state_class(self) -> str | None:
-        """Return the state class of the sensor."""
-        class_or_icon = SENSOR_DEVICE_CLASS_ICON_MAP.get(
-            self._tasmota_entity.quantity, {}
-        )
-        return class_or_icon.get(STATE_CLASS)
-
-    @cached_property
-    def entity_category(self) -> EntityCategory | None:
-        """Return the category of the entity, if any."""
-        if self._tasmota_entity.quantity in status_sensor.SENSORS:
-            return EntityCategory.DIAGNOSTIC
-        return None
-
-    @cached_property
-    def entity_registry_enabled_default(self) -> bool:
-        """Return if the entity should be enabled when first added to the entity registry."""
-        # Hide fast changing status sensors
-        if self._tasmota_entity.quantity in (
-            hc.SENSOR_STATUS_IP,
-            hc.SENSOR_STATUS_RSSI,
-            hc.SENSOR_STATUS_SIGNAL,
-            hc.SENSOR_STATUS_VERSION,
-        ):
-            return False
-        return True
-
-    @property
-    def icon(self) -> str | None:
-        """Return the icon."""
-        class_or_icon = SENSOR_DEVICE_CLASS_ICON_MAP.get(
-            self._tasmota_entity.quantity, {}
-        )
-        return class_or_icon.get(ICON)
-
     @property
     def native_value(self) -> datetime | str | None:
         """Return the state of the entity."""
         if self._state_timestamp and self.device_class == SensorDeviceClass.TIMESTAMP:
             return self._state_timestamp
         return self._state
-
-    @property
-    def native_unit_of_measurement(self) -> str | None:
-        """Return the unit this state is expressed in."""
-        return SENSOR_UNIT_MAP.get(self._tasmota_entity.unit, self._tasmota_entity.unit)
