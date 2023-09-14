@@ -645,13 +645,6 @@ class ZwaveSensor(ZWaveBaseEntity, SensorEntity):
             return None
         return str(self.info.primary_value.metadata.unit)
 
-    @property  # type: ignore[override]
-    # fget is used in the child classes which is not compatible with cached_property
-    # mypy also doesn't know about fget: https://github.com/python/mypy/issues/6185
-    def device_class(self) -> SensorDeviceClass | None:
-        """Return device class of sensor."""
-        return super().device_class
-
 
 class ZWaveNumericSensor(ZwaveSensor):
     """Representation of a Z-Wave Numeric sensor."""
@@ -736,9 +729,7 @@ class ZWaveListSensor(ZwaveSensor):
             alternate_value_name=self.info.primary_value.property_name,
             additional_info=[self.info.primary_value.property_key_name],
         )
-        if (device_class := self.entity_description.device_class) is not None:
-            self._attr_device_class = device_class
-        elif self.info.primary_value.metadata.states:
+        if self.info.primary_value.metadata.states:
             self._attr_device_class = SensorDeviceClass.ENUM
             self._attr_options = list(info.primary_value.metadata.states.values())
 
