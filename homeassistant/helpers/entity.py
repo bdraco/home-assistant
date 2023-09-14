@@ -615,7 +615,7 @@ class Entity(ABC):
         """Time that a context is considered recent."""
         return self._attr_context_recent_time
 
-    @cached_property
+    @property
     def entity_registry_enabled_default(self) -> bool:
         """Return if the entity should be enabled when first added.
 
@@ -627,7 +627,7 @@ class Entity(ABC):
             return self.entity_description.entity_registry_enabled_default
         return True
 
-    @cached_property
+    @property
     def entity_registry_visible_default(self) -> bool:
         """Return if the entity should be visible when first added.
 
