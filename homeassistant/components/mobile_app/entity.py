@@ -65,7 +65,7 @@ class MobileAppEntity(RestoreEntity):
         """Return the name of the mobile app sensor."""
         return self._name
 
-    @cached_property
+    @property
     def entity_registry_enabled_default(self) -> bool:
         """Return if entity should be enabled by default."""
         return not self._config.get(ATTR_SENSOR_DISABLED)
@@ -92,7 +92,7 @@ class MobileAppEntity(RestoreEntity):
         """Return the entity category, if any."""
         return self._config.get(ATTR_SENSOR_ENTITY_CATEGORY)
 
-    @cached_property
+    @property
     def device_info(self):
         """Return device registry information for this entity."""
         return device_info(self._registration)
