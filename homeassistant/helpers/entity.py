@@ -644,7 +644,7 @@ class Entity(ABC):
         """Return the attribution."""
         return self._attr_attribution
 
-    @cached_property
+    @property
     def entity_category(self) -> EntityCategory | None:
         """Return the category of the entity, if any."""
         if hasattr(self, "_attr_entity_category"):
