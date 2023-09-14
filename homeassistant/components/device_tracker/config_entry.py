@@ -4,7 +4,6 @@ from __future__ import annotations
 import asyncio
 from typing import final
 
-from homeassistant.backports.functools import cached_property
 from homeassistant.components import zone
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
@@ -325,7 +324,7 @@ class ScannerEntity(BaseTrackerEntity):
         """Device tracker entities should not create device registry entries."""
         return None
 
-    @cached_property
+    @property
     def entity_registry_enabled_default(self) -> bool:
         """Return if entity is enabled by default."""
         # If mac_address is None, we can never find a device entry.
