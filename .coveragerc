@@ -793,6 +793,7 @@ omit =
     homeassistant/components/netgear/__init__.py
     homeassistant/components/netgear/button.py
     homeassistant/components/netgear/device_tracker.py
+    homeassistant/components/netgear/entity.py
     homeassistant/components/netgear/router.py
     homeassistant/components/netgear/sensor.py
     homeassistant/components/netgear/switch.py
@@ -1480,6 +1481,7 @@ omit =
     homeassistant/components/wiffi/sensor.py
     homeassistant/components/wiffi/wiffi_strings.py
     homeassistant/components/wirelesstag/*
+    homeassistant/components/withings/api.py
     homeassistant/components/wolflink/__init__.py
     homeassistant/components/wolflink/sensor.py
     homeassistant/components/worldtidesinfo/sensor.py
