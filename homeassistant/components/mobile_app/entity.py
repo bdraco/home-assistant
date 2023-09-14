@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.backports.functools import cached_property
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_ICON, CONF_NAME, CONF_UNIQUE_ID, STATE_UNAVAILABLE
 from homeassistant.core import callback
@@ -87,7 +86,7 @@ class MobileAppEntity(RestoreEntity):
         """Return the icon to use in the frontend, if any."""
         return self._config[ATTR_SENSOR_ICON]
 
-    @cached_property
+    @property
     def entity_category(self):
         """Return the entity category, if any."""
         return self._config.get(ATTR_SENSOR_ENTITY_CATEGORY)

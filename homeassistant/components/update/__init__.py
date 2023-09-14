@@ -233,7 +233,7 @@ class UpdateEntity(RestoreEntity):
             return self.entity_description.device_class
         return None
 
-    @cached_property
+    @property
     def entity_category(self) -> EntityCategory | None:
         """Return the category of the entity, if any."""
         if hasattr(self, "_attr_entity_category"):
