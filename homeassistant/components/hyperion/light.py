@@ -159,6 +159,11 @@ class HyperionLight(LightEntity):
         return get_hyperion_unique_id(server_id, instance_num, TYPE_HYPERION_LIGHT)
 
     @property
+    def entity_registry_enabled_default(self) -> bool:
+        """Whether or not the entity is enabled by default."""
+        return True
+
+    @property
     def brightness(self) -> int:
         """Return the brightness of this light between 0..255."""
         return self._brightness
