@@ -723,6 +723,7 @@ class Entity(ABC):
     @callback
     def async_write_ha_state(self) -> None:
         """Write the state to the state machine."""
+        _LOGGER.warning("async_write_ha_state called for %s", self.entity_id)
         if self.hass is None:
             raise RuntimeError(f"Attribute hass is None for {self}")
 
