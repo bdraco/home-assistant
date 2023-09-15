@@ -729,9 +729,22 @@ class ZWaveListSensor(ZwaveSensor):
             alternate_value_name=self.info.primary_value.property_name,
             additional_info=[self.info.primary_value.property_key_name],
         )
+
+    @property
+    def options(self) -> list[str] | None:
+        """Return options for enum sensor."""
+        if self.device_class == SensorDeviceClass.ENUM:
+            return list(self.info.primary_value.metadata.states.values())
+        return None
+
+    @property
+    def device_class(self) -> SensorDeviceClass | None:
+        """Return sensor device class."""
+        if (device_class := super().device_class) is not None:
+            return device_class
         if self.info.primary_value.metadata.states:
-            self._attr_device_class = SensorDeviceClass.ENUM
-            self._attr_options = list(info.primary_value.metadata.states.values())
+            return SensorDeviceClass.ENUM
+        return None
 
     @property
     def extra_state_attributes(self) -> dict[str, str] | None:
@@ -767,13 +780,19 @@ class ZWaveConfigParameterSensor(ZWaveListSensor):
             alternate_value_name=self.info.primary_value.property_name,
             additional_info=[property_key_name] if property_key_name else None,
         )
+
+    @property
+    def device_class(self) -> SensorDeviceClass | None:
+        """Return sensor device class."""
+        # mypy doesn't know about fget: https://github.com/python/mypy/issues/6185
+        if (device_class := ZwaveSensor.device_class.fget(self)) is not None:  # type: ignore[attr-defined]
+            return device_class  # type: ignore[no-any-return]
         if (
-            self.entity_description.device_class is None
-            and not hasattr(self, "_attr_device_class")
-            and self._primary_value.configuration_value_type
+            self._primary_value.configuration_value_type
             == ConfigurationValueType.ENUMERATED
         ):
-            self._attr_device_class = SensorDeviceClass.ENUM
+            return SensorDeviceClass.ENUM
+        return None
 
     @property
     def extra_state_attributes(self) -> dict[str, str] | None:

@@ -11,7 +11,6 @@ import logging
 from math import ceil, floor, isfinite, log10
 from typing import Any, Final, Self, cast, final
 
-from homeassistant.backports.functools import cached_property
 from homeassistant.config_entries import ConfigEntry
 
 # pylint: disable-next=hass-deprecated-import
@@ -260,7 +259,7 @@ class SensorEntity(Entity):
         """
         return self.device_class not in (None, SensorDeviceClass.ENUM)
 
-    @cached_property
+    @property
     def device_class(self) -> SensorDeviceClass | None:
         """Return the class of this entity."""
         if hasattr(self, "_attr_device_class"):
@@ -270,7 +269,7 @@ class SensorEntity(Entity):
         return None
 
     @final
-    @cached_property
+    @property
     def _numeric_state_expected(self) -> bool:
         """Return true if the sensor must be numeric."""
         # Note: the order of the checks needs to be kept aligned
@@ -297,7 +296,7 @@ class SensorEntity(Entity):
             return self.entity_description.options
         return None
 
-    @cached_property
+    @property
     def state_class(self) -> SensorStateClass | str | None:
         """Return the state class of this entity, if any."""
         if hasattr(self, "_attr_state_class"):
@@ -394,7 +393,7 @@ class SensorEntity(Entity):
         """Return the value reported by the sensor."""
         return self._attr_native_value
 
-    @cached_property
+    @property
     def suggested_display_precision(self) -> int | None:
         """Return the suggested number of decimal digits for display."""
         if hasattr(self, "_attr_suggested_display_precision"):
@@ -403,7 +402,7 @@ class SensorEntity(Entity):
             return self.entity_description.suggested_display_precision
         return None
 
-    @cached_property
+    @property
     def native_unit_of_measurement(self) -> str | None:
         """Return the unit of measurement of the sensor, if any."""
         if hasattr(self, "_attr_native_unit_of_measurement"):
@@ -412,7 +411,7 @@ class SensorEntity(Entity):
             return self.entity_description.native_unit_of_measurement
         return None
 
-    @cached_property
+    @property
     def suggested_unit_of_measurement(self) -> str | None:
         """Return the unit which should be used for the sensor's state.
 
