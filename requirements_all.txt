@@ -649,7 +649,7 @@ datadog==0.15.0
 datapoint==0.9.8
 
 # homeassistant.components.bluetooth
-dbus-fast==2.7.0
+dbus-fast==2.9.0
 
 # homeassistant.components.debugpy
 debugpy==1.8.0
@@ -1044,6 +1044,9 @@ ical==5.0.1
 
 # homeassistant.components.ping
 icmplib==3.0
+
+# homeassistant.components.idasen_desk
+idasen-ha==1.4
 
 # homeassistant.components.network
 ifaddr==0.2.0
