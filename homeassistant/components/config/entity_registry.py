@@ -1,7 +1,7 @@
 """HTTP views to interact with the entity registry."""
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import voluptuous as vol
 
@@ -44,17 +44,14 @@ def websocket_list_entities(
         f'{{"id":{msg["id"]},"type": "{websocket_api.const.TYPE_RESULT}",'
         '"success":true,"result": ['
     )
+    msg_json_postfix = "]}"
     # Concatenate cached entity registry item JSON serializations
-    msg_json = (
-        msg_json_prefix
-        + ",".join(
-            json_repr
-            for entry in registry.entities.values()
-            if (json_repr := entry.partial_json_repr) is not None
-        )
-        + "]}"
+    entries = {entry.partial_json_repr for entry in registry.entities.values()}
+    entries.discard(None)
+    entries_without_none = cast(set[str], entries)
+    connection.send_message(
+        f'{msg_json_prefix}{",".join(entries_without_none)}{msg_json_postfix}'
     )
-    connection.send_message(msg_json)
 
 
 @websocket_api.websocket_command(
@@ -74,18 +71,18 @@ def websocket_list_entities_for_display(
         f'{{"id":{msg["id"]},"type":"{websocket_api.const.TYPE_RESULT}","success":true,'
         f'"result":{{"entity_categories":{entity_categories},"entities":['
     )
+    msg_json_postfix = "]}}"
     # Concatenate cached entity registry item JSON serializations
-    msg_json = (
-        msg_json_prefix
-        + ",".join(
-            json_repr
-            for entry in registry.entities.values()
-            if entry.disabled_by is None
-            and (json_repr := entry.display_json_repr) is not None
-        )
-        + "]}}"
+    entries = {
+        entry.display_json_repr
+        for entry in registry.entities.values()
+        if entry.disabled_by is None
+    }
+    entries.discard(None)
+    entries_without_none = cast(set[str], entries)
+    connection.send_message(
+        f'{msg_json_prefix}{",".join(entries_without_none)}{msg_json_postfix}'
     )
-    connection.send_message(msg_json)
 
 
 @websocket_api.websocket_command(
