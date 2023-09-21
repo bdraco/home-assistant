@@ -969,6 +969,7 @@ class Entity(ABC):
 
         This method is a coroutine.
         """
+        _LOGGER.warning("Calling async_device_update for %s", self.entity_id)
         if self._update_staged:
             return
 
