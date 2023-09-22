@@ -14,7 +14,7 @@ import re
 from statistics import mean
 from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
 
-from sqlalchemy import Select, and_, bindparam, delete, func, lambda_stmt, select, text
+from sqlalchemy import Select, and_, bindparam, func, lambda_stmt, select, text
 from sqlalchemy.engine.row import Row
 from sqlalchemy.exc import SQLAlchemyError, StatementError
 from sqlalchemy.orm.session import Session
@@ -24,6 +24,7 @@ import voluptuous as vol
 from homeassistant.const import ATTR_UNIT_OF_MEASUREMENT
 from homeassistant.core import HomeAssistant, callback, valid_entity_id
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.singleton import singleton
 from homeassistant.helpers.typing import UNDEFINED, UndefinedType
 from homeassistant.util import dt as dt_util
 from homeassistant.util.unit_conversion import (
@@ -54,7 +55,6 @@ from .const import (
 )
 from .db_schema import (
     STATISTICS_TABLES,
-    LatestStatisticsShortTermIDs,
     Statistics,
     StatisticsBase,
     StatisticsRuns,
@@ -142,8 +142,37 @@ STATISTIC_UNIT_TO_UNIT_CONVERTER: dict[str | None, type[BaseUnitConverter]] = {
     **{unit: VolumeConverter for unit in VolumeConverter.VALID_UNITS},
 }
 
+DATA_SHORT_TERM_STATISTICS_RUN_CACHE = "recorder_short_term_statistics_run_cache"
+
 
 _LOGGER = logging.getLogger(__name__)
+
+
+@dataclasses.dataclass(slots=True)
+class ShortTermStatisticsRunCache:
+    """Cache for short term statistics runs."""
+
+    # This is a mapping of metadata_id:id of the last short term
+    # statistics run for each metadata_id
+    _latest_id_by_metadata_id: dict[int, int] = dataclasses.field(default_factory=dict)
+
+    def get_latest_ids(self, metadata_ids: set[int]) -> dict[int, int]:
+        """Return the latest short term statistics ids for the metadata_ids."""
+        return {
+            metadata_id: id_
+            for metadata_id, id_ in self._latest_id_by_metadata_id.items()
+            if metadata_id in metadata_ids
+        }
+
+    def set_latest_id_for_metadata_id(self, metadata_id: int, id_: int) -> None:
+        """Cache the latest id for the metadata_id."""
+        self._latest_id_by_metadata_id[metadata_id] = id_
+
+    def set_latest_ids_for_metadata_ids(
+        self, metadata_id_to_id: dict[int, int]
+    ) -> None:
+        """Cache the latest id for the each metadata_id."""
+        self._latest_id_by_metadata_id.update(metadata_id_to_id)
 
 
 class BaseStatisticsRow(TypedDict, total=False):
@@ -540,18 +569,19 @@ def _compile_statistics(
 
     if updated_metadata_ids:
         # These are always the newest statistics, so we can update
-        # latest_statistics_short_term_ids table without having to check the start_ts.
+        # the run cache without having to check the start_ts.
         session.flush()  # populate the ids of the new StatisticsShortTerm rows
-        session.execute(
-            _delete_latest_statistics_short_term_ids_by_metadata_ids_stmt(
-                updated_metadata_ids
-            ),
-        )
-        session.add_all(
-            LatestStatisticsShortTermIDs(
-                metadata_id=new_stat.metadata_id, id=new_stat.id
+        run_cache = get_short_term_statistics_run_cache(instance.hass)
+        # metadata_id is typed to allow None, but we know it's not None here
+        # so we can safely cast it to int.
+        run_cache.set_latest_ids_for_metadata_ids(
+            cast(
+                dict[int, int],
+                {
+                    new_stat.metadata_id: new_stat.id
+                    for new_stat in new_short_term_stats
+                },
             )
-            for new_stat in new_short_term_stats
         )
 
     return modified_statistic_ids
@@ -1833,30 +1863,25 @@ def get_last_short_term_statistics(
     )
 
 
-def _latest_short_term_statistics_from_latest_statistics_short_term_ids_stmt(
-    metadata_ids: set[int],
-) -> StatementLambdaElement:
-    """Create the statement for finding the latest short term stat rows.
-
-    This query uses LatestStatisticsShortTermIDs.
-    """
-    return lambda_stmt(
-        lambda: select(*QUERY_STATISTICS_SHORT_TERM)
-        .select_from(LatestStatisticsShortTermIDs)
-        .join(
-            StatisticsShortTerm,
-            LatestStatisticsShortTermIDs.id == StatisticsShortTerm.id,
+def get_latest_short_term_statistics_by_ids(
+    session: Session, ids: Iterable[int]
+) -> list[Row]:
+    """Return the latest short term statistics for a list of ids."""
+    stmt = _latest_short_term_statistics_by_ids_stmt(ids)
+    return list(
+        cast(
+            Sequence[Row],
+            execute_stmt_lambda_element(session, stmt, orm_rows=False),
         )
-        .filter(LatestStatisticsShortTermIDs.metadata_id.in_(metadata_ids))
     )
 
 
-def _short_term_statistics_by_ids_stmt(
-    ids: set[int],
+def _latest_short_term_statistics_by_ids_stmt(
+    ids: Iterable[int],
 ) -> StatementLambdaElement:
-    """Create the statement for finding the latest short term stat rows."""
+    """Create the statement for finding the latest short term stat rows by id."""
     return lambda_stmt(
-        lambda: select(*QUERY_STATISTICS_SHORT_TERM).where(
+        lambda: select(*QUERY_STATISTICS_SHORT_TERM).filter(
             StatisticsShortTerm.id.in_(ids)
         )
     )
@@ -1880,38 +1905,32 @@ def get_latest_short_term_statistics(
         metadata_ids = set(
             _extract_metadata_and_discard_impossible_columns(metadata, types)
         )
-        stmt = _latest_short_term_statistics_from_latest_statistics_short_term_ids_stmt(
-            metadata_ids
-        )
-        stats = cast(
-            Sequence[Row], execute_stmt_lambda_element(session, stmt, orm_rows=False)
-        )
-        found_metadata_ids = {stat.metadata_id for stat in stats}
-        # If we do not have a row for a metadata_id, we need to find it in the table
-        # manually with a slower query. This should only happen once per metadata_id
-        # ever since the latest statistics table was introduced.
-        if missing_metadata_ids := metadata_ids - found_metadata_ids:
-            missing_ids: set[int] = set()
-            for metadata_id in missing_metadata_ids:
+        run_cache = get_short_term_statistics_run_cache(hass)
+        # Try to find the latest short term statistics ids for the metadata_ids
+        # from the run cache first if we have it.
+        stats: list[Row] = []
+        if metadata_id_to_id := run_cache.get_latest_ids(metadata_ids):
+            stats = get_latest_short_term_statistics_by_ids(
+                session, metadata_id_to_id.values()
+            )
+        # If we are missing some metadata_ids in the run cache, we need run a query
+        # to populate the cache for each metadata_id, and then run another query
+        # to get the latest short term statistics for the missing metadata_ids.
+        if (missing_metadata_ids := metadata_ids - set(metadata_id_to_id)) and (
+            found_latest_ids := {
+                latest_id
+                for metadata_id in missing_metadata_ids
                 if (
-                    latest := cast(
-                        Sequence[Row],
-                        execute_stmt_lambda_element(
-                            session,
-                            _find_latest_short_term_statistic_stmt(metadata_id),
-                            orm_rows=False,
-                        ),
+                    latest_id := cache_latest_short_term_statistic_id_for_metadata_id(
+                        run_cache, session, metadata_id
                     )
-                ) and (missing_id := latest[0].id):
-                    missing_ids.add(missing_id)
-            if missing_ids:
-                stmt = _short_term_statistics_by_ids_stmt(missing_ids)
-                if stats_for_missing_rows := cast(
-                    Sequence[Row],
-                    execute_stmt_lambda_element(session, stmt, orm_rows=False),
-                ):
-                    stats = list(stats)
-                    stats.extend(stats_for_missing_rows)
+                )
+                is not None
+            }
+        ):
+            stats.extend(
+                get_latest_short_term_statistics_by_ids(session, found_latest_ids)
+            )
 
         if not stats:
             return {}
@@ -2287,28 +2306,63 @@ def _import_statistics_with_session(
         return True
 
     # We just inserted new short term statistics, so we need to update the
-    # latest_statistics_short_term_ids table that tracks what the newest id is
-    # for the metadata_id.
-    session.execute(
-        _delete_latest_statistics_short_term_ids_by_metadata_ids_stmt({metadata_id}),
+    # ShortTermStatisticsRunCache with the latest id for the metadata_id
+    run_cache = get_short_term_statistics_run_cache(instance.hass)
+    cache_latest_short_term_statistic_id_for_metadata_id(
+        run_cache, session, metadata_id
     )
-    if latest := cast(
-        Sequence[Row],
-        execute_stmt_lambda_element(
-            session, _find_latest_short_term_statistic_stmt(metadata_id), orm_rows=False
-        ),
-    ):
-        session.add(
-            LatestStatisticsShortTermIDs(metadata_id=metadata_id, id=latest[0].id)
-        )
 
     return True
 
 
-def _find_latest_short_term_statistic_stmt(
+@singleton(DATA_SHORT_TERM_STATISTICS_RUN_CACHE)
+def get_short_term_statistics_run_cache(
+    hass: HomeAssistant,
+) -> ShortTermStatisticsRunCache:
+    """Get the short term statistics run cache."""
+    return ShortTermStatisticsRunCache()
+
+
+def cache_latest_short_term_statistic_id_for_metadata_id(
+    run_cache: ShortTermStatisticsRunCache, session: Session, metadata_id: int
+) -> int | None:
+    """Cache the latest short term statistic for a given metadata_id.
+
+    Returns the id of the latest short term statistic for the metadata_id
+    that was added to the cache, or None if no latest short term statistic
+    was found for the metadata_id.
+    """
+    if latest := cast(
+        Sequence[Row],
+        execute_stmt_lambda_element(
+            session,
+            _find_latest_short_term_statistic_for_metadata_id_stmt(metadata_id),
+            orm_rows=False,
+        ),
+    ):
+        id_: int = latest[0].id
+        run_cache.set_latest_id_for_metadata_id(metadata_id, id_)
+        return id_
+    return None
+
+
+def _find_latest_short_term_statistic_for_metadata_id_stmt(
     metadata_id: int,
 ) -> StatementLambdaElement:
-    """Find the latest short term statistics for a list of metadata_ids."""
+    """Create the statement to find the latest short term statistics for a given metadata_id."""
+    #
+    # This code only looks up one row, and should not be refactored to
+    # lookup multiple the latest for multiple metadata_ids using func.max
+    # or similar, as that will cause the query to be significantly slower
+    # for DBMs such as PostgreSQL that will have to do a full scan
+    #
+    # For PostgreSQL a combined query plan looks like:
+    # (actual time=2.218..893.909 rows=170531 loops=1)
+    #
+    # For PostgreSQL a separate query plan looks like:
+    # (actual time=0.301..0.301 rows=1 loops=1)
+    #
+    #
     return lambda_stmt(
         lambda: select(
             StatisticsShortTerm.id,
@@ -2317,39 +2371,6 @@ def _find_latest_short_term_statistic_stmt(
         .order_by(StatisticsShortTerm.start_ts.desc())
         .limit(1)
     )
-
-
-def _delete_latest_statistics_short_term_ids_by_metadata_ids_stmt(
-    metadata_ids: set[int],
-) -> StatementLambdaElement:
-    """Delete LatestStatisticsShortTermIDs rows.
-
-    Delete matching metadata_ids in the latest_statistics_short_term_ids table
-    that tracks what the newest id is for each metadata_id.
-
-    This does NOT delete the actual statistics data.
-    """
-    return lambda_stmt(
-        lambda: delete(LatestStatisticsShortTermIDs)
-        .where(LatestStatisticsShortTermIDs.metadata_id.in_(metadata_ids))
-        .execution_options(synchronize_session=False)
-    )
-
-
-def _clear_latest_statistics_short_term_ids_stmt() -> StatementLambdaElement:
-    """Delete all LatestStatisticsShortTermIDs rows."""
-    return lambda_stmt(lambda: delete(LatestStatisticsShortTermIDs))
-
-
-def clear_latest_short_term_statistics_ids(session: Session) -> None:
-    """Delete all LatestStatisticsShortTermIDs rows.
-
-    Clear the latest latest_statistics_short_term_ids table that
-    tracks what the newest id is for each metadata_id.
-
-    This does NOT delete the actual statistics data.
-    """
-    session.execute(_clear_latest_statistics_short_term_ids_stmt())
 
 
 @retryable_database_job("statistics")
