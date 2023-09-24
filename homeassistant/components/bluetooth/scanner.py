@@ -178,11 +178,12 @@ class HaScanner(BaseHaScanner):
         central manager.
         """
         callback_time = MONOTONIC_TIME()
-        local_name = advertisement_data.local_name
-        manufacturer_data = advertisement_data.manufacturer_data
-        service_data = advertisement_data.service_data
-        service_uuids = advertisement_data.service_uuids
-        if local_name or manufacturer_data or service_data or service_uuids:
+        if (
+            advertisement_data.local_name
+            or advertisement_data.manufacturer_data
+            or advertisement_data.service_data
+            or advertisement_data.service_uuids
+        ):
             # Don't count empty advertisements
             # as the adapter is in a failure
             # state if all the data is empty.
@@ -328,9 +329,6 @@ class HaScanner(BaseHaScanner):
             self.name,
             SCANNER_WATCHDOG_TIMEOUT,
         )
-        # Immediately mark the scanner as not scanning
-        # since the restart task will have to wait for the lock
-        self.scanning = False
         self.hass.async_create_task(self._async_restart_scanner())
 
     async def _async_restart_scanner(self) -> None:
