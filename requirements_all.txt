@@ -216,7 +216,6 @@ aiocomelit==0.0.8
 aiodiscover==1.5.1
 
 # homeassistant.components.dnsip
-# homeassistant.components.minecraft_server
 aiodns==3.0.0
 
 # homeassistant.components.eafm
@@ -462,7 +461,7 @@ async-interrupt==1.1.1
 # homeassistant.components.ssdp
 # homeassistant.components.upnp
 # homeassistant.components.yeelight
-async-upnp-client==0.35.1
+async-upnp-client==0.36.0
 
 # homeassistant.components.keyboard_remote
 asyncinotify==4.0.2
@@ -1130,7 +1129,7 @@ laundrify-aio==1.1.2
 ld2410-ble==0.1.1
 
 # homeassistant.components.led_ble
-led-ble==1.0.0
+led-ble==1.0.1
 
 # homeassistant.components.foscam
 libpyfoscam==1.0
