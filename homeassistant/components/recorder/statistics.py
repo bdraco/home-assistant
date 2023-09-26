@@ -1907,7 +1907,9 @@ def get_latest_short_term_statistics(
         )
         run_cache = get_short_term_statistics_run_cache(hass)
         # Try to find the latest short term statistics ids for the metadata_ids
-        # from the run cache first if we have it.
+        # from the run cache first if we have it. If the run cache references
+        # a non-existent id because of a purge, we will detect it missing in the
+        # next step and run a query to re-populate the cache.
         stats: list[Row] = []
         if metadata_id_to_id := run_cache.get_latest_ids(metadata_ids):
             stats = get_latest_short_term_statistics_by_ids(
@@ -2349,10 +2351,10 @@ def cache_latest_short_term_statistic_id_for_metadata_id(
 def _find_latest_short_term_statistic_for_metadata_id_stmt(
     metadata_id: int,
 ) -> StatementLambdaElement:
-    """Create the statement to find the latest short term statistics for a given metadata_id."""
+    """Create a statement to find the latest short term statistics for a metadata_id."""
     #
     # This code only looks up one row, and should not be refactored to
-    # lookup multiple the latest for multiple metadata_ids using func.max
+    # lookup multiple using func.max
     # or similar, as that will cause the query to be significantly slower
     # for DBMs such as PostgreSQL that will have to do a full scan
     #
