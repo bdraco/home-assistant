@@ -186,7 +186,7 @@ aio-georss-gdacs==0.8
 aioairq==0.2.4
 
 # homeassistant.components.airzone_cloud
-aioairzone-cloud==0.2.1
+aioairzone-cloud==0.2.2
 
 # homeassistant.components.airzone
 aioairzone==0.6.8
@@ -1538,7 +1538,7 @@ pyCEC==0.5.2
 pyControl4==1.1.0
 
 # homeassistant.components.duotecno
-pyDuotecno==2023.8.4
+pyDuotecno==2023.9.0
 
 # homeassistant.components.eight_sleep
 pyEight==0.3.2
@@ -2778,7 +2778,7 @@ zamg==0.3.0
 zengge==0.2
 
 # homeassistant.components.zeroconf
-zeroconf==0.114.0
+zeroconf==0.115.0
 
 # homeassistant.components.zeversolar
 zeversolar==0.3.1
