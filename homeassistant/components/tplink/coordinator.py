@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from datetime import timedelta
 import logging
-from typing import Any
 
 from kasa import SmartDevice, SmartDeviceException
 
@@ -16,14 +15,7 @@ _LOGGER = logging.getLogger(__name__)
 REQUEST_REFRESH_DELAY = 0.35
 
 
-def _internal_state_without_time(internal_state: dict[str, Any]) -> dict[str, Any]:
-    """Return the internal state without time."""
-    state_copy = internal_state.copy()
-    state_copy.pop("time", None)
-    return state_copy
-
-
-class TPLinkDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
+class TPLinkDataUpdateCoordinator(DataUpdateCoordinator[None]):
     """DataUpdateCoordinator to gather data for a specific TPLink device."""
 
     def __init__(
@@ -45,7 +37,6 @@ class TPLinkDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             request_refresh_debouncer=Debouncer(
                 hass, _LOGGER, cooldown=REQUEST_REFRESH_DELAY, immediate=False
             ),
-            always_update=False,
         )
 
     async def async_request_refresh_without_children(self) -> None:
@@ -56,12 +47,10 @@ class TPLinkDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.update_children = False
         await self.async_request_refresh()
 
-    async def _async_update_data(self) -> dict[str, Any]:
+    async def _async_update_data(self) -> None:
         """Fetch all device and sensor data from api."""
-        device = self.device
         try:
-            await device.update(update_children=self.update_children)
-            return _internal_state_without_time(device.internal_state)
+            await self.device.update(update_children=self.update_children)
         except SmartDeviceException as ex:
             raise UpdateFailed(ex) from ex
         finally:
