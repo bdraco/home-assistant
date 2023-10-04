@@ -805,7 +805,9 @@ class HassioDataUpdateCoordinator(DataUpdateCoordinator):
         self.entry_id = config_entry.entry_id
         self.dev_reg = dev_reg
         self.is_hass_os = (get_info(self.hass) or {}).get("hassos") is not None
-        self._enabled_updates_by_addon: dict[str, set[str]] = defaultdict(set)
+        self._enabled_updates_by_addon: defaultdict[str, dict[str, int]] = defaultdict(
+            dict
+        )
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Update data via library."""
@@ -964,7 +966,6 @@ class HassioDataUpdateCoordinator(DataUpdateCoordinator):
         """Update single addon stats."""
         try:
             stats = await self.hassio.get_addon_stats(slug)
-            _LOGGER.warning("Addon stats: %s %s", slug, stats)
             return (slug, stats)
         except HassioAPIError as err:
             _LOGGER.warning("Could not fetch stats for %s: %s", slug, err)
@@ -974,7 +975,6 @@ class HassioDataUpdateCoordinator(DataUpdateCoordinator):
         """Return the changelog for an add-on."""
         try:
             changelog = await self.hassio.get_addon_changelog(slug)
-            _LOGGER.warning("Addon change: %s %s", slug, changelog)
             return (slug, changelog)
         except HassioAPIError as err:
             _LOGGER.warning("Could not fetch changelog for %s: %s", slug, err)
@@ -984,19 +984,23 @@ class HassioDataUpdateCoordinator(DataUpdateCoordinator):
         """Return the info for an add-on."""
         try:
             info = await self.hassio.get_addon_info(slug)
-            _LOGGER.warning("Addon info: %s %s", slug, info)
             return (slug, info)
         except HassioAPIError as err:
             _LOGGER.warning("Could not fetch info for %s: %s", slug, err)
         return (slug, None)
 
-    async def async_enable_addon_updates(self, slug: str, key: str) -> CALLBACK_TYPE:
+    async def async_enable_addon_updates(
+        self, slug: str, types: set[str]
+    ) -> CALLBACK_TYPE:
         """Enable updates for an add-on."""
-        self._enabled_updates_by_addon[slug].add(key)
+        enabled_updates = self._enabled_updates_by_addon[slug]
+        for key in types:
+            enabled_updates[key] = enabled_updates.get(key, 0) + 1
 
         @callback
         def _remove():
-            self._enabled_updates_by_addon[slug].remove(key)
+            for key in types:
+                enabled_updates[key] -= 1
 
         return _remove
 
