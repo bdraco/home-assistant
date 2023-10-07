@@ -87,7 +87,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up TPLink from a config entry."""
     host = entry.data[CONF_HOST]
     try:
-        device: SmartDevice = await Discover.discover_single(host)
+        device: SmartDevice = await Discover.connect_single(host)
     except SmartDeviceException as ex:
         raise ConfigEntryNotReady from ex
 
