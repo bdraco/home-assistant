@@ -360,6 +360,12 @@ class BaseHaRemoteScanner(BaseHaScanner):
             device.details = self._details | details
             # pylint: disable-next=protected-access
             device._rssi = rssi  # deprecated, will be removed in newer bleak
+            if tx_power is None:
+                # We need to preserve the previous value if it is not available
+                # because advertisements are limited to 31 bytes. BlueZ will
+                # cache this value for BlueZ based scanners, but since we are
+                # not BlueZ based we need to do it ourselves.
+                tx_power = prev_advertisement.tx_power
 
         advertisement_data = AdvertisementData(
             local_name=None if local_name == "" else local_name,
