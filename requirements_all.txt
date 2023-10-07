@@ -64,7 +64,7 @@ PyFlick==0.0.2
 PyFlume==0.6.5
 
 # homeassistant.components.fronius
-PyFronius==0.7.1
+PyFronius==0.7.2
 
 # homeassistant.components.mvglive
 PyMVGLive==1.1.4
@@ -958,7 +958,7 @@ ha-ffmpeg==3.1.0
 ha-iotawattpy==0.1.1
 
 # homeassistant.components.philips_js
-ha-philipsjs==3.1.0
+ha-philipsjs==3.1.1
 
 # homeassistant.components.habitica
 habitipy==0.2.0
@@ -1045,7 +1045,7 @@ ical==5.0.1
 icmplib==3.0
 
 # homeassistant.components.idasen_desk
-idasen-ha==1.4
+idasen-ha==1.4.1
 
 # homeassistant.components.network
 ifaddr==0.2.0
@@ -1665,7 +1665,7 @@ pydiscovergy==2.0.3
 pydoods==1.0.2
 
 # homeassistant.components.hydrawise
-pydrawise==2023.8.0
+pydrawise==2023.10.0
 
 # homeassistant.components.android_ip_webcam
 pydroid-ipcam==2.0.0
@@ -2192,7 +2192,7 @@ python-tado==0.15.0
 python-telegram-bot==13.1
 
 # homeassistant.components.vlc
-python-vlc==1.1.2
+python-vlc==3.0.18122
 
 # homeassistant.components.egardia
 pythonegardia==1.0.52

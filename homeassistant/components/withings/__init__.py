@@ -38,7 +38,6 @@ from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN, HomeAssistant
 from homeassistant.helpers import config_entry_oauth2_flow, config_validation as cv
 from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue
-from homeassistant.helpers.start import async_at_started
 from homeassistant.helpers.typing import ConfigType
 
 from .api import ConfigEntryWithingsApi
@@ -161,7 +160,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         webhook_name = "Withings"
         if entry.title != DEFAULT_TITLE:
-            webhook_name = " ".join([DEFAULT_TITLE, entry.title])
+            webhook_name = f"{DEFAULT_TITLE} {entry.title}"
 
         webhook_register(
             hass,
@@ -183,14 +182,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         if state is cloud.CloudConnectionState.CLOUD_DISCONNECTED:
             await unregister_webhook(None)
-            async_call_later(hass, 30, register_webhook)
+            entry.async_on_unload(async_call_later(hass, 30, register_webhook))
 
     if cloud.async_active_subscription(hass):
         if cloud.async_is_connected(hass):
-            await register_webhook(None)
-        cloud.async_listen_connection_change(hass, manage_cloudhook)
+            entry.async_on_unload(async_call_later(hass, 1, register_webhook))
+        entry.async_on_unload(
+            cloud.async_listen_connection_change(hass, manage_cloudhook)
+        )
     else:
-        async_at_started(hass, register_webhook)
+        entry.async_on_unload(async_call_later(hass, 1, register_webhook))
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(update_listener))
