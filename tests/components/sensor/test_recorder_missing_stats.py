@@ -1,11 +1,11 @@
 """The tests for sensor recorder platform can catch up."""
 from datetime import datetime, timedelta
 from pathlib import Path
+from unittest.mock import patch
 
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.components.recorder import SQLITE_URL_PREFIX
 from homeassistant.components.recorder.history import get_significant_states
 from homeassistant.components.recorder.statistics import (
     get_latest_short_term_statistics_with_session,
@@ -27,15 +27,27 @@ POWER_SENSOR_ATTRIBUTES = {
 }
 
 
+@pytest.fixture(autouse=True)
+def disable_db_issue_creation():
+    """Disable the creation of the database issue."""
+    with patch(
+        "homeassistant.components.recorder.util._async_create_mariadb_range_index_regression_issue"
+    ):
+        yield
+
+
 @pytest.mark.timeout(25)
 def test_compile_missing_statistics(
-    caplog: pytest.LogCaptureFixture, freezer: FrozenDateTimeFactory, tmp_path: Path
+    freezer: FrozenDateTimeFactory, recorder_db_url: str, tmp_path: Path
 ) -> None:
     """Test compile missing statistics."""
-    test_dir = tmp_path.joinpath("sqlite")
-    test_dir.mkdir()
-    test_db_file = test_dir.joinpath("test_run_info.db")
-    dburl = f"{SQLITE_URL_PREFIX}//{test_db_file}"
+    if recorder_db_url == "sqlite://":
+        # On-disk database because we need to stop and start hass
+        # and have it persist.
+        recorder_db_url = "sqlite:///" + str(tmp_path / "pytest.db")
+    config = {
+        "db_url": recorder_db_url,
+    }
     three_days_ago = datetime(2021, 1, 1, 0, 0, 0, tzinfo=dt_util.UTC)
     start_time = three_days_ago + timedelta(days=3)
     freezer.move_to(three_days_ago)
@@ -43,7 +55,7 @@ def test_compile_missing_statistics(
     hass.state = CoreState.not_running
     recorder_helper.async_initialize_recorder(hass)
     setup_component(hass, "sensor", {})
-    setup_component(hass, "recorder", {"recorder": {"db_url": dburl}})
+    setup_component(hass, "recorder", {"recorder": config})
     hass.start()
     wait_recording_done(hass)
     wait_recording_done(hass)
@@ -82,7 +94,7 @@ def test_compile_missing_statistics(
     recorder_helper.async_initialize_recorder(hass)
     setup_component(hass, "sensor", {})
     hass.states.set("sensor.test1", "0", POWER_SENSOR_ATTRIBUTES)
-    setup_component(hass, "recorder", {"recorder": {"db_url": dburl}})
+    setup_component(hass, "recorder", {"recorder": config})
     hass.start()
     wait_recording_done(hass)
     wait_recording_done(hass)
