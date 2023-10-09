@@ -614,6 +614,16 @@ class HomeAccessory(Accessory):  # type: ignore[misc]
         while self._subscriptions:
             self._subscriptions.pop(0)()
 
+    async def stop(self) -> None:
+        """Stop the accessory.
+
+        This is overrides the parent class to call async_stop
+        since pyhap will call this function to stop the accessory
+        but we want to use our async_stop method since we need
+        it to be a callback to avoid races in reloading accessories.
+        """
+        self.async_stop()
+
 
 class HomeBridge(Bridge):  # type: ignore[misc]
     """Adapter class for Bridge."""
