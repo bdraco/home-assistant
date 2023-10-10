@@ -104,32 +104,24 @@ class _ColumnTypesForDialect:
     big_int_type: str
     timestamp_type: str
     context_bin_type: str
-    unused_column_type: str
-    hash_column_type: str
 
 
 _MYSQL_COLUMN_TYPES = _ColumnTypesForDialect(
     big_int_type="INTEGER(20)",
     timestamp_type=DOUBLE_PRECISION_TYPE_SQL,
     context_bin_type=f"BLOB({CONTEXT_ID_BIN_MAX_LENGTH})",
-    unused_column_type="CHAR(0)",
-    hash_column_type="INT UNSIGNED",
 )
 
 _POSTGRESQL_COLUMN_TYPES = _ColumnTypesForDialect(
     big_int_type="INTEGER",
     timestamp_type=DOUBLE_PRECISION_TYPE_SQL,
     context_bin_type="BYTEA",
-    unused_column_type="CHAR(1)",
-    hash_column_type="BIGINT",
 )
 
 _SQLITE_COLUMN_TYPES = _ColumnTypesForDialect(
     big_int_type="INTEGER",
     timestamp_type="FLOAT",
     context_bin_type="BLOB",
-    unused_column_type="CHAR(1)",
-    hash_column_type="BIGINT",
 )
 
 _COLUMN_TYPES_FOR_DIALECT: dict[SupportedDialect | None, _ColumnTypesForDialect] = {
@@ -446,7 +438,6 @@ def _modify_columns(
     engine: Engine,
     table_name: str,
     columns_def: list[str],
-    ignore: bool = False,
 ) -> None:
     """Modify columns in a table."""
     if engine.dialect.name == SupportedDialect.SQLITE:
@@ -483,16 +474,13 @@ def _modify_columns(
     else:
         columns_def = [f"MODIFY {col_def}" for col_def in columns_def]
 
-    ignore_sql = "IGNORE" if ignore else ""
     with session_scope(session=session_maker()) as session:
         try:
             connection = session.connection()
             connection.execute(
                 text(
-                    "ALTER {ignore_sql} TABLE {table} {columns_def}".format(
-                        ignore_sql=ignore_sql,
-                        table=table_name,
-                        columns_def=", ".join(columns_def),
+                    "ALTER TABLE {table} {columns_def}".format(
+                        table=table_name, columns_def=", ".join(columns_def)
                     )
                 )
             )
@@ -504,9 +492,7 @@ def _modify_columns(
         with session_scope(session=session_maker()) as session:
             try:
                 connection = session.connection()
-                connection.execute(
-                    text(f"ALTER {ignore_sql} TABLE {table_name} {column_def}")
-                )
+                connection.execute(text(f"ALTER TABLE {table_name} {column_def}"))
             except (InternalError, OperationalError):
                 _LOGGER.exception(
                     "Could not modify column %s in table %s", column_def, table_name
@@ -964,26 +950,9 @@ def _apply_update(  # noqa: C901
             "statistics_short_term",
             "ix_statistics_short_term_statistic_id_start_ts",
         )
-        try:
-            _migrate_statistics_columns_to_timestamp(instance, session_maker, engine)
-        except IntegrityError as ex:
-            _LOGGER.error(
-                "Statistics table contains duplicate entries: %s; "
-                "Cleaning up duplicates and trying again; "
-                "This will take a while; "
-                "Please be patient!",
-                ex,
-            )
-            # There may be duplicated statistics entries, delete duplicates
-            # and try again
-            with session_scope(session=session_maker()) as session:
-                delete_statistics_duplicates(instance, hass, session)
-            _migrate_statistics_columns_to_timestamp(instance, session_maker, engine)
-            # Log at error level to ensure the user sees this message in the log
-            # since we logged the error above.
-            _LOGGER.error(
-                "Statistics migration successfully recovered after statistics table duplicate cleanup"
-            )
+        _migrate_statistics_columns_to_timestamp_removing_duplicates(
+            hass, instance, session_maker, engine
+        )
     elif new_version == 35:
         # Migration is done in two steps to ensure we can start using
         # the new columns before we wipe the old ones.
@@ -1075,60 +1044,43 @@ def _apply_update(  # noqa: C901
         _create_index(session_maker, "event_types", "ix_event_types_event_type")
         _create_index(session_maker, "states_meta", "ix_states_meta_entity_id")
     elif new_version == 42:
-        dialect_name = engine.dialect.name
-        if dialect_name != SupportedDialect.MYSQL:
-            # SQLite doesn't support ALTER TABLE with our minimum version
-            # PostgreSQL doesn't support IGNORE so if they ever downgraded
-            # and upgraded it would fail
-            return
-        unused_column_type = _column_types.unused_column_type
-        # We use ignore since the column might still have legacy data
-        # in it an we don't want to fail because they downgraded an upgraded
-        # in the past
-        _modify_columns(
-            session_maker,
-            engine,
-            "states",
-            [
-                f"{column} {unused_column_type}"
-                for column in ("last_updated", "last_changed", "created")
-            ],
-            ignore=True,
-        )
-        _modify_columns(
-            session_maker,
-            engine,
-            "events",
-            [f"{column} {unused_column_type}" for column in ("time_fired",)],
-            ignore=True,
-        )
-        for table in ("statistics", "statistics_short_term"):
-            _modify_columns(
-                session_maker,
-                engine,
-                table,
-                [
-                    f"{column} {unused_column_type}"
-                    for column in ("created", "start", "last_reset")
-                ],
-                ignore=True,
-            )
-        # The hash column used more space than needed
-        hash_column_type = _column_types.hash_column_type
-        _modify_columns(
-            session_maker,
-            engine,
-            "state_attributes",
-            [f"hash {hash_column_type}"],
-        )
-        _modify_columns(
-            session_maker,
-            engine,
-            "event_data",
-            [f"hash {hash_column_type}"],
+        # If the user downgraded from 2023.3.x to an older version
+        # we will have unmigrated statistics columns so we want to
+        # clean this up one last time.
+        _migrate_statistics_columns_to_timestamp_removing_duplicates(
+            hass, instance, session_maker, engine
         )
     else:
         raise ValueError(f"No schema migration defined for version {new_version}")
+
+
+def _migrate_statistics_columns_to_timestamp_removing_duplicates(
+    hass: HomeAssistant,
+    instance: Recorder,
+    session_maker: Callable[[], Session],
+    engine: Engine,
+) -> None:
+    """Migrate statistics columns to timestamp or cleanup duplicates."""
+    try:
+        _migrate_statistics_columns_to_timestamp(instance, session_maker, engine)
+    except IntegrityError as ex:
+        _LOGGER.error(
+            "Statistics table contains duplicate entries: %s; "
+            "Cleaning up duplicates and trying again; "
+            "This will take a while; "
+            "Please be patient!",
+            ex,
+        )
+        # There may be duplicated statistics entries, delete duplicates
+        # and try again
+        with session_scope(session=session_maker()) as session:
+            delete_statistics_duplicates(instance, hass, session)
+        _migrate_statistics_columns_to_timestamp(instance, session_maker, engine)
+        # Log at error level to ensure the user sees this message in the log
+        # since we logged the error above.
+        _LOGGER.error(
+            "Statistics migration successfully recovered after statistics table duplicate cleanup"
+        )
 
 
 def _correct_table_character_set_and_collation(
