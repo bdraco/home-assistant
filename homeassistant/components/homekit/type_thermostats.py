@@ -174,15 +174,6 @@ class Thermostat(HomeAccessory):
         self.hc_homekit_to_hass = None
         self.hc_hass_to_homekit = None
         hc_min_temp, hc_max_temp = self.get_temperature_range()
-        self._reload_on_change_attrs.extend(
-            (
-                ATTR_MIN_HUMIDITY,
-                ATTR_MAX_TEMP,
-                ATTR_MIN_TEMP,
-                ATTR_FAN_MODES,
-                ATTR_HVAC_MODES,
-            )
-        )
 
         # Add additional characteristics if auto mode is supported
         self.chars = []
@@ -354,7 +345,7 @@ class Thermostat(HomeAccessory):
                 )
                 self.char_target_fan_state.display_name = "Fan Auto"
 
-        self.async_update_state(state)
+        self._async_update_state(state)
 
         serv_thermostat.setter_callback = self._set_chars
 
@@ -586,6 +577,29 @@ class Thermostat(HomeAccessory):
 
     @callback
     def async_update_state(self, new_state):
+        """Update thermostat state after state changed."""
+        # We always recheck valid hvac modes as the entity
+        # may not have been fully setup when we saw it last
+        original_hc_hass_to_homekit = self.hc_hass_to_homekit
+        self._configure_hvac_modes(new_state)
+
+        if self.hc_hass_to_homekit != original_hc_hass_to_homekit:
+            if self.char_target_heat_cool.value not in self.hc_homekit_to_hass:
+                # We must make sure the char value is
+                # in the new valid values before
+                # setting the new valid values or
+                # changing them with throw
+                self.char_target_heat_cool.set_value(
+                    list(self.hc_homekit_to_hass)[0], should_notify=False
+                )
+            self.char_target_heat_cool.override_properties(
+                valid_values=self.hc_hass_to_homekit
+            )
+
+        self._async_update_state(new_state)
+
+    @callback
+    def _async_update_state(self, new_state):
         """Update state without rechecking the device features."""
         attributes = new_state.attributes
         features = attributes.get(ATTR_SUPPORTED_FEATURES, 0)
@@ -713,12 +727,6 @@ class WaterHeater(HomeAccessory):
     def __init__(self, *args):
         """Initialize a WaterHeater accessory object."""
         super().__init__(*args, category=CATEGORY_THERMOSTAT)
-        self._reload_on_change_attrs.extend(
-            (
-                ATTR_MAX_TEMP,
-                ATTR_MIN_TEMP,
-            )
-        )
         self._unit = self.hass.config.units.temperature_unit
         min_temp, max_temp = self.get_temperature_range()
 
