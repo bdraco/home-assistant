@@ -155,7 +155,7 @@ class HassIOIngress(HomeAssistantView):
         """Ingress route for request."""
         url = self._create_url(token, path)
         source_header = _init_header(request, token)
-
+        _LOGGER.warning("Handle request: url=%s source_header=%s", url, source_header)
         async with self._websession.request(
             request.method,
             url,
@@ -167,6 +167,13 @@ class HassIOIngress(HomeAssistantView):
             skip_auto_headers={hdrs.CONTENT_TYPE},
         ) as result:
             headers = _response_header(result)
+            _LOGGER.warning(
+                "Handle request result: url=%s source_header=%s result=%s headers=%s",
+                url,
+                source_header,
+                result,
+                headers,
+            )
             content_length_int = 0
             content_length = result.headers.get(hdrs.CONTENT_LENGTH, UNDEFINED)
             # Simple request
