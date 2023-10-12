@@ -134,6 +134,9 @@ RtmAPI==0.7.2
 # homeassistant.components.sql
 SQLAlchemy==2.0.21
 
+# homeassistant.components.tami4
+Tami4EdgeAPI==2.1
+
 # homeassistant.components.travisci
 TravisPy==0.3.5
 
@@ -1850,9 +1853,6 @@ pymailgunner==1.4
 # homeassistant.components.firmata
 pymata-express==1.19
 
-# homeassistant.components.mazda
-pymazda==0.3.11
-
 # homeassistant.components.mediaroom
 pymediaroom==0.6.5.4
 
@@ -1869,7 +1869,7 @@ pymitv==1.4.3
 pymochad==0.2.0
 
 # homeassistant.components.modbus
-pymodbus==3.5.2
+pymodbus==3.5.4
 
 # homeassistant.components.monoprice
 pymonoprice==0.4
@@ -2694,7 +2694,7 @@ vultr==0.1.2
 wakeonlan==2.1.0
 
 # homeassistant.components.wallbox
-wallbox==0.4.12
+wallbox==0.4.14
 
 # homeassistant.components.folder_watcher
 watchdog==2.3.1
