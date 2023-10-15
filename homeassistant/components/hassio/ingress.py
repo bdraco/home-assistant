@@ -93,7 +93,7 @@ class HassIOIngress(HomeAssistantView):
             return await self._handle_request(request, token, path)
 
         except aiohttp.ClientError as err:
-            _LOGGER.exception("Ingress error with %s / %s: %s", token, path, err)
+            _LOGGER.debug("Ingress error with %s / %s: %s", token, path, err)
 
         raise HTTPBadGateway() from None
 
