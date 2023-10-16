@@ -247,7 +247,7 @@ class RuntimeEntryData:
             self.loaded_platforms |= needed
 
     async def async_update_static_infos(
-        self, hass: HomeAssistant, entry: ConfigEntry, infos: list[EntityInfo]
+        self, hass: HomeAssistant, entry: ConfigEntry, infos: list[EntityInfo], mac: str
     ) -> None:
         """Distribute an update of static infos to all platforms."""
         # First, load all platforms
@@ -255,10 +255,7 @@ class RuntimeEntryData:
         if async_get_dashboard(hass):
             needed_platforms.add(Platform.UPDATE)
 
-        assert self.device_info is not None, "device_info must be set at this point"
-        mac = self.device_info.mac_address
-
-        if self.device_info.voice_assistant_version:
+        if self.device_info and self.device_info.voice_assistant_version:
             needed_platforms.add(Platform.BINARY_SENSOR)
             needed_platforms.add(Platform.SELECT)
 
