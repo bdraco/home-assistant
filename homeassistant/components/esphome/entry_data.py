@@ -38,7 +38,7 @@ from aioesphomeapi.model import ButtonInfo
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.storage import Store
 
@@ -102,7 +102,6 @@ class RuntimeEntryData:
     available: bool = False
     expected_disconnect: bool = False  # Last disconnect was expected (e.g. deep sleep)
     device_info: DeviceInfo | None = None
-    formatted_mac: str | None = None
     bluetooth_device: ESPHomeBluetoothDevice | None = None
     api_version: APIVersion = field(default_factory=APIVersion)
     cleanup_callbacks: list[Callable[[], None]] = field(default_factory=list)
@@ -253,9 +252,10 @@ class RuntimeEntryData:
         unique_id_migrations: dict[str, EntityInfo],
     ) -> None:
         """Migrate unique ids to new format."""
-        assert self.formatted_mac
+        assert self.device_info
+        mac = self.device_info.mac_address
         for old_unique_id, info in unique_id_migrations.items():
-            new_unique_id = build_unique_id(self.formatted_mac, info)
+            new_unique_id = build_unique_id(mac, info)
             platform = INFO_TYPE_TO_PLATFORM[type(info)]
             if old_entry := ent_reg.async_get_entity_id(
                 platform, DOMAIN, old_unique_id
@@ -270,15 +270,14 @@ class RuntimeEntryData:
 
         # First, load all platforms
         needed_platforms = set()
-
         if async_get_dashboard(hass):
             needed_platforms.add(Platform.UPDATE)
 
-        if self.device_info is not None:
-            self.formatted_mac = dr.format_mac(self.device_info.mac_address).upper()
-            if self.device_info.voice_assistant_version:
-                needed_platforms.add(Platform.BINARY_SENSOR)
-                needed_platforms.add(Platform.SELECT)
+        assert self.device_info is not None, "device_info must be set at this point"
+
+        if self.device_info.voice_assistant_version:
+            needed_platforms.add(Platform.BINARY_SENSOR)
+            needed_platforms.add(Platform.SELECT)
 
         unique_id_migrations: dict[str, EntityInfo] = {}
         for info in infos:
@@ -290,7 +289,6 @@ class RuntimeEntryData:
                 unique_id_migrations[old_unique_id] = info
 
         if unique_id_migrations:
-            assert self.formatted_mac
             _LOGGER.warning("Unique id migrations: %s", unique_id_migrations)
             self._migrate_unique_ids(ent_reg, unique_id_migrations)
 
