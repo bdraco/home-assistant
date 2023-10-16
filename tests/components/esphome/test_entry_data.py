@@ -1,4 +1,4 @@
-"""Test ESPHome sensors."""
+"""Test ESPHome entry data."""
 
 from aioesphomeapi import (
     APIClient,
