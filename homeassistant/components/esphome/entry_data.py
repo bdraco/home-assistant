@@ -31,6 +31,7 @@ from aioesphomeapi import (
     SwitchInfo,
     TextSensorInfo,
     UserService,
+    build_unique_id,
 )
 from aioesphomeapi.model import ButtonInfo
 
@@ -110,6 +111,7 @@ class RuntimeEntryData:
     available: bool = False
     expected_disconnect: bool = False  # Last disconnect was expected (e.g. deep sleep)
     device_info: DeviceInfo | None = None
+    formatted_mac: str | None = None
     bluetooth_device: ESPHomeBluetoothDevice | None = None
     api_version: APIVersion = field(default_factory=APIVersion)
     cleanup_callbacks: list[Callable[[], None]] = field(default_factory=list)
@@ -254,57 +256,20 @@ class RuntimeEntryData:
                 await hass.config_entries.async_forward_entry_setups(entry, needed)
             self.loaded_platforms |= needed
 
-    def _migrate_unique_ids_if_needed(
+    def _migrate_unique_ids(
         self,
         ent_reg: er.EntityRegistry,
-        new_unique_id_prefix: str,
-        possible_unique_id_migrations: dict[str, EntityInfo],
+        unique_id_migrations: dict[str, EntityInfo],
     ) -> None:
-        """Migrate unique ids if needed."""
-        assert self.device_info is not None
-        old_unique_id_prefix = self.device_info.name
-        special_cases: list[str] = []
-        for unique_id, info in possible_unique_id_migrations.items():
+        """Migrate unique ids to new format."""
+        assert self.formatted_mac
+        for old_unique_id, info in unique_id_migrations.items():
+            new_unique_id = build_unique_id(self.formatted_mac, info)
             platform = INFO_TYPE_TO_PLATFORM[type(info)]
-            _, esphome_platform, object_id = unique_id.split("-", 2)
-            old_unique_id = f"{old_unique_id_prefix}{esphome_platform}{object_id}"
             if old_entry := ent_reg.async_get_entity_id(
                 platform, DOMAIN, old_unique_id
             ):
-                ent_reg.async_update_entity(old_entry, new_unique_id=unique_id)
-                continue
-            # If we get here the old unique id may not be in the default format
-            # and is likely a special case.
-            #
-            # Older ESPHome versions have the following special cases:
-            #
-            # <mac>-adc - for esp8266 adc sensor only
-            # <mac>-hall - for esp32 hall sensor only
-            # <mac>-uptime
-            # <mac>-version
-            # dallas-<dallas-address>
-            # <mac>-ethernetinfo - ip address when using ethernet
-            # <mac>-wifiinfo-ip
-            # <mac>-wifiinfo-dns
-            # <mac>-wifiinfo-scanresults
-            # <mac>-wifiinfo-ssid
-            # <mac>-wifiinfo-bssid
-            # <mac>-wifiinfo-macadr
-            # <mac>-wifisignal
-            #
-            special_cases.append(unique_id)
-
-        if not special_cases:
-            return
-
-        for unique_id in special_cases:
-            if "-" not in unique_id:
-                _LOGGER.warning(
-                    "Skipping special case unique id migration for %s", unique_id
-                )
-                continue
-
-        # TODO: handle special cases here
+                ent_reg.async_update_entity(old_entry, new_unique_id=new_unique_id)
 
     async def async_update_static_infos(
         self, hass: HomeAssistant, entry: ConfigEntry, infos: list[EntityInfo]
@@ -314,42 +279,30 @@ class RuntimeEntryData:
 
         # First, load all platforms
         needed_platforms = set()
-        new_unique_id_prefix: str | None = None
 
         if async_get_dashboard(hass):
             needed_platforms.add(Platform.UPDATE)
 
         if self.device_info is not None:
-            new_unique_id_prefix = (
-                f"{dr.format_mac(self.device_info.mac_address).upper()}-"
-            )
-
+            self.formatted_mac = dr.format_mac(self.device_info.mac_address).upper()
             if self.device_info.voice_assistant_version:
                 needed_platforms.add(Platform.BINARY_SENSOR)
                 needed_platforms.add(Platform.SELECT)
 
-        possible_unique_id_migrations: dict[str, EntityInfo] = {}
+        unique_id_migrations: dict[str, EntityInfo] = {}
         for info in infos:
             platform = INFO_TYPE_TO_PLATFORM[type(info)]
             needed_platforms.add(platform)
-            unique_id = info.unique_id
+            old_unique_id = info.unique_id
             # If the unique id is in the new format and does not already exist in the entity registry
             # then we need to migrate it from the old format if there is an entity with the old format
-            if (
-                new_unique_id_prefix
-                and not unique_id_is_new_format(new_unique_id_prefix, unique_id)
-                and not ent_reg.async_get_entity_id(platform, DOMAIN, unique_id)
-            ):
-                possible_unique_id_migrations[unique_id] = info
+            if ent_reg.async_get_entity_id(platform, DOMAIN, old_unique_id):
+                unique_id_migrations[old_unique_id] = info
 
-        if possible_unique_id_migrations:
-            assert new_unique_id_prefix
-            _LOGGER.warning(
-                "Possible unique id migrations: %s", possible_unique_id_migrations
-            )
-            self._migrate_unique_ids_if_needed(
-                ent_reg, new_unique_id_prefix, possible_unique_id_migrations
-            )
+        if unique_id_migrations:
+            assert self.formatted_mac
+            _LOGGER.warning("Unique id migrations: %s", unique_id_migrations)
+            self._migrate_unique_ids(ent_reg, unique_id_migrations)
 
         await self._ensure_platforms_loaded(hass, entry, needed_platforms)
 
