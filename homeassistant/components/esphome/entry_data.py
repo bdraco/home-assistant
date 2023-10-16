@@ -250,8 +250,6 @@ class RuntimeEntryData:
         self, hass: HomeAssistant, entry: ConfigEntry, infos: list[EntityInfo]
     ) -> None:
         """Distribute an update of static infos to all platforms."""
-        ent_reg = er.async_get(hass)
-
         # First, load all platforms
         needed_platforms = set()
         if async_get_dashboard(hass):
@@ -264,6 +262,7 @@ class RuntimeEntryData:
             needed_platforms.add(Platform.BINARY_SENSOR)
             needed_platforms.add(Platform.SELECT)
 
+        ent_reg = er.async_get(hass)
         registry_get_entity = ent_reg.async_get_entity_id
         for info in infos:
             platform = INFO_TYPE_TO_PLATFORM[type(info)]
