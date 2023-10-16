@@ -285,8 +285,7 @@ class RuntimeEntryData:
             platform = INFO_TYPE_TO_PLATFORM[type(info)]
             needed_platforms.add(platform)
             old_unique_id = info.unique_id
-            # If the unique id is in the new format and does not already exist in the entity registry
-            # then we need to migrate it from the old format if there is an entity with the old format
+            # If the unique id is in the old format, migrate it
             if ent_reg.async_get_entity_id(platform, DOMAIN, old_unique_id):
                 unique_id_migrations[old_unique_id] = info
 
