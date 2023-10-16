@@ -70,7 +70,7 @@ PyMetno==0.11.0
 PyMicroBot==0.0.9
 
 # homeassistant.components.nina
-PyNINA==0.3.2
+PyNINA==0.3.3
 
 # homeassistant.components.mobile_app
 # homeassistant.components.owntracks
@@ -218,7 +218,7 @@ aioecowitt==2023.5.0
 aioemonitor==1.0.5
 
 # homeassistant.components.esphome
-aioesphomeapi==18.0.2
+aioesphomeapi==18.0.3
 
 # homeassistant.components.flo
 aioflo==2021.11.0
@@ -679,7 +679,7 @@ gardena-bluetooth==1.4.0
 gassist-text==0.0.10
 
 # homeassistant.components.google
-gcal-sync==4.1.4
+gcal-sync==5.0.0
 
 # homeassistant.components.geocaching
 geocachingapi==0.2.1
@@ -1768,7 +1768,7 @@ samsungtvws[async,encrypted]==2.6.0
 scapy==2.5.0
 
 # homeassistant.components.screenlogic
-screenlogicpy==0.9.2
+screenlogicpy==0.9.3
 
 # homeassistant.components.backup
 securetar==2023.3.0
