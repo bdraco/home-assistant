@@ -62,7 +62,7 @@ async def test_migrate_entity_unique_id_downgrade_upgrade(
     mock_client: APIClient,
     mock_generic_device_entry,
 ) -> None:
-    """Test a generic sensor entity unique id prefers the migrated entity on downgrade upgrade."""
+    """Test unique id migration prefers the original entity on downgrade upgrade."""
     ent_reg = er.async_get(hass)
     ent_reg.async_get_or_create(
         "sensor",
