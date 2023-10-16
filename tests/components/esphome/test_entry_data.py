@@ -104,7 +104,7 @@ async def test_migrate_entity_unique_id_downgrade_upgrade(
     entry = entity_reg.async_get("sensor.new_sensor")
     assert entry is not None
     # Confirm we did not touch the entity that was created
-    # on downgrade so when they upgrade they get delete the
+    # on downgrade so when they upgrade again they can delete the
     # entity that was only created on downgrade and they keep
     # the original one.
     assert entity_reg.async_get_entity_id("sensor", "esphome", "my_sensor") is not None
