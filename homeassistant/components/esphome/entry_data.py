@@ -246,22 +246,6 @@ class RuntimeEntryData:
                 await hass.config_entries.async_forward_entry_setups(entry, needed)
             self.loaded_platforms |= needed
 
-    def _migrate_unique_ids(
-        self,
-        ent_reg: er.EntityRegistry,
-        unique_id_migrations: dict[str, EntityInfo],
-    ) -> None:
-        """Migrate unique ids to new format."""
-        assert self.device_info
-        mac = self.device_info.mac_address
-        for old_unique_id, info in unique_id_migrations.items():
-            new_unique_id = build_unique_id(mac, info)
-            platform = INFO_TYPE_TO_PLATFORM[type(info)]
-            if old_entry := ent_reg.async_get_entity_id(
-                platform, DOMAIN, old_unique_id
-            ):
-                ent_reg.async_update_entity(old_entry, new_unique_id=new_unique_id)
-
     async def async_update_static_infos(
         self, hass: HomeAssistant, entry: ConfigEntry, infos: list[EntityInfo]
     ) -> None:
@@ -274,23 +258,25 @@ class RuntimeEntryData:
             needed_platforms.add(Platform.UPDATE)
 
         assert self.device_info is not None, "device_info must be set at this point"
+        mac = self.device_info.mac_address
 
         if self.device_info.voice_assistant_version:
             needed_platforms.add(Platform.BINARY_SENSOR)
             needed_platforms.add(Platform.SELECT)
 
-        unique_id_migrations: dict[str, EntityInfo] = {}
         for info in infos:
             platform = INFO_TYPE_TO_PLATFORM[type(info)]
             needed_platforms.add(platform)
             old_unique_id = info.unique_id
             # If the unique id is in the old format, migrate it
-            if ent_reg.async_get_entity_id(platform, DOMAIN, old_unique_id):
-                unique_id_migrations[old_unique_id] = info
-
-        if unique_id_migrations:
-            _LOGGER.warning("Unique id migrations: %s", unique_id_migrations)
-            self._migrate_unique_ids(ent_reg, unique_id_migrations)
+            if old_entry := ent_reg.async_get_entity_id(
+                platform, DOMAIN, old_unique_id
+            ):
+                new_unique_id = build_unique_id(mac, info)
+                # If they downgraded and upgraded, there might be a duplicate
+                # so we want to keep the one that was already there.
+                if not ent_reg.async_get_entity_id(platform, DOMAIN, new_unique_id):
+                    ent_reg.async_update_entity(old_entry, new_unique_id=new_unique_id)
 
         await self._ensure_platforms_loaded(hass, entry, needed_platforms)
 
