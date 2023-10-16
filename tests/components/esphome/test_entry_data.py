@@ -7,7 +7,6 @@ from aioesphomeapi import (
     SensorState,
 )
 
-from homeassistant.const import ATTR_ICON
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
