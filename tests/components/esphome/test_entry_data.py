@@ -108,6 +108,6 @@ async def test_migrate_entity_unique_id_downgrade_upgrade(
     # entity that was only created on downgrade and they keep
     # the original one.
     assert entity_reg.async_get_entity_id("sensor", "esphome", "my_sensor") is not None
-    # Not that ESPHome includes the EntityInfo type in the unique id
+    # Note that ESPHome includes the EntityInfo type in the unique id
     # as this is not a 1:1 mapping to the entity platform (ie. text_sensor)
     assert entry.unique_id == "11:22:33:44:55:aa-sensor-mysensor"
