@@ -84,15 +84,6 @@ class ESPHomeStorage(Store[StoreData]):
     """ESPHome Storage."""
 
 
-def unique_id_is_new_format(new_unique_id_prefix: str, unique_id: str) -> bool:
-    """Return True if the unique id is in the new format."""
-    if unique_id.count("-") == 2 and unique_id.startswith(new_unique_id_prefix):
-        split_unique_id = unique_id.split("-", 2)
-        if split_unique_id[1] != "wifiinfo":
-            return True
-    return False
-
-
 @dataclass(slots=True)
 class RuntimeEntryData:
     """Store runtime data for esphome config entries."""
