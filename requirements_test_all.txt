@@ -218,7 +218,7 @@ aioecowitt==2023.5.0
 aioemonitor==1.0.5
 
 # homeassistant.components.esphome
-aioesphomeapi==18.0.3
+aioesphomeapi==18.0.4
 
 # homeassistant.components.flo
 aioflo==2021.11.0
@@ -460,7 +460,7 @@ bleak==0.21.1
 blebox-uniapi==2.2.0
 
 # homeassistant.components.blink
-blinkpy==0.21.0
+blinkpy==0.22.2
 
 # homeassistant.components.bluemaestro
 bluemaestro-ble==0.2.3
@@ -1981,7 +1981,7 @@ vallox-websocket-api==3.3.0
 vehicle==1.0.1
 
 # homeassistant.components.velbus
-velbus-aio==2023.2.0
+velbus-aio==2023.10.0
 
 # homeassistant.components.venstar
 venstarcolortouch==0.19
@@ -2090,7 +2090,7 @@ zeroconf==0.118.0
 zeversolar==0.3.1
 
 # homeassistant.components.zha
-zha-quirks==0.0.104
+zha-quirks==0.0.105
 
 # homeassistant.components.zha
 zigpy-deconz==0.21.1
