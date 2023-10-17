@@ -261,7 +261,7 @@ class AccessoryEntity(HomeKitEntity):
         return f"{self._accessory.unique_id}_{self._aid}"
 
 
-class CharacteristicEntity(HomeKitEntity):
+class BaseCharacteristicEntity(HomeKitEntity):
     """A HomeKit entity that is related to an single characteristic rather than a whole service.
 
     This is typically used to expose additional sensor, binary_sensor or number entities that don't belong with
@@ -274,17 +274,6 @@ class CharacteristicEntity(HomeKitEntity):
         """Initialise a generic single characteristic HomeKit entity."""
         self._char = char
         super().__init__(accessory, devinfo)
-
-    @property
-    def old_unique_id(self) -> str:
-        """Return the old ID of this device."""
-        serial = self.accessory_info.value(CharacteristicsTypes.SERIAL_NUMBER)
-        return f"homekit-{serial}-aid:{self._aid}-sid:{self._char.service.iid}-cid:{self._char.iid}"
-
-    @property
-    def unique_id(self) -> str:
-        """Return the ID of this device."""
-        return f"{self._accessory.unique_id}_{self._aid}_{self._char.service.iid}_{self._char.iid}"
 
     @callback
     def _async_remove_entity_if_characteristics_disappeared(self) -> bool:
@@ -306,3 +295,22 @@ class CharacteristicEntity(HomeKitEntity):
             and not self._async_remove_entity_if_characteristics_disappeared()
         ):
             super()._async_reconfigure()
+
+
+class CharacteristicEntity(BaseCharacteristicEntity):
+    """A HomeKit entity that is related to an single characteristic rather than a whole service.
+
+    This is typically used to expose additional sensor, binary_sensor or number entities that don't belong with
+    the service entity.
+    """
+
+    @property
+    def old_unique_id(self) -> str:
+        """Return the old ID of this device."""
+        serial = self.accessory_info.value(CharacteristicsTypes.SERIAL_NUMBER)
+        return f"homekit-{serial}-aid:{self._aid}-sid:{self._char.service.iid}-cid:{self._char.iid}"
+
+    @property
+    def unique_id(self) -> str:
+        """Return the ID of this device."""
+        return f"{self._accessory.unique_id}_{self._aid}_{self._char.service.iid}_{self._char.iid}"
