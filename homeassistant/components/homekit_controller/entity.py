@@ -54,17 +54,29 @@ class HomeKitEntity(Entity):
         self.hass.async_create_task(self.async_remove(force_remove=True))
 
     @callback
-    def _async_config_changed(self) -> None:
-        """Handle accessory discovery changes."""
+    def _async_remove_entity_if_accessory_or_service_disappeared(self) -> bool:
+        """Handle accessory or service disappearance."""
         hk_device = self._accessory
         entity_map = hk_device.entity_map
         if not entity_map.has_aid(self._aid):
             self._async_handle_entity_removed()
-            return
-        accessory = entity_map.aid(self._aid)
-        if not _get_service_by_iid_or_none(accessory.services, self._iid):
+            return True
+        if not _get_service_by_iid_or_none(
+            entity_map.aid(self._aid).services, self._iid
+        ):
             self._async_handle_entity_removed()
-            return
+            return True
+        return False
+
+    @callback
+    def _async_config_changed(self) -> None:
+        """Handle accessory discovery changes."""
+        if not self._async_remove_entity_if_accessory_or_service_disappeared():
+            self._async_reconfigure()
+
+    @callback
+    def _async_reconfigure(self) -> None:
+        """Reconfigure the entity."""
         self._async_remove_watching_characteristics()
         self.async_setup()
         self._async_add_watching_characteristics()
@@ -282,16 +294,13 @@ class CharacteristicEntity(HomeKitEntity):
     @callback
     def _async_config_changed(self) -> None:
         """Handle accessory discovery changes."""
-        hk_device = self._accessory
-        entity_map = hk_device.entity_map
-        if not entity_map.has_aid(self._aid):
+        if self._async_remove_entity_if_accessory_or_service_disappeared():
+            return
+        if (
+            not self._accessory.entity_map.aid(self._aid)
+            .services.iid(self._iid)
+            .get_char_by_iid(self._char.iid)
+        ):
             self._async_handle_entity_removed()
             return
-        accessory = entity_map.aid(self._aid)
-        if not (service := _get_service_by_iid_or_none(accessory.services, self._iid)):
-            self._async_handle_entity_removed()
-            return
-        if not service.get_char_by_iid(self._char.iid):
-            self._async_handle_entity_removed()
-            return
-        super()._async_config_changed()
+        super()._async_reconfigure()
