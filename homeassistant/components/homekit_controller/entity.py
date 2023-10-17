@@ -51,12 +51,12 @@ class HomeKitEntity(Entity):
     @callback
     def _async_handle_entity_removed(self) -> None:
         """Handle entity removal."""
-        # We call _async_unsubscribe_on_entity_removal as soon as we
+        # We call _async_unsubscribe_chars as soon as we
         # know the entity is about to be removed so we do not try to
         # update characteristics that no longer exist. It will get
         # called in async_will_remove_from_hass as well, but that is
         # too late.
-        self._async_unsubscribe_on_entity_removal()
+        self._async_unsubscribe_chars()
         self.hass.async_create_task(self.async_remove(force_remove=True))
 
     @callback
@@ -79,31 +79,14 @@ class HomeKitEntity(Entity):
     @callback
     def _async_reconfigure(self) -> None:
         """Reconfigure the entity."""
-        self._async_remove_watching_characteristics()
+        self._async_unsubscribe_chars()
         self.async_setup()
-        self._async_add_watching_characteristics()
-        self._async_subscribe_all_characteristics()
+        self._async_subscribe_chars()
         self.async_write_ha_state()
-
-    @callback
-    def _async_subscribe_all_characteristics(self) -> None:
-        """Subscribe to all characteristics."""
-        self._async_unsubscribe_all_characteristics()
-        self._char_subscription = self._accessory.async_subscribe(
-            self.all_characteristics, self._async_write_ha_state
-        )
-
-    @callback
-    def _async_unsubscribe_all_characteristics(self) -> None:
-        """Unsubscribe from all characteristics."""
-        if self._char_subscription:
-            self._char_subscription()
-            self._char_subscription = None
 
     async def async_added_to_hass(self) -> None:
         """Entity added to hass."""
-        self._async_add_watching_characteristics()
-        self._async_subscribe_all_characteristics()
+        self._async_subscribe_chars()
         self.async_on_remove(
             self._accessory.async_subscribe_config_changed(self._async_config_changed)
         )
@@ -113,40 +96,25 @@ class HomeKitEntity(Entity):
 
     async def async_will_remove_from_hass(self) -> None:
         """Prepare to be removed from hass."""
-        self._async_unsubscribe_on_entity_removal()
+        self._async_unsubscribe_chars()
 
     @callback
-    def _async_unsubscribe_on_entity_removal(self):
-        """Handle entity removal.
-
-        This is safe to call multiple times (i.e. when we know
-        the entity is about to be removed and when it is actually)
-        """
-        self._async_remove_watching_characteristics()
-        self._async_unsubscribe_all_characteristics()
-
-    @callback
-    def _async_add_watching_characteristics(self) -> None:
-        """Add the characteristics we are watching."""
-        self._watching_chars = True
-        self._accessory.add_pollable_characteristics(self.pollable_characteristics)
-        self._accessory.add_watchable_characteristics(self.watchable_characteristics)
-
-    @callback
-    def _async_remove_watching_characteristics(self) -> None:
-        """Remove the characteristics we are watching."""
-        if not self._watching_chars:
-            # We call this in two places _async_handle_entity_removed and
-            # async_will_remove_from_hass, but we only want to do it once
-            # so we check if we are already not watching and do nothing if
-            # that is the case.
-            #
-            # We have to call this from _async_handle_entity_removed since
-            # async_will_remove_from_hass is called too late.
-            return
-        self._watching_chars = False
+    def _async_unsubscribe_chars(self):
+        """Handle unsubscribing from characteristics."""
+        if self._char_subscription:
+            self._char_subscription()
+            self._char_subscription = None
         self._accessory.remove_pollable_characteristics(self.pollable_characteristics)
         self._accessory.remove_watchable_characteristics(self.watchable_characteristics)
+
+    @callback
+    def _async_subscribe_chars(self):
+        """Handle registering characteristics to watch and subscribe."""
+        self._accessory.add_pollable_characteristics(self.pollable_characteristics)
+        self._accessory.add_watchable_characteristics(self.watchable_characteristics)
+        self._char_subscription = self._accessory.async_subscribe(
+            self.all_characteristics, self._async_write_ha_state
+        )
 
     async def async_put_characteristics(self, characteristics: dict[str, Any]) -> None:
         """Write characteristics to the device.
