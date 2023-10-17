@@ -44,7 +44,6 @@ class HomeKitEntity(Entity):
         self._iid = devinfo["iid"]
         self._char_name: str | None = None
         self._char_subscription: CALLBACK_TYPE | None = None
-        self._watching_chars = False
         self.async_setup()
         super().__init__()
 
