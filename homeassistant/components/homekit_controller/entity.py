@@ -44,7 +44,6 @@ class HomeKitEntity(Entity):
         self._iid = devinfo["iid"]
         self._char_name: str | None = None
         self._char_subscription: CALLBACK_TYPE | None = None
-        self._watching_chars = False
         self.async_setup()
         super().__init__()
 
@@ -117,23 +116,12 @@ class HomeKitEntity(Entity):
     def _async_unsubscribe_chars(self):
         """Handle unsubscribing from characteristics."""
         self._async_unsubscribe_all_characteristics()
-        if not self._watching_chars:
-            # We call this in two places _async_handle_entity_removed and
-            # async_will_remove_from_hass, but we only want to do it once
-            # so we check if we are already not watching and do nothing if
-            # that is the case.
-            #
-            # We have to call this from _async_handle_entity_removed since
-            # async_will_remove_from_hass is called too late.
-            return
-        self._watching_chars = False
         self._accessory.remove_pollable_characteristics(self.pollable_characteristics)
         self._accessory.remove_watchable_characteristics(self.watchable_characteristics)
 
     @callback
     def _async_subscribe_chars(self):
         """Handle registering characteristics to watch and subscribe."""
-        self._watching_chars = True
         self._accessory.add_pollable_characteristics(self.pollable_characteristics)
         self._accessory.add_watchable_characteristics(self.watchable_characteristics)
         self._async_subscribe_all_characteristics()
