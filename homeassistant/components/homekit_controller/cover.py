@@ -23,7 +23,6 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType
 
 from . import KNOWN_DEVICES
 from .connection import HKDevice
@@ -129,9 +128,23 @@ class HomeKitGarageDoorCover(HomeKitEntity, CoverEntity):
 class HomeKitWindowCover(HomeKitEntity, CoverEntity):
     """Representation of a HomeKit Window or Window Covering."""
 
-    def __init__(self, accessory: HKDevice, devinfo: ConfigType) -> None:
-        """Initialise the WindowCover entity."""
-        super().__init__(accessory, devinfo)
+    def get_characteristic_types(self) -> list[str]:
+        """Define the homekit characteristics the entity cares about."""
+        return [
+            CharacteristicsTypes.POSITION_STATE,
+            CharacteristicsTypes.POSITION_CURRENT,
+            CharacteristicsTypes.POSITION_TARGET,
+            CharacteristicsTypes.POSITION_HOLD,
+            CharacteristicsTypes.VERTICAL_TILT_CURRENT,
+            CharacteristicsTypes.VERTICAL_TILT_TARGET,
+            CharacteristicsTypes.HORIZONTAL_TILT_CURRENT,
+            CharacteristicsTypes.HORIZONTAL_TILT_TARGET,
+            CharacteristicsTypes.OBSTRUCTION_DETECTED,
+        ]
+
+    @property
+    def supported_features(self) -> CoverEntityFeature:
+        """Flag supported features."""
         features = (
             CoverEntityFeature.OPEN
             | CoverEntityFeature.CLOSE
@@ -150,21 +163,7 @@ class HomeKitWindowCover(HomeKitEntity, CoverEntity):
                 | CoverEntityFeature.SET_TILT_POSITION
             )
 
-        self._attr_supported_features = features
-
-    def get_characteristic_types(self) -> list[str]:
-        """Define the homekit characteristics the entity cares about."""
-        return [
-            CharacteristicsTypes.POSITION_STATE,
-            CharacteristicsTypes.POSITION_CURRENT,
-            CharacteristicsTypes.POSITION_TARGET,
-            CharacteristicsTypes.POSITION_HOLD,
-            CharacteristicsTypes.VERTICAL_TILT_CURRENT,
-            CharacteristicsTypes.VERTICAL_TILT_TARGET,
-            CharacteristicsTypes.HORIZONTAL_TILT_CURRENT,
-            CharacteristicsTypes.HORIZONTAL_TILT_TARGET,
-            CharacteristicsTypes.OBSTRUCTION_DETECTED,
-        ]
+        return features
 
     @property
     def current_cover_position(self) -> int:
