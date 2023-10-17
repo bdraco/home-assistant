@@ -56,7 +56,7 @@ class HomeKitEntity(Entity):
         # update characteristics that no longer exist. It will get
         # called in async_will_remove_from_hass as well, but that is
         # too late.
-        self._async_unsubscribe()
+        self._async_unsubscribe_chars()
         self.hass.async_create_task(self.async_remove(force_remove=True))
 
     @callback
@@ -79,9 +79,9 @@ class HomeKitEntity(Entity):
     @callback
     def _async_reconfigure(self) -> None:
         """Reconfigure the entity."""
-        self._async_unsubscribe()
+        self._async_unsubscribe_chars()
         self.async_setup()
-        self._async_subscribe()
+        self._async_subscribe_chars()
         self.async_write_ha_state()
 
     @callback
@@ -101,7 +101,7 @@ class HomeKitEntity(Entity):
 
     async def async_added_to_hass(self) -> None:
         """Entity added to hass."""
-        self._async_subscribe()
+        self._async_subscribe_chars()
         self.async_on_remove(
             self._accessory.async_subscribe_config_changed(self._async_config_changed)
         )
@@ -111,10 +111,10 @@ class HomeKitEntity(Entity):
 
     async def async_will_remove_from_hass(self) -> None:
         """Prepare to be removed from hass."""
-        self._async_unsubscribe()
+        self._async_unsubscribe_chars()
 
     @callback
-    def _async_unsubscribe(self):
+    def _async_unsubscribe_chars(self):
         """Handle unsubscribing from characteristics."""
         self._async_unsubscribe_all_characteristics()
         if not self._watching_chars:
@@ -131,7 +131,7 @@ class HomeKitEntity(Entity):
         self._accessory.remove_watchable_characteristics(self.watchable_characteristics)
 
     @callback
-    def _async_subscribe(self):
+    def _async_subscribe_chars(self):
         """Handle registering characteristics to watch and subscribe."""
         self._watching_chars = True
         self._accessory.add_pollable_characteristics(self.pollable_characteristics)
