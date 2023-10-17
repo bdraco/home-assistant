@@ -83,21 +83,6 @@ class HomeKitEntity(Entity):
         self._async_subscribe_chars()
         self.async_write_ha_state()
 
-    @callback
-    def _async_subscribe_all_characteristics(self) -> None:
-        """Subscribe to all characteristics."""
-        self._async_unsubscribe_all_characteristics()
-        self._char_subscription = self._accessory.async_subscribe(
-            self.all_characteristics, self._async_write_ha_state
-        )
-
-    @callback
-    def _async_unsubscribe_all_characteristics(self) -> None:
-        """Unsubscribe from all characteristics."""
-        if self._char_subscription:
-            self._char_subscription()
-            self._char_subscription = None
-
     async def async_added_to_hass(self) -> None:
         """Entity added to hass."""
         self._async_subscribe_chars()
@@ -115,7 +100,9 @@ class HomeKitEntity(Entity):
     @callback
     def _async_unsubscribe_chars(self):
         """Handle unsubscribing from characteristics."""
-        self._async_unsubscribe_all_characteristics()
+        if self._char_subscription:
+            self._char_subscription()
+            self._char_subscription = None
         self._accessory.remove_pollable_characteristics(self.pollable_characteristics)
         self._accessory.remove_watchable_characteristics(self.watchable_characteristics)
 
@@ -124,7 +111,9 @@ class HomeKitEntity(Entity):
         """Handle registering characteristics to watch and subscribe."""
         self._accessory.add_pollable_characteristics(self.pollable_characteristics)
         self._accessory.add_watchable_characteristics(self.watchable_characteristics)
-        self._async_subscribe_all_characteristics()
+        self._char_subscription = self._accessory.async_subscribe(
+            self.all_characteristics, self._async_write_ha_state
+        )
 
     async def async_put_characteristics(self, characteristics: dict[str, Any]) -> None:
         """Write characteristics to the device.
