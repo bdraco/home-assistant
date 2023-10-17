@@ -51,7 +51,7 @@ class HomeKitEntity(Entity):
     @callback
     def _async_handle_entity_removed(self) -> None:
         """Handle entity removal."""
-        # We call _async_unsubscribe as soon as we
+        # We call _async_unsubscribe_chars as soon as we
         # know the entity is about to be removed so we do not try to
         # update characteristics that no longer exist. It will get
         # called in async_will_remove_from_hass as well, but that is
