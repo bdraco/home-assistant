@@ -68,7 +68,7 @@ class HomeKitEventEntity(HomeKitEntity, EventEntity):
 
         self.async_on_remove(
             self._accessory.async_subscribe(
-                [(self._aid, self._characteristic.iid)],
+                {(self._aid, self._characteristic.iid)},
                 self._handle_event,
             )
         )
