@@ -289,15 +289,22 @@ class CharacteristicEntity(HomeKitEntity):
         return f"{self._accessory.unique_id}_{self._aid}_{self._char.service.iid}_{self._char.iid}"
 
     @callback
-    def _async_config_changed(self) -> None:
-        """Handle accessory discovery changes."""
-        if self._async_remove_entity_if_accessory_or_service_disappeared():
-            return
+    def _async_remove_entity_if_characteristics_disappeared(self) -> bool:
+        """Handle characteristic disappearance."""
         if (
             not self._accessory.entity_map.aid(self._aid)
             .services.iid(self._iid)
             .get_char_by_iid(self._char.iid)
         ):
             self._async_handle_entity_removed()
-            return
-        super()._async_reconfigure()
+            return True
+        return False
+
+    @callback
+    def _async_config_changed(self) -> None:
+        """Handle accessory discovery changes."""
+        if (
+            not self._async_remove_entity_if_accessory_or_service_disappeared()
+            and not self._async_remove_entity_if_characteristics_disappeared()
+        ):
+            super()._async_reconfigure()
