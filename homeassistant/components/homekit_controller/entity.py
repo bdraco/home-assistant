@@ -51,13 +51,12 @@ class HomeKitEntity(Entity):
     @callback
     def _async_handle_entity_removed(self) -> None:
         """Handle entity removal."""
-        # We need to remove watching the characteristics and
-        # cancel the subscription before we remove the entity
-        # since async_will_remove_from_hass() will not be called
-        # before the next update which will result in trying to
-        # update a non-existing entity/accessory.
-        self._async_remove_watching_characteristics()
-        self._async_unsubscribe_all_characteristics()
+        # We call _async_unsubscribe_on_entity_removal as soon as we
+        # know the entity is about to be removed so we do not try to
+        # update characteristics that no longer exist. It will get
+        # called in async_will_remove_from_hass as well, but that is
+        # too late.
+        self._async_unsubscribe_on_entity_removal()
         self.hass.async_create_task(self.async_remove(force_remove=True))
 
     @callback
@@ -114,6 +113,15 @@ class HomeKitEntity(Entity):
 
     async def async_will_remove_from_hass(self) -> None:
         """Prepare to be removed from hass."""
+        self._async_unsubscribe_on_entity_removal()
+
+    @callback
+    def _async_unsubscribe_on_entity_removal(self):
+        """Handle entity removal.
+
+        This is safe to call multiple times (i.e. when we know
+        the entity is about to be removed and when it is actually)
+        """
         self._async_remove_watching_characteristics()
         self._async_unsubscribe_all_characteristics()
 
