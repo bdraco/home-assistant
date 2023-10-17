@@ -172,7 +172,7 @@ class HKDevice:
     ) -> None:
         """Remove all pollable characteristics by accessory id."""
         for aid_iid in characteristics:
-            self.pollable_characteristics.remove(aid_iid)
+            self.pollable_characteristics.discard(aid_iid)
 
     def add_watchable_characteristics(
         self, characteristics: list[tuple[int, int]]
@@ -208,7 +208,7 @@ class HKDevice:
     ) -> None:
         """Remove all pollable characteristics by accessory id."""
         for aid_iid in characteristics:
-            self.watchable_characteristics.remove(aid_iid)
+            self.watchable_characteristics.discard(aid_iid)
             self._pending_subscribes.discard(aid_iid)
 
     @callback
