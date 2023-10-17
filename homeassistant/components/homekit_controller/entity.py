@@ -50,7 +50,6 @@ class HomeKitEntity(Entity):
     @callback
     def _async_handle_entity_removed(self) -> None:
         """Handle entity removal."""
-        self._async_remove_watching_characteristics()
         self.hass.async_create_task(self.async_remove(force_remove=True))
 
     @callback
