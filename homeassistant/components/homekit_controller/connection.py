@@ -840,7 +840,7 @@ class HKDevice:
 
     @callback
     def _remove_characteristics_callback(
-        self, characteristics: Iterable[tuple[int, int]], callback_: CALLBACK_TYPE
+        self, characteristics: set[tuple[int, int]], callback_: CALLBACK_TYPE
     ) -> None:
         """Remove a characteristics callback."""
         for aid_iid in characteristics:
