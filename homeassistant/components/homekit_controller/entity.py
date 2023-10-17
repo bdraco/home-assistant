@@ -56,8 +56,7 @@ class HomeKitEntity(Entity):
     @callback
     def _async_remove_entity_if_accessory_or_service_disappeared(self) -> bool:
         """Handle accessory or service disappearance."""
-        hk_device = self._accessory
-        entity_map = hk_device.entity_map
+        entity_map = self._accessory.entity_map
         if not entity_map.has_aid(self._aid) or not _get_service_by_iid_or_none(
             entity_map.aid(self._aid).services, self._iid
         ):
