@@ -255,7 +255,7 @@ async def test_ecobee3_add_sensors_at_runtime(hass: HomeAssistant) -> None:
 
 
 async def test_ecobee3_remove_sensors_at_runtime(hass: HomeAssistant) -> None:
-    """Test that sensors are automatically remove."""
+    """Test that sensors are automatically removed."""
     entity_registry = er.async_get(hass)
 
     # Set up a base Ecobee 3 with additional sensors.
@@ -303,3 +303,29 @@ async def test_ecobee3_remove_sensors_at_runtime(hass: HomeAssistant) -> None:
     # Currently it is not possible to add the entities back once
     # they are removed because _add_new_entities has a guard to prevent
     # the same entity from being added twice.
+
+
+async def test_ecobee3_remove_on_device_temp_sensor_at_run_time(
+    hass: HomeAssistant,
+) -> None:
+    """Test that a service is removed from the accessory but not the accessory itself."""
+    entity_registry = er.async_get(hass)
+
+    # Set up a base Ecobee 3 with additional sensors.
+    accessories = await setup_accessories_from_file(hass, "ecobee3.json")
+    await setup_test_accessories(hass, accessories)
+
+    climate = entity_registry.async_get("climate.homew")
+    assert climate.unique_id == "00:00:00:00:00:00_1_16"
+
+    temp_sensor = entity_registry.async_get("sensor.homew_current_temperature")
+    assert temp_sensor.unique_id == "00:00:00:00:00:00_1_16_19"
+
+    # Reconfigure with the temperature service removed
+    accessories = await setup_accessories_from_file(
+        hass, "ecobee3_service_removed.json"
+    )
+    await device_config_changed(hass, accessories)
+
+    assert hass.states.get("climate.homew") is not None
+    assert hass.states.get("sensor.homew_current_temperature") is None
