@@ -117,7 +117,7 @@ class HKDevice:
 
         # This just tracks aid/iid pairs so we know if a HK service has been
         # mapped to a HA entity.
-        self.entities: list[tuple[int, int | None, int | None]] = []
+        self.entities: set[tuple[int, int | None, int | None]] = set()
 
         # A map of aid -> device_id
         # Useful when routing events to triggers
@@ -652,7 +652,7 @@ class HKDevice:
                 if (accessory.aid, None, None) in self.entities:
                     continue
                 if handler(accessory):
-                    self.entities.append((accessory.aid, None, None))
+                    self.entities.add((accessory.aid, None, None))
                     break
 
     def add_char_factory(self, add_entities_cb: AddCharacteristicCb) -> None:
@@ -668,7 +668,7 @@ class HKDevice:
                         if (accessory.aid, service.iid, char.iid) in self.entities:
                             continue
                         if handler(char):
-                            self.entities.append((accessory.aid, service.iid, char.iid))
+                            self.entities.add((accessory.aid, service.iid, char.iid))
                             break
 
     def add_listener(self, add_entities_cb: AddServiceCb) -> None:
@@ -716,7 +716,7 @@ class HKDevice:
 
                 for listener in callbacks:
                     if listener(service):
-                        self.entities.append((aid, None, iid))
+                        self.entities.add((aid, None, iid))
                         break
 
     async def async_load_platform(self, platform: str) -> None:
