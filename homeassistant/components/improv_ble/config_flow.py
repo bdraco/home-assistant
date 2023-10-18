@@ -128,6 +128,13 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the Bluetooth discovery step."""
         await self.async_set_unique_id(discovery_info.address)
         self._abort_if_unique_id_configured()
+        service_data = discovery_info.service_data
+        improv_data = service_data.get("00004677-0000-1000-8000-00805f9b34fb")
+        if not improv_data:
+            return self.async_abort(reason="not_improv_device")
+        improv_state = improv_data[0]
+        if improv_state in (State.PROVISIONING, State.PROVISIONED):
+            return self.async_abort(reason="already_provisioned")
         self._discovery_info = discovery_info
         name = self._discovery_info.name or self._discovery_info.address
         self.context["title_placeholders"] = {"name": name}
