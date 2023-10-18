@@ -96,6 +96,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if (
                 discovery.address in current_addresses
                 or discovery.address in self._discovered_devices
+                # TODO update device_filter to take account service_data
                 or not device_filter(discovery.advertisement)
             ):
                 continue
@@ -131,7 +132,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         service_data = discovery_info.service_data
         # TODO: make uuid a constant from the library
         improv_data = service_data.get("00004677-0000-1000-8000-00805f9b34fb")
-        # TODO: move data layout comments to library
+        # TODO: move data layout to library
         # improv_data layout:
         #   0: state
         #   1: capabilities
