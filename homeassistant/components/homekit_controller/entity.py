@@ -3,14 +3,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from aiohomekit.model import Service, Services
 from aiohomekit.model.characteristics import (
     EVENT_CHARACTERISTICS,
     Characteristic,
     CharacteristicPermissions,
     CharacteristicsTypes,
 )
-from aiohomekit.model.services import ServicesTypes
+from aiohomekit.model.services import Service, ServicesTypes
 
 from homeassistant.core import CALLBACK_TYPE, callback
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -21,18 +20,11 @@ from .connection import HKDevice, valid_serial_number
 from .utils import folded_name
 
 
-def _get_service_by_iid_or_none(services: Services, iid: int) -> Service | None:
-    """Return a service by iid or None."""
-    try:
-        return services.iid(iid)
-    except KeyError:
-        return None
-
-
 class HomeKitEntity(Entity):
     """Representation of a Home Assistant HomeKit device."""
 
     _attr_should_poll = False
+    accessory_info: Service
     pollable_characteristics: list[tuple[int, int]]
     watchable_characteristics: list[tuple[int, int]]
     all_characteristics: set[tuple[int, int]]
@@ -67,9 +59,9 @@ class HomeKitEntity(Entity):
     def _async_remove_entity_if_accessory_or_service_disappeared(self) -> bool:
         """Handle accessory or service disappearance."""
         entity_map = self._accessory.entity_map
-        if not entity_map.has_aid(self._aid) or not _get_service_by_iid_or_none(
-            entity_map.aid(self._aid).services, self._iid
-        ):
+        if not (
+            accessory := entity_map.aid_or_none(self._aid)
+        ) or not accessory.services.iid_or_none(self._iid):
             self._async_handle_entity_removed()
             return True
         return False
@@ -144,9 +136,11 @@ class HomeKitEntity(Entity):
         accessory = self._accessory
         self.accessory = accessory.entity_map.aid(self._aid)
         self.service = self.accessory.services.iid(self._iid)
-        self.accessory_info = self.accessory.services.first(
+        accessory_info = self.accessory.services.first(
             service_type=ServicesTypes.ACCESSORY_INFORMATION
         )
+        assert accessory_info
+        self.accessory_info = accessory_info
         # If we re-setup, we need to make sure we make new
         # lists since we passed them to the connection before
         # and we do not want to inadvertently modify the old

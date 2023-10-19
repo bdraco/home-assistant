@@ -831,7 +831,7 @@ ical==5.0.1
 icmplib==3.0
 
 # homeassistant.components.idasen_desk
-idasen-ha==1.4.1
+idasen-ha==2.3
 
 # homeassistant.components.network
 ifaddr==0.2.0
@@ -1070,7 +1070,7 @@ openerz-api==0.2.0
 openhomedevice==2.2.0
 
 # homeassistant.components.opower
-opower==0.0.36
+opower==0.0.37
 
 # homeassistant.components.oralb
 oralb-ble==0.17.6
