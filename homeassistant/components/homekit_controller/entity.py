@@ -28,6 +28,7 @@ class HomeKitEntity(Entity):
     pollable_characteristics: list[tuple[int, int]]
     watchable_characteristics: list[tuple[int, int]]
     all_characteristics: set[tuple[int, int]]
+    accessory_info: Service
 
     def __init__(self, accessory: HKDevice, devinfo: ConfigType) -> None:
         """Initialise a generic HomeKit device."""
