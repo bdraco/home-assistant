@@ -15,7 +15,6 @@ from homeassistant.const import (
 from homeassistant.helpers import config_validation as cv
 
 from . import (
-    alarm_control_panel as alarm_control_panel_platform,
     binary_sensor as binary_sensor_platform,
     button as button_platform,
     camera as camera_platform,
@@ -27,7 +26,6 @@ from . import (
     humidifier as humidifier_platform,
     image as image_platform,
     lawn_mower as lawn_mower_platform,
-    light as light_platform,
     lock as lock_platform,
     number as number_platform,
     scene as scene_platform,
@@ -56,10 +54,7 @@ DEFAULT_TLS_PROTOCOL = "auto"
 
 CONFIG_SCHEMA_BASE = vol.Schema(
     {
-        Platform.ALARM_CONTROL_PANEL.value: vol.All(
-            cv.ensure_list,
-            [alarm_control_panel_platform.PLATFORM_SCHEMA_MODERN],  # type: ignore[has-type] # noqa: E501
-        ),
+        Platform.ALARM_CONTROL_PANEL.value: vol.All(cv.ensure_list, [dict]),
         Platform.BINARY_SENSOR.value: vol.All(
             cv.ensure_list,
             [binary_sensor_platform.PLATFORM_SCHEMA_MODERN],  # type: ignore[has-type]
@@ -104,13 +99,10 @@ CONFIG_SCHEMA_BASE = vol.Schema(
             cv.ensure_list,
             [lawn_mower_platform.PLATFORM_SCHEMA_MODERN],  # type: ignore[has-type]
         ),
+        Platform.LIGHT.value: vol.All(cv.ensure_list, [dict]),
         Platform.LOCK.value: vol.All(
             cv.ensure_list,
             [lock_platform.PLATFORM_SCHEMA_MODERN],  # type: ignore[has-type]
-        ),
-        Platform.LIGHT.value: vol.All(
-            cv.ensure_list,
-            [light_platform.PLATFORM_SCHEMA_MODERN],  # type: ignore[has-type]
         ),
         Platform.NUMBER.value: vol.All(
             cv.ensure_list,
