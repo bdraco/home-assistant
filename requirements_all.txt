@@ -192,10 +192,10 @@ aio-georss-gdacs==0.8
 aioairq==0.2.4
 
 # homeassistant.components.airzone_cloud
-aioairzone-cloud==0.2.4
+aioairzone-cloud==0.2.5
 
 # homeassistant.components.airzone
-aioairzone==0.6.8
+aioairzone==0.6.9
 
 # homeassistant.components.ambient_station
 aioambient==2023.04.0
@@ -1670,7 +1670,7 @@ pydelijn==1.1.0
 pydexcom==0.2.3
 
 # homeassistant.components.discovergy
-pydiscovergy==2.0.4
+pydiscovergy==2.0.5
 
 # homeassistant.components.doods
 pydoods==1.0.2
@@ -2600,7 +2600,7 @@ todoist-api-python==2.1.2
 tololib==0.1.0b4
 
 # homeassistant.components.toon
-toonapi==0.2.1
+toonapi==0.3.0
 
 # homeassistant.components.totalconnect
 total-connect-client==2023.2
@@ -2662,7 +2662,7 @@ uvcclient==0.11.0
 vallox-websocket-api==3.3.0
 
 # homeassistant.components.rdw
-vehicle==1.0.1
+vehicle==2.0.0
 
 # homeassistant.components.velbus
 velbus-aio==2023.10.1
