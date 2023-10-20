@@ -40,7 +40,7 @@ Mastodon.py==1.5.1
 # homeassistant.components.seven_segments
 # homeassistant.components.sighthound
 # homeassistant.components.tensorflow
-Pillow==10.0.1
+Pillow==10.1.0
 
 # homeassistant.components.plex
 PlexAPI==4.15.4
@@ -438,7 +438,7 @@ apcaccess==0.0.13
 apple_weatherkit==1.0.4
 
 # homeassistant.components.apprise
-apprise==1.5.0
+apprise==1.6.0
 
 # homeassistant.components.aprs
 aprslib==0.7.0
@@ -1489,7 +1489,7 @@ proxmoxer==2.0.1
 psutil-home-assistant==0.0.1
 
 # homeassistant.components.systemmonitor
-psutil==5.9.5
+psutil==5.9.6
 
 # homeassistant.components.pulseaudio_loopback
 pulsectl==23.5.2
@@ -2621,7 +2621,7 @@ ttls==1.5.1
 tuya-iot-py-sdk==0.6.6
 
 # homeassistant.components.twentemilieu
-twentemilieu==1.0.0
+twentemilieu==2.0.0
 
 # homeassistant.components.twilio
 twilio==6.32.0
@@ -2726,7 +2726,7 @@ wiffi==1.1.2
 wirelesstagpy==0.8.1
 
 # homeassistant.components.wled
-wled==0.16.0
+wled==0.17.0
 
 # homeassistant.components.wolflink
 wolf-smartset==0.1.11
