@@ -390,7 +390,7 @@ aiowatttime==0.1.1
 aiowebostv==0.3.3
 
 # homeassistant.components.withings
-aiowithings==0.4.4
+aiowithings==0.5.0
 
 # homeassistant.components.yandex_transport
 aioymaps==1.2.2
@@ -470,7 +470,7 @@ async-interrupt==1.1.1
 # homeassistant.components.ssdp
 # homeassistant.components.upnp
 # homeassistant.components.yeelight
-async-upnp-client==0.36.1
+async-upnp-client==0.36.2
 
 # homeassistant.components.keyboard_remote
 asyncinotify==4.0.2
