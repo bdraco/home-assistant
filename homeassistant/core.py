@@ -1687,9 +1687,6 @@ class StateMachine:
             last_changed = old_state.last_changed if same_state else None
 
         if same_state and same_attr:
-            _LOGGER.warning(
-                "Updating state for %s but already in that state", entity_id
-            )
             return
 
         if context is None:
