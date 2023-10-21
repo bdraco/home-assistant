@@ -233,7 +233,7 @@ aioguardian==2022.07.0
 aioharmony==0.2.10
 
 # homeassistant.components.homekit_controller
-aiohomekit==3.0.7
+aiohomekit==3.0.8
 
 # homeassistant.components.emulated_hue
 # homeassistant.components.http
@@ -448,7 +448,7 @@ base36==0.1.1
 beautifulsoup4==4.12.2
 
 # homeassistant.components.zha
-bellows==0.36.7
+bellows==0.36.5
 
 # homeassistant.components.bmw_connected_drive
 bimmer-connected==0.14.2
