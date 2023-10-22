@@ -170,7 +170,7 @@ aio-georss-gdacs==0.8
 aioairq==0.2.4
 
 # homeassistant.components.airzone_cloud
-aioairzone-cloud==0.2.7
+aioairzone-cloud==0.2.8
 
 # homeassistant.components.airzone
 aioairzone==0.6.9
@@ -365,7 +365,7 @@ aiowatttime==0.1.1
 aiowebostv==0.3.3
 
 # homeassistant.components.withings
-aiowithings==1.0.0
+aiowithings==1.0.1
 
 # homeassistant.components.yandex_transport
 aioymaps==1.2.2
