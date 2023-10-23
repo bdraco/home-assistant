@@ -9,8 +9,10 @@ from typing import Any, TypeVar
 
 from bleak import BleakError
 from improv_ble_client import (
+    SERVICE_DATA_UUID,
     Error,
     ImprovBLEClient,
+    ImprovServiceData,
     State,
     device_filter,
     errors as improv_ble_errors,
@@ -21,6 +23,7 @@ from homeassistant import config_entries
 from homeassistant.components.bluetooth import (
     BluetoothServiceInfoBleak,
     async_discovered_service_info,
+    async_last_service_info,
 )
 from homeassistant.const import CONF_ADDRESS
 from homeassistant.data_entry_flow import FlowResult
@@ -96,7 +99,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if (
                 discovery.address in current_addresses
                 or discovery.address in self._discovered_devices
-                # TODO update device_filter to take account service_data
                 or not device_filter(discovery.advertisement)
             ):
                 continue
@@ -130,22 +132,13 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         await self.async_set_unique_id(discovery_info.address)
         self._abort_if_unique_id_configured()
         service_data = discovery_info.service_data
-        # TODO: make uuid a constant from the library
-        improv_data = service_data.get("00004677-0000-1000-8000-00805f9b34fb")
-        # TODO: move data layout to library
-        # improv_data layout:
-        #   0: state
-        #   1: capabilities
-        #   2: reserved
-        #   3: reserved
-        #   4: reserved
-        #   5: reserved
-        if not improv_data:
-            # TODO: test case for this
-            return self.async_abort(reason="not_improv_device")
-        improv_state = improv_data[0]
-        if improv_state in (State.PROVISIONING, State.PROVISIONED):
-            # TODO: test case for this
+        improv_service_data = ImprovServiceData.from_bytes(
+            service_data[SERVICE_DATA_UUID]
+        )
+        if improv_service_data.state in (State.PROVISIONING, State.PROVISIONED):
+            _LOGGER.debug(
+                "Device is already provisioned: %s", improv_service_data.state
+            )
             return self.async_abort(reason="already_provisioned")
         self._discovery_info = discovery_info
         name = self._discovery_info.name or self._discovery_info.address
@@ -178,6 +171,20 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """
         # mypy is not aware that we can't get here without having these set already
         assert self._discovery_info is not None
+        self._discovery_info = async_last_service_info(
+            self.hass, self._discovery_info.address
+        )
+        if not self._discovery_info:
+            return self.async_abort(reason="cannot_connect")
+        service_data = self._discovery_info.service_data
+        improv_service_data = ImprovServiceData.from_bytes(
+            service_data[SERVICE_DATA_UUID]
+        )
+        if improv_service_data.state in (State.PROVISIONING, State.PROVISIONED):
+            _LOGGER.debug(
+                "Device is already provisioned: %s", improv_service_data.state
+            )
+            return self.async_abort(reason="already_provisioned")
 
         if not self._device:
             self._device = ImprovBLEClient(self._discovery_info.device)
@@ -189,14 +196,18 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             except AbortFlow as err:
                 return self.async_abort(reason=err.reason)
         if self._can_identify:
-            return self.async_show_menu(
-                step_id="main_menu",
-                menu_options=[
-                    "identify",
-                    "provision",
-                ],
-            )
+            return await self.async_step_main_menu()
         return await self.async_step_provision()
+
+    async def async_step_main_menu(self, _: None = None) -> FlowResult:
+        """Show the main menu."""
+        return self.async_show_menu(
+            step_id="main_menu",
+            menu_options=[
+                "identify",
+                "provision",
+            ],
+        )
 
     async def async_step_identify(
         self, user_input: dict[str, Any] | None = None
@@ -229,9 +240,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         try:
             need_authorization = await self._try_call(self._device.need_authorization())
-            _LOGGER.debug("Need authorization: %s", need_authorization)
         except AbortFlow as err:
             return self.async_abort(reason=err.reason)
+        _LOGGER.debug("Need authorization: %s", need_authorization)
         if need_authorization:
             return await self.async_step_authorize()
         return await self.async_step_do_provision()
@@ -253,7 +264,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         self._credentials.ssid, self._credentials.password, None
                     )
                 )
-                _LOGGER.debug("Provision successful, redirect URL: %s", redirect_url)
             except AbortFlow as err:
                 self._provision_result = self.async_abort(reason=err.reason)
                 return
@@ -269,6 +279,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     self._provision_result = self.async_abort(reason="unknown")
                     return
             else:
+                _LOGGER.debug("Provision successful, redirect URL: %s", redirect_url)
                 # Abort all flows in progress with same unique ID
                 for flow in self._async_in_progress(include_uninitialized=True):
                     flow_unique_id = flow["context"].get("unique_id")
