@@ -1458,7 +1458,7 @@ plexauth==0.0.6
 plexwebsocket==0.0.14
 
 # homeassistant.components.plugwise
-plugwise==0.33.0
+plugwise==0.33.1
 
 # homeassistant.components.plum_lightpad
 plumlightpad==0.0.11
@@ -1604,7 +1604,7 @@ pyatag==0.3.5.3
 pyatmo==7.5.0
 
 # homeassistant.components.apple_tv
-pyatv==0.13.4
+pyatv==0.14.3
 
 # homeassistant.components.aussie_broadband
 pyaussiebb==0.0.15
