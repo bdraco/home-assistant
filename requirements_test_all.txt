@@ -22,7 +22,7 @@ Ambiclimate==0.2.1
 DoorBirdPy==2.1.0
 
 # homeassistant.components.homekit
-HAP-python==4.9.0
+HAP-python==4.9.1
 
 # homeassistant.components.tasmota
 HATasmota==0.7.3
