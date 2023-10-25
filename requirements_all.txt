@@ -1010,7 +1010,7 @@ hole==0.8.0
 holidays==0.28
 
 # homeassistant.components.frontend
-home-assistant-frontend==20231005.0
+home-assistant-frontend==20231025.1
 
 # homeassistant.components.conversation
 home-assistant-intents==2023.10.16
@@ -1049,6 +1049,7 @@ ibeacon-ble==1.0.1
 ibmiotf==0.3.4
 
 # homeassistant.components.local_calendar
+# homeassistant.components.local_todo
 ical==5.1.0
 
 # homeassistant.components.ping
@@ -2149,7 +2150,7 @@ python-kasa[speedups]==0.5.3
 # python-lirc==1.2.3
 
 # homeassistant.components.matter
-python-matter-server==3.7.0
+python-matter-server==4.0.0
 
 # homeassistant.components.xiaomi_miio
 python-miio==0.5.12
@@ -2823,7 +2824,7 @@ zigpy==0.59.0
 zm-py==0.5.2
 
 # homeassistant.components.zwave_js
-zwave-js-server-python==0.52.1
+zwave-js-server-python==0.53.1
 
 # homeassistant.components.zwave_me
 zwave-me-ws==0.4.3
