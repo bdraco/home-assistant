@@ -235,7 +235,7 @@ class ActiveConnection:
     @callback
     def async_handle_exception(self, msg: dict[str, Any], err: Exception) -> None:
         """Handle an exception while processing a handler."""
-        log_handler = self.logger.error
+        log_handler = self.logger.exception
 
         code = const.ERR_UNKNOWN_ERROR
         err_message = None
