@@ -1,7 +1,7 @@
 """Commands part of Websocket API."""
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 import datetime as dt
 from functools import lru_cache, partial
 import json
@@ -357,22 +357,23 @@ def handle_subscribe_entities(
     )
     connection.send_result(msg["id"])
 
+    if not entity_ids:
+        states_generator = (state.as_compressed_state_json for state in states)
+    else:
+        states_generator = (
+            state.as_compressed_state_json
+            for state in states
+            if state.entity_id in entity_ids
+        )
+
     # JSON serialize here so we can recover if it blows up due to the
     # state machine containing unserializable data. This command is required
     # to succeed for the UI to show.
     try:
-        if not entity_ids:
-            serialized_states = [state.as_compressed_state_json for state in states]
-        else:
-            serialized_states = [
-                state.as_compressed_state_json
-                for state in states
-                if state.entity_id in entity_ids
-            ]
+        _send_handle_entities_init_response(connection, msg["id"], states_generator)
     except (ValueError, TypeError):
         pass
     else:
-        _send_handle_entities_init_response(connection, msg["id"], serialized_states)
         return
 
     serialized_states = []
@@ -391,7 +392,7 @@ def handle_subscribe_entities(
 
 
 def _send_handle_entities_init_response(
-    connection: ActiveConnection, msg_id: int, serialized_states: list[str]
+    connection: ActiveConnection, msg_id: int, serialized_states: Iterable[str]
 ) -> None:
     """Send handle entities init response."""
     connection.send_message(
