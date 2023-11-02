@@ -274,12 +274,11 @@ def handle_get_states(
     states = _async_get_allowed_states(hass, connection)
 
     try:
-        _send_handle_get_states_response(
-            connection, msg["id"], (state.as_dict_json for state in states)
-        )
+        serialized_states = [state.as_dict_json for state in states]
     except (ValueError, TypeError):
         pass
     else:
+        _send_handle_get_states_response(connection, msg["id"], serialized_states)
         return
 
     # If we can't serialize, we'll filter out unserializable states
@@ -299,7 +298,7 @@ def handle_get_states(
 
 
 def _send_handle_get_states_response(
-    connection: ActiveConnection, msg_id: int, serialized_states: Iterable[str]
+    connection: ActiveConnection, msg_id: int, serialized_states: list[str]
 ) -> None:
     """Send handle get states response."""
     connection.send_message(
