@@ -286,7 +286,9 @@ class HaBleakClientWrapper(BleakClient):
             description = ble_device_description(device)
             _, adv = scanner.discovered_devices_and_advertisement_data[device.address]
             rssi = adv.rssi
-            _LOGGER.debug("%s: Connecting (last rssi: %s)", description, rssi)
+            _LOGGER.debug(
+                "%s: Connecting via %s (last rssi: %s)", description, scanner.name, rssi
+            )
         connected = None
         try:
             connected = await super().connect(**kwargs)
