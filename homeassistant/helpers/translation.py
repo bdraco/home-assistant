@@ -319,7 +319,7 @@ async def async_get_translations(
             cache = hass.data[TRANSLATION_FLATTEN_CACHE] = _TranslationCache(hass)
         cached = await cache.async_fetch(language, category, components)
 
-    result = {}
+    result: dict[str, dict[str, Any]] = {}
     for entry in cached:
-        result.update(entry)
+        result |= entry
     return result
