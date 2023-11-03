@@ -20,7 +20,7 @@ import re
 import statistics
 from struct import error as StructError, pack, unpack_from
 import sys
-from types import CodeType
+from types import CodeType, TracebackType
 from typing import (
     Any,
     Concatenate,
@@ -2221,7 +2221,12 @@ class TemplateContextManager(AbstractContextManager):
         """Store template being parsed or rendered in a Contextvar to aid error handling."""
         template_cv.set((template_str, action))
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
         """Raise any exception triggered within the runtime context."""
         template_cv.set(None)
 
