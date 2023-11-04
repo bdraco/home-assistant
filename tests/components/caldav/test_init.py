@@ -1,68 +1,69 @@
-"""Test the Caldav component."""
+"""Unit tests for the CalDav integration."""
 
+from collections.abc import Awaitable, Callable
 from unittest.mock import patch
 
-from caldav.lib.error import DAVError
+from caldav.lib.error import AuthorizationError, DAVError
+import pytest
+import requests
 
-from homeassistant.components.caldav.const import CONF_DAYS, DOMAIN
-from homeassistant.config_entries import SOURCE_USER, ConfigEntryState
-from homeassistant.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME, CONF_VERIFY_SSL
+from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 
 from tests.common import MockConfigEntry
 
 
-async def test_async_setup_entry(hass: HomeAssistant, mock_connect):
-    """Test setup entry."""
-    entry = MockConfigEntry(
-        domain=DOMAIN,
-        source=SOURCE_USER,
-        data={
-            CONF_URL: "url",
-            CONF_USERNAME: "username",
-            CONF_PASSWORD: "any",
-            CONF_DAYS: 1,
-            CONF_VERIFY_SSL: True,
-        },
-        entry_id=1,
-        unique_id="username:url",
-    )
-    entry.add_to_hass(hass)
+async def test_load_unload(
+    hass: HomeAssistant,
+    setup_integration: Callable[[], Awaitable[bool]],
+    config_entry: MockConfigEntry,
+) -> None:
+    """Test loading and unloading of the config entry."""
 
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    assert config_entry.state == ConfigEntryState.NOT_LOADED
 
-    assert entry.state is ConfigEntryState.LOADED
+    with patch("homeassistant.components.caldav.config_flow.caldav.DAVClient"):
+        assert await setup_integration()
 
-    assert await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
+    assert config_entry.state == ConfigEntryState.LOADED
 
-    assert entry.state is ConfigEntryState.NOT_LOADED
-    assert not hass.data.get(DOMAIN)
+    assert await hass.config_entries.async_unload(config_entry.entry_id)
+    assert config_entry.state == ConfigEntryState.NOT_LOADED
 
 
-async def test_dav_error_setup_entry(hass: HomeAssistant):
-    """Test setup entry."""
-    entry = MockConfigEntry(
-        domain=DOMAIN,
-        source=SOURCE_USER,
-        data={
-            CONF_URL: "url",
-            CONF_USERNAME: "username",
-            CONF_PASSWORD: "any",
-            CONF_DAYS: 1,
-            CONF_VERIFY_SSL: True,
-        },
-        entry_id=1,
-        unique_id="username:url",
-    )
-    entry.add_to_hass(hass)
+@pytest.mark.parametrize(
+    ("side_effect", "expected_state", "expected_flows"),
+    [
+        (Exception(), ConfigEntryState.SETUP_ERROR, []),
+        (requests.ConnectionError(), ConfigEntryState.SETUP_RETRY, []),
+        (DAVError(), ConfigEntryState.SETUP_RETRY, []),
+        (
+            AuthorizationError(reason="Unauthorized"),
+            ConfigEntryState.SETUP_ERROR,
+            ["reauth_confirm"],
+        ),
+        (AuthorizationError(reason="Other"), ConfigEntryState.SETUP_ERROR, []),
+    ],
+)
+async def test_client_failure(
+    hass: HomeAssistant,
+    setup_integration: Callable[[], Awaitable[bool]],
+    config_entry: MockConfigEntry | None,
+    side_effect: Exception,
+    expected_state: ConfigEntryState,
+    expected_flows: list[str],
+) -> None:
+    """Test CalDAV client failures in setup."""
+
+    assert config_entry.state == ConfigEntryState.NOT_LOADED
 
     with patch(
-        "homeassistant.components.caldav.caldav.DAVClient.principal",
-        side_effect=DAVError,
-    ):
-        await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        "homeassistant.components.caldav.config_flow.caldav.DAVClient"
+    ) as mock_client:
+        mock_client.return_value.principal.side_effect = side_effect
+        assert not await setup_integration()
 
-    assert entry.state is ConfigEntryState.SETUP_RETRY
+    assert config_entry.state == expected_state
+
+    flows = hass.config_entries.flow.async_progress()
+    assert [flow.get("step_id") for flow in flows] == expected_flows

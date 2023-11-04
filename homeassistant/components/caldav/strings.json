@@ -2,46 +2,33 @@
   "config": {
     "step": {
       "user": {
-        "title": "Register your calendar",
         "data": {
+          "url": "[%key:common::config_flow::data::url%]",
           "username": "[%key:common::config_flow::data::username%]",
           "password": "[%key:common::config_flow::data::password%]",
-          "url": "[%key:common::config_flow::data::url%]",
-          "verify_ssl": "Verify ssl",
-          "days": "Days",
-          "calendars": "Calendars",
-          "add_new_custom_calendars": "Add new custom calendars"
+          "verify_ssl": "[%key:common::config_flow::data::verify_ssl%]"
         },
-        "data_description": {
-          "add_new_custom_calendars": "Checked to add custom calendars in next window"
-        }
+        "description": "Please enter your CalDAV server credentials"
       },
-      "custom_calendars": {
-        "title": "Add custom calendar",
+      "reauth_confirm": {
+        "description": "The password for {username} is invalid.",
+        "title": "[%key:common::config_flow::title::reauth%]",
         "data": {
-          "custom_calendars": "Custom calendars"
+          "password": "[%key:common::config_flow::data::password%]"
         }
       }
+    },
+    "create_entry": {
+      "default": "[%key:common::config_flow::create_entry::authenticated%]"
     },
     "error": {
       "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
+      "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
       "unknown": "[%key:common::config_flow::error::unknown%]"
     },
     "abort": {
-      "already_configured": "[%key:common::config_flow::abort::already_configured_service%]"
-    }
-  },
-  "options": {
-    "step": {
-      "init": {
-        "data": {
-          "custom_calendars": "Custom calendars",
-          "calendars": "Calendars"
-        }
-      }
-    },
-    "error": {
-      "choice_custom": "Choose between calendar names or custom calendars."
+      "reauth_successful": "[%key:common::config_flow::abort::reauth_successful%]",
+      "already_configured": "[%key:common::config_flow::abort::already_configured_account%]"
     }
   }
 }

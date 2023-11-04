@@ -1,266 +1,284 @@
-"""Test the Caldav config flow."""
-from unittest.mock import patch
+"""Test the CalDAV config flow."""
 
-from caldav.lib.error import DAVError
+from collections.abc import Generator
+from unittest.mock import AsyncMock, Mock, patch
 
-from homeassistant.components.caldav.const import (
-    CONF_ADD_CUSTOM_CALENDAR,
-    CONF_CALENDAR,
-    CONF_CALENDARS,
-    CONF_CUSTOM_CALENDARS,
-    CONF_DAYS,
-    CONF_SEARCH,
-    DOMAIN,
-)
-from homeassistant.config_entries import SOURCE_IMPORT, SOURCE_USER
-from homeassistant.const import (
-    CONF_NAME,
-    CONF_PASSWORD,
-    CONF_SOURCE,
-    CONF_URL,
-    CONF_USERNAME,
-    CONF_VERIFY_SSL,
-)
+from caldav.lib.error import AuthorizationError, DAVError
+import pytest
+import requests
+
+from homeassistant import config_entries
+from homeassistant.components.caldav.const import DOMAIN
+from homeassistant.const import CONF_PASSWORD, CONF_URL, CONF_USERNAME, CONF_VERIFY_SSL
 from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import (
-    RESULT_TYPE_ABORT,
-    RESULT_TYPE_CREATE_ENTRY,
-    RESULT_TYPE_FORM,
-)
+from homeassistant.data_entry_flow import FlowResultType
+
+from .conftest import TEST_PASSWORD, TEST_URL, TEST_USERNAME
 
 from tests.common import MockConfigEntry
 
-USER_INPUT = {
-    CONF_USERNAME: "username",
-    CONF_PASSWORD: "password",
-    CONF_URL: "http://homeassistant.io",
-    CONF_VERIFY_SSL: True,
-    CONF_DAYS: 2,
-    CONF_ADD_CUSTOM_CALENDAR: False,
-}
 
-USER_INPUT_CUSTO = {
-    CONF_USERNAME: "username",
-    CONF_PASSWORD: "password",
-    CONF_URL: "http://homeassistant.io",
-    CONF_VERIFY_SSL: True,
-    CONF_DAYS: 2,
-    CONF_ADD_CUSTOM_CALENDAR: True,
-}
-
-CUSTOM_INPUT = {
-    CONF_CUSTOM_CALENDARS: [
-        {CONF_NAME: "name", CONF_CALENDAR: "calendar", CONF_SEARCH: "search"}
-    ]
-}
-
-IMPORT_INPUT = {
-    CONF_USERNAME: "username",
-    CONF_PASSWORD: "password",
-    CONF_URL: "http://homeassistant.io",
-    CONF_VERIFY_SSL: True,
-    CONF_DAYS: 2,
-    CONF_CALENDARS: ["home", "assistant"],
-    CONF_CUSTOM_CALENDARS: [
-        {CONF_NAME: "name", CONF_CALENDAR: "calendar", CONF_SEARCH: "search"},
-        {CONF_NAME: "name_1", CONF_CALENDAR: "calendar_1", CONF_SEARCH: "search_1"},
-    ],
-}
-
-OPTIONS_INPUT = {
-    CONF_CALENDARS: ["home", "assistant"],
-    CONF_CUSTOM_CALENDARS: [
-        {CONF_NAME: "name", CONF_CALENDAR: "calendar", CONF_SEARCH: "search"},
-        {CONF_NAME: "name_1", CONF_CALENDAR: "calendar_1", CONF_SEARCH: "search_1"},
-    ],
-}
-
-
-async def test_user_form(hass, mock_connect):
-    """Test we get the user initiated form."""
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={CONF_SOURCE: SOURCE_USER}
-    )
-    assert result["type"] == RESULT_TYPE_FORM
-    assert result["step_id"] == "user"
-    assert result["errors"] == {}
-
+@pytest.fixture
+def mock_setup_entry() -> Generator[AsyncMock, None, None]:
+    """Override async_setup_entry."""
     with patch(
-        "homeassistant.components.caldav.async_setup_entry", return_value=True
+        f"homeassistant.components.{DOMAIN}.async_setup_entry", return_value=True
     ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_configure(
-            result["flow_id"], USER_INPUT
-        )
-        await hass.async_block_till_done()
+        yield mock_setup_entry
 
-    assert result["type"] == RESULT_TYPE_CREATE_ENTRY
-    assert result["title"] == "homeassistant.io (username)"
 
-    assert result["data"]
-    assert result["data"][CONF_URL] == USER_INPUT[CONF_URL]
-    assert result["data"][CONF_USERNAME] == USER_INPUT[CONF_USERNAME]
-    assert result["data"][CONF_PASSWORD] == USER_INPUT[CONF_PASSWORD]
-    assert result["data"][CONF_DAYS] == USER_INPUT[CONF_DAYS]
-    assert result["data"][CONF_VERIFY_SSL] is USER_INPUT[CONF_VERIFY_SSL]
+async def test_form(
+    hass: HomeAssistant,
+    mock_setup_entry: AsyncMock,
+) -> None:
+    """Test successful config flow setup."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    assert result.get("type") == FlowResultType.FORM
+    assert not result.get("errors")
+
+    result2 = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            CONF_URL: TEST_URL,
+            CONF_USERNAME: TEST_USERNAME,
+            CONF_PASSWORD: TEST_PASSWORD,
+            CONF_VERIFY_SSL: False,
+        },
+    )
+    await hass.async_block_till_done()
+
+    assert result2.get("type") == FlowResultType.CREATE_ENTRY
+    assert result2.get("title") == TEST_USERNAME
+    assert result2.get("data") == {
+        CONF_URL: TEST_URL,
+        CONF_USERNAME: TEST_USERNAME,
+        CONF_PASSWORD: TEST_PASSWORD,
+        CONF_VERIFY_SSL: False,
+    }
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_user_form_custom(hass, mock_connect):
-    """Test we get the user initiated form."""
+@pytest.mark.parametrize(
+    ("side_effect", "expected_error"),
+    [
+        (Exception(), "unknown"),
+        (requests.ConnectionError(), "cannot_connect"),
+        (DAVError(), "cannot_connect"),
+        (AuthorizationError(reason="Unauthorized"), "invalid_auth"),
+        (AuthorizationError(reason="Other"), "cannot_connect"),
+    ],
+)
+async def test_caldav_client_error(
+    hass: HomeAssistant,
+    side_effect: Exception,
+    expected_error: str,
+    dav_client: Mock,
+) -> None:
+    """Test CalDav client errors during configuration flow."""
     result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={CONF_SOURCE: SOURCE_USER}
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] == RESULT_TYPE_FORM
-    assert result["step_id"] == "user"
-    assert result["errors"] == {}
 
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], USER_INPUT_CUSTO
+    dav_client.return_value.principal.side_effect = side_effect
+
+    result2 = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            CONF_URL: TEST_URL,
+            CONF_USERNAME: TEST_USERNAME,
+            CONF_PASSWORD: TEST_PASSWORD,
+        },
     )
     await hass.async_block_till_done()
 
-    assert result["type"] == RESULT_TYPE_FORM
-    assert result["step_id"] == "custom_calendars"
-    assert result["errors"] is None
+    assert result2.get("type") == FlowResultType.FORM
+    assert result2.get("errors") == {"base": expected_error}
 
-    with patch(
-        "homeassistant.components.caldav.async_setup_entry", return_value=True
-    ) as mock_setup_entry:
-        result = await hass.config_entries.flow.async_configure(
-            result["flow_id"], CUSTOM_INPUT
-        )
-        await hass.async_block_till_done()
 
-    assert result["type"] == RESULT_TYPE_CREATE_ENTRY
-    assert result["data"]
-    assert result["data"][CONF_URL] == USER_INPUT[CONF_URL]
-    assert result["data"][CONF_USERNAME] == USER_INPUT[CONF_USERNAME]
-    assert result["data"][CONF_PASSWORD] == USER_INPUT[CONF_PASSWORD]
-    assert result["data"][CONF_DAYS] == USER_INPUT[CONF_DAYS]
-    assert result["data"][CONF_VERIFY_SSL] is USER_INPUT[CONF_VERIFY_SSL]
-    assert (
-        result["options"][CONF_CUSTOM_CALENDARS] == CUSTOM_INPUT[CONF_CUSTOM_CALENDARS]
+async def test_reauth_success(
+    hass: HomeAssistant,
+    mock_setup_entry: AsyncMock,
+    config_entry: MockConfigEntry,
+) -> None:
+    """Test reauthentication configuration flow."""
+
+    config_entry.add_to_hass(hass)
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={
+            "source": config_entries.SOURCE_REAUTH,
+            "entry_id": config_entry.entry_id,
+        },
     )
+    assert result["type"] == "form"
+    assert result["step_id"] == "reauth_confirm"
+
+    result2 = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            CONF_PASSWORD: "password-2",
+        },
+    )
+    await hass.async_block_till_done()
+
+    assert result2.get("type") == FlowResultType.ABORT
+    assert result2.get("reason") == "reauth_successful"
+
+    # Verify updated configuration entry
+    assert dict(config_entry.data) == {
+        CONF_URL: "https://example.com/url-1",
+        CONF_USERNAME: "username-1",
+        CONF_PASSWORD: "password-2",
+        CONF_VERIFY_SSL: True,
+    }
     assert len(mock_setup_entry.mock_calls) == 1
 
 
-async def test_abort_on_connection_error(hass: HomeAssistant) -> None:
-    """Test we abort on connection error."""
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": SOURCE_USER}
-    )
+async def test_reauth_failure(
+    hass: HomeAssistant,
+    mock_setup_entry: AsyncMock,
+    config_entry: MockConfigEntry,
+    dav_client: Mock,
+) -> None:
+    """Test a failure during reauthentication configuration flow."""
 
-    assert result["type"] == RESULT_TYPE_FORM
-    assert result["step_id"] == "user"
-    assert result["errors"] == {}
+    config_entry.add_to_hass(hass)
 
-    with patch(
-        "homeassistant.components.caldav.caldav.DAVClient.principal",
-        side_effect=DAVError(),
-    ):
-
-        result = await hass.config_entries.flow.async_configure(
-            result["flow_id"], USER_INPUT
-        )
-        await hass.async_block_till_done()
-
-    assert result["type"] == RESULT_TYPE_FORM
-    assert result["errors"] == {"base": "cannot_connect"}
-
-    with patch(
-        "homeassistant.components.caldav.caldav.DAVClient.principal",
-        side_effect=Exception(),
-    ):
-
-        result = await hass.config_entries.flow.async_configure(
-            result["flow_id"], USER_INPUT
-        )
-        await hass.async_block_till_done()
-
-    assert result["type"] == RESULT_TYPE_FORM
-    assert result["errors"] == {"base": "unknown"}
-
-
-async def test_abort_if_already_setup(hass: HomeAssistant):
-    """Test we abort if component is already setup."""
-    MockConfigEntry(
-        domain=DOMAIN, data={CONF_URL: "url", CONF_USERNAME: "username"}
-    ).add_to_hass(hass)
-
-    # Should fail, same MOCK_HOST (import)
     result = await hass.config_entries.flow.async_init(
         DOMAIN,
-        context={"source": SOURCE_IMPORT},
-        data={CONF_URL: "url", CONF_USERNAME: "username"},
+        context={
+            "source": config_entries.SOURCE_REAUTH,
+            "entry_id": config_entry.entry_id,
+        },
     )
-    assert result["type"] == RESULT_TYPE_ABORT
-    assert result["reason"] == "already_configured"
+    assert result["type"] == "form"
+    assert result["step_id"] == "reauth_confirm"
 
-    # Should fail, same MOCK_HOST (flow)
+    dav_client.return_value.principal.side_effect = DAVError
+
+    result2 = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            CONF_PASSWORD: "password-2",
+        },
+    )
+    await hass.async_block_till_done()
+
+    assert result2.get("type") == FlowResultType.FORM
+    assert result2.get("errors") == {"base": "cannot_connect"}
+
+    # Complete the form and it succeeds this time
+    dav_client.return_value.principal.side_effect = None
+    result2 = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            CONF_PASSWORD: "password-3",
+        },
+    )
+    await hass.async_block_till_done()
+
+    assert result2.get("type") == FlowResultType.ABORT
+    assert result2.get("reason") == "reauth_successful"
+
+    # Verify updated configuration entry
+    assert dict(config_entry.data) == {
+        CONF_URL: "https://example.com/url-1",
+        CONF_USERNAME: "username-1",
+        CONF_PASSWORD: "password-3",
+        CONF_VERIFY_SSL: True,
+    }
+    assert len(mock_setup_entry.mock_calls) == 1
+
+
+@pytest.mark.parametrize(
+    ("user_input"),
+    [
+        {
+            CONF_URL: f"{TEST_URL}/different-path",
+            CONF_USERNAME: TEST_USERNAME,
+            CONF_PASSWORD: TEST_PASSWORD,
+        },
+        {
+            CONF_URL: TEST_URL,
+            CONF_USERNAME: f"{TEST_USERNAME}-different-user",
+            CONF_PASSWORD: TEST_PASSWORD,
+        },
+    ],
+)
+async def test_multiple_config_entries(
+    hass: HomeAssistant,
+    mock_setup_entry: AsyncMock,
+    config_entry: MockConfigEntry,
+    user_input: dict[str, str],
+) -> None:
+    """Test multiple configuration entries with unique settings."""
+
+    config_entry.add_to_hass(hass)
+    entries = hass.config_entries.async_entries(DOMAIN)
+    assert len(entries) == 1
+
     result = await hass.config_entries.flow.async_init(
-        DOMAIN,
-        context={"source": SOURCE_USER},
-        data={CONF_URL: "url", CONF_USERNAME: "username"},
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] == RESULT_TYPE_ABORT
-    assert result["reason"] == "already_configured"
+    assert result.get("type") == FlowResultType.FORM
+    assert not result.get("errors")
+
+    result2 = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        user_input,
+    )
+    await hass.async_block_till_done()
+
+    assert result2.get("type") == FlowResultType.CREATE_ENTRY
+    assert result2.get("title") == user_input[CONF_USERNAME]
+    assert result2.get("data") == {
+        **user_input,
+        CONF_VERIFY_SSL: True,
+    }
+    assert len(mock_setup_entry.mock_calls) == 2
+    entries = hass.config_entries.async_entries(DOMAIN)
+    assert len(entries) == 2
 
 
-async def test_import(hass: HomeAssistant, mock_connect):
-    """Test import step."""
+@pytest.mark.parametrize(
+    ("user_input"),
+    [
+        {
+            CONF_URL: TEST_URL,
+            CONF_USERNAME: TEST_USERNAME,
+            CONF_PASSWORD: TEST_PASSWORD,
+        },
+        {
+            CONF_URL: TEST_URL,
+            CONF_USERNAME: TEST_USERNAME,
+            CONF_PASSWORD: f"{TEST_PASSWORD}-different",
+        },
+    ],
+)
+async def test_duplicate_config_entries(
+    hass: HomeAssistant,
+    mock_setup_entry: AsyncMock,
+    config_entry: MockConfigEntry,
+    user_input: dict[str, str],
+) -> None:
+    """Test multiple configuration entries with the same settings."""
+
+    config_entry.add_to_hass(hass)
+
     result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": SOURCE_IMPORT}, data=IMPORT_INPUT
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    assert result.get("type") == FlowResultType.FORM
+    assert not result.get("errors")
+
+    result2 = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        user_input,
     )
     await hass.async_block_till_done()
 
-    assert result["type"] == RESULT_TYPE_CREATE_ENTRY
-    assert result["data"]
-    assert result["data"][CONF_URL] == USER_INPUT[CONF_URL]
-    assert result["data"][CONF_USERNAME] == USER_INPUT[CONF_USERNAME]
-    assert result["data"][CONF_PASSWORD] == USER_INPUT[CONF_PASSWORD]
-    assert result["data"][CONF_DAYS] == USER_INPUT[CONF_DAYS]
-    assert result["data"][CONF_VERIFY_SSL] is USER_INPUT[CONF_VERIFY_SSL]
-    assert result["options"] == OPTIONS_INPUT
-
-
-async def test_options_flow(hass: HomeAssistant, mock_connect):
-    """Test options."""
-    entry = MockConfigEntry(
-        domain=DOMAIN, data={CONF_URL: "url", CONF_USERNAME: "username"}
-    )
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-
-    result = await hass.config_entries.options.async_init(entry.entry_id)
-
-    assert result["type"] == RESULT_TYPE_FORM
-    assert result["step_id"] == "init"
-
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"], CUSTOM_INPUT
-    )
-    await hass.async_block_till_done()
-
-    assert result["type"] == RESULT_TYPE_CREATE_ENTRY
-
-
-async def test_options_flow_error_choice(hass: HomeAssistant, mock_connect):
-    """Test options."""
-    entry = MockConfigEntry(
-        domain=DOMAIN, data={CONF_URL: "url", CONF_USERNAME: "username"}
-    )
-    entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(entry.entry_id)
-
-    result = await hass.config_entries.options.async_init(entry.entry_id)
-
-    assert result["type"] == RESULT_TYPE_FORM
-    assert result["step_id"] == "init"
-
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"], OPTIONS_INPUT
-    )
-    await hass.async_block_till_done()
-
-    assert result["type"] == RESULT_TYPE_FORM
-    assert result["errors"] == {"base": "choice_custom"}
+    assert result2.get("type") == FlowResultType.ABORT
+    assert result2.get("reason") == "already_configured"
