@@ -1242,7 +1242,7 @@ pybotvac==0.0.24
 pybravia==0.3.3
 
 # homeassistant.components.cloudflare
-pycfdns==2.0.1
+pycfdns==3.0.0
 
 # homeassistant.components.comfoconnect
 pycomfoconnect==0.5.1
@@ -1890,10 +1890,10 @@ surepy==0.8.0
 switchbot-api==1.2.1
 
 # homeassistant.components.system_bridge
-systembridgeconnector==3.8.4
+systembridgeconnector==3.9.4
 
 # homeassistant.components.tailscale
-tailscale==0.2.0
+tailscale==0.6.0
 
 # homeassistant.components.tellduslive
 tellduslive==0.10.11
