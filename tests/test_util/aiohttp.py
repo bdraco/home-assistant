@@ -272,6 +272,14 @@ class AiohttpClientMockResponse:
     def close(self):
         """Mock close."""
 
+    async def wait_for_close(self):
+        """Wait until all requests are done.
+
+        For the purposes of mocking, we only need to run
+        the event loop once to let the request finish.
+        """
+        await asyncio.sleep(0)
+
 
 @contextmanager
 def mock_aiohttp_client():
