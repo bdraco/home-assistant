@@ -125,7 +125,7 @@ Tami4EdgeAPI==2.1
 WSDiscovery==2.0.0
 
 # homeassistant.components.accuweather
-accuweather==2.0.1
+accuweather==2.1.0
 
 # homeassistant.components.adax
 adax==0.3.0
@@ -833,7 +833,7 @@ ibeacon-ble==1.0.1
 
 # homeassistant.components.local_calendar
 # homeassistant.components.local_todo
-ical==6.0.0
+ical==6.1.0
 
 # homeassistant.components.ping
 icmplib==3.0
@@ -885,6 +885,9 @@ kegtron-ble==0.4.0
 
 # homeassistant.components.knx
 knx-frontend==2023.6.23.191712
+
+# homeassistant.components.komfovent
+komfovent-api==0.0.3
 
 # homeassistant.components.konnected
 konnected==1.2.0
@@ -1670,7 +1673,7 @@ pytrydan==0.4.0
 pyudev==0.23.2
 
 # homeassistant.components.unifiprotect
-pyunifiprotect==4.20.0
+pyunifiprotect==4.21.0
 
 # homeassistant.components.uptimerobot
 pyuptimerobot==22.2.0
@@ -1881,7 +1884,7 @@ stookwijzer==1.3.0
 stringcase==1.2.0
 
 # homeassistant.components.subaru
-subarulink==0.7.8
+subarulink==0.7.9
 
 # homeassistant.components.solarlog
 sunwatcher==0.2.1
