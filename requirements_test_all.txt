@@ -685,7 +685,7 @@ gardena-bluetooth==1.4.0
 gassist-text==0.0.10
 
 # homeassistant.components.google
-gcal-sync==5.0.0
+gcal-sync==6.0.1
 
 # homeassistant.components.geocaching
 geocachingapi==0.2.1
@@ -1025,7 +1025,7 @@ nextcord==2.0.0a8
 nextdns==2.0.1
 
 # homeassistant.components.nibe_heatpump
-nibe==2.4.0
+nibe==2.5.0
 
 # homeassistant.components.nfandroidtv
 notifications-android-tv==0.1.5
@@ -1757,7 +1757,7 @@ rokuecp==0.18.1
 roombapy==1.6.8
 
 # homeassistant.components.roon
-roonapi==0.1.4
+roonapi==0.1.5
 
 # homeassistant.components.rpi_power
 rpi-bad-power==0.1.0
