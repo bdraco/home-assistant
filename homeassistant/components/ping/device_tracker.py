@@ -4,7 +4,6 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime, timedelta
 import logging
-import subprocess
 
 from icmplib import async_multiping
 import voluptuous as vol
@@ -12,27 +11,29 @@ import voluptuous as vol
 from homeassistant.components.device_tracker import (
     CONF_SCAN_INTERVAL,
     PLATFORM_SCHEMA as BASE_PLATFORM_SCHEMA,
-    SCAN_INTERVAL,
     AsyncSeeCallback,
+    ScannerEntity,
     SourceType,
 )
-from homeassistant.const import CONF_HOSTS
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_HOST, CONF_HOSTS
 from homeassistant.core import HomeAssistant
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_track_point_in_utc_time
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.util import dt as dt_util
 from homeassistant.util.async_ import gather_with_limited_concurrency
-from homeassistant.util.process import kill_subprocess
 
 from . import PingDomainData
-from .const import DOMAIN, ICMP_TIMEOUT, PING_ATTEMPTS_COUNT, PING_TIMEOUT
+from .const import CONF_PING_COUNT, DOMAIN, ICMP_TIMEOUT, PING_ATTEMPTS_COUNT
+from .helpers import PingDataICMPLib, PingDataSubProcess
 
 _LOGGER = logging.getLogger(__name__)
 
 PARALLEL_UPDATES = 0
-CONF_PING_COUNT = "count"
 CONCURRENT_PING_LIMIT = 6
+SCAN_INTERVAL = timedelta(minutes=5)
 
 PLATFORM_SCHEMA = BASE_PLATFORM_SCHEMA.extend(
     {
@@ -42,8 +43,8 @@ PLATFORM_SCHEMA = BASE_PLATFORM_SCHEMA.extend(
 )
 
 
-class HostSubProcess:
-    """Host object with ping detection."""
+class HostSubProcess(PingDataSubProcess):
+    """Host subclass using subprocess."""
 
     def __init__(
         self,
@@ -53,41 +54,15 @@ class HostSubProcess:
         config: ConfigType,
         privileged: bool | None,
     ) -> None:
-        """Initialize the Host pinger."""
-        self.hass = hass
-        self.ip_address = ip_address
+        """Initialize the subclass."""
+
+        super().__init__(hass, ip_address, config[CONF_PING_COUNT], privileged)
         self.dev_id = dev_id
-        self._count = config[CONF_PING_COUNT]
-        self._ping_cmd = ["ping", "-n", "-q", "-c1", "-W1", ip_address]
 
-    def ping(self) -> bool | None:
-        """Send an ICMP echo request and return True if success."""
-        with subprocess.Popen(
-            self._ping_cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            close_fds=False,  # required for posix_spawn
-        ) as pinger:
-            try:
-                pinger.communicate(timeout=1 + PING_TIMEOUT)
-                return pinger.returncode == 0
-            except subprocess.TimeoutExpired:
-                kill_subprocess(pinger)
-                return False
-
-            except subprocess.CalledProcessError:
-                return False
-
-    def update(self) -> bool:
-        """Update device state by sending one or more ping messages."""
-        failed = 0
-        while failed < self._count:  # check more times if host is unreachable
-            if self.ping():
-                return True
-            failed += 1
-
-        _LOGGER.debug("No response from %s failed=%d", self.ip_address, failed)
-        return False
+    async def async_is_alive(self) -> bool:
+        """Overwrite subclass update method to return alive status."""
+        await super().async_update()
+        return self.is_alive
 
 
 async def async_setup_scanner(
@@ -122,7 +97,7 @@ async def async_setup_scanner(
             """Update all the hosts on every interval time."""
             results = await gather_with_limited_concurrency(
                 CONCURRENT_PING_LIMIT,
-                *(hass.async_add_executor_job(host.update) for host in hosts),
+                *(host.async_is_alive for host in hosts),
             )
             await asyncio.gather(
                 *(
@@ -162,3 +137,65 @@ async def async_setup_scanner(
 
     await _async_update_interval(dt_util.now())
     return True
+
+
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
+    """Set up a Ping config entry."""
+
+    data: PingDomainData = hass.data[DOMAIN]
+
+    host: str = entry.options[CONF_HOST]
+    count: int = int(entry.options[CONF_PING_COUNT])
+    privileged: bool | None = data.privileged
+    ping_cls: type[PingDataSubProcess | PingDataICMPLib]
+    if privileged is None:
+        ping_cls = PingDataSubProcess
+    else:
+        ping_cls = PingDataICMPLib
+
+    async_add_entities(
+        [PingDeviceTracker(entry.title, ping_cls(hass, host, count, privileged))]
+    )
+
+
+class PingDeviceTracker(ScannerEntity):
+    """Representation of a Ping device tracker."""
+
+    ping: PingDataSubProcess | PingDataICMPLib
+
+    def __init__(
+        self,
+        name: str,
+        ping_cls: PingDataSubProcess | PingDataICMPLib,
+    ) -> None:
+        """Initialize the Ping device tracker."""
+        super().__init__()
+
+        self._attr_name = name
+        self.ping = ping_cls
+
+    @property
+    def ip_address(self) -> str:
+        """Return the primary ip address of the device."""
+        return self.ping.ip_address
+
+    @property
+    def unique_id(self) -> str:
+        """Return a unique ID."""
+        return self.ping.ip_address
+
+    @property
+    def source_type(self) -> SourceType:
+        """Return the source type which is router."""
+        return SourceType.ROUTER
+
+    @property
+    def is_connected(self) -> bool:
+        """Return true if ping returns is_alive."""
+        return self.ping.is_alive
+
+    async def async_update(self) -> None:
+        """Update the sensor."""
+        await self.ping.async_update()

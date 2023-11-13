@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 import logging
+from types import MappingProxyType
 from typing import Any
 
 import voluptuous as vol
@@ -12,6 +13,7 @@ from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_NAME, STATE_ON
 from homeassistant.core import HomeAssistant
 import homeassistant.helpers.config_validation as cv
@@ -20,21 +22,17 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import PingDomainData
-from .const import DOMAIN
+from .const import CONF_PING_COUNT, DEFAULT_PING_COUNT, DOMAIN
 from .helpers import PingDataICMPLib, PingDataSubProcess
 
 _LOGGER = logging.getLogger(__name__)
-
 
 ATTR_ROUND_TRIP_TIME_AVG = "round_trip_time_avg"
 ATTR_ROUND_TRIP_TIME_MAX = "round_trip_time_max"
 ATTR_ROUND_TRIP_TIME_MDEV = "round_trip_time_mdev"
 ATTR_ROUND_TRIP_TIME_MIN = "round_trip_time_min"
 
-CONF_PING_COUNT = "count"
-
 DEFAULT_NAME = "Ping"
-DEFAULT_PING_COUNT = 5
 
 SCAN_INTERVAL = timedelta(minutes=5)
 
@@ -57,13 +55,32 @@ async def async_setup_platform(
     async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
-    """Set up the Ping Binary sensor."""
+    """Init Ping sensor from YAML."""
+
+    setup_sensor(hass, config, async_add_entities)
+
+
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
+    """Set up a Ping config entry."""
+
+    setup_sensor(hass, entry.options, async_add_entities, entry, entry.title)
+
+
+def setup_sensor(
+    hass: HomeAssistant,
+    config: MappingProxyType[str, Any] | dict[str, Any],
+    async_add_entities: AddEntitiesCallback,
+    config_entry: ConfigEntry | None = None,
+    name: str | None = None,
+) -> None:
+    """Actually set up the sensor."""
 
     data: PingDomainData = hass.data[DOMAIN]
 
     host: str = config[CONF_HOST]
-    count: int = config[CONF_PING_COUNT]
-    name: str = config.get(CONF_NAME, f"{DEFAULT_NAME} {host}")
+    count: int = int(config[CONF_PING_COUNT])
     privileged: bool | None = data.privileged
     ping_cls: type[PingDataSubProcess | PingDataICMPLib]
     if privileged is None:
@@ -72,7 +89,13 @@ async def async_setup_platform(
         ping_cls = PingDataICMPLib
 
     async_add_entities(
-        [PingBinarySensor(name, ping_cls(hass, host, count, privileged))]
+        [
+            PingBinarySensor(
+                name=name or str(config.get(CONF_NAME, f"{DEFAULT_NAME} {host}")),
+                ping=ping_cls(hass, host, count, privileged),
+                config_entry=config_entry,
+            )
+        ],
     )
 
 
@@ -80,11 +103,20 @@ class PingBinarySensor(RestoreEntity, BinarySensorEntity):
     """Representation of a Ping Binary sensor."""
 
     _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
+    _attr_available = False
 
-    def __init__(self, name: str, ping: PingDataSubProcess | PingDataICMPLib) -> None:
+    def __init__(
+        self,
+        name: str,
+        ping: PingDataSubProcess | PingDataICMPLib,
+        config_entry: ConfigEntry | None = None,
+    ) -> None:
         """Initialize the Ping Binary sensor."""
-        self._attr_available = False
         self._attr_name = name
+
+        if config_entry:
+            self._attr_unique_id = config_entry.entry_id
+
         self._ping = ping
 
     @property
