@@ -11,6 +11,7 @@ from kasa import (
     SmartPlug,
     SmartStrip,
 )
+from kasa.device_type import DeviceType
 from kasa.exceptions import SmartDeviceException
 from kasa.protocol import TPLinkSmartHomeProtocol
 
@@ -63,7 +64,7 @@ def _mocked_bulb() -> SmartBulb:
     bulb.set_hsv = AsyncMock()
     bulb.set_color_temp = AsyncMock()
     bulb.protocol = _mock_protocol()
-    bulb.device_type = MagicMock(value="Bulb")
+    bulb.device_type = DeviceType.Bulb
     return bulb
 
 
@@ -105,6 +106,7 @@ def _mocked_smart_light_strip() -> SmartLightStrip:
     strip.set_effect = AsyncMock()
     strip.set_custom_effect = AsyncMock()
     strip.protocol = _mock_protocol()
+    strip.device_type = DeviceType.Strip
     return strip
 
 
@@ -136,6 +138,7 @@ def _mocked_dimmer() -> SmartDimmer:
     dimmer.set_color_temp = AsyncMock()
     dimmer.set_led = AsyncMock()
     dimmer.protocol = _mock_protocol()
+    dimmer.device_type = DeviceType.Dimmer
     return dimmer
 
 
@@ -157,6 +160,7 @@ def _mocked_plug() -> SmartPlug:
     plug.turn_on = AsyncMock()
     plug.set_led = AsyncMock()
     plug.protocol = _mock_protocol()
+    plug.device_type = DeviceType.Plug
     return plug
 
 
@@ -178,6 +182,7 @@ def _mocked_strip() -> SmartStrip:
     strip.turn_on = AsyncMock()
     strip.set_led = AsyncMock()
     strip.protocol = _mock_protocol()
+    strip.device_type = DeviceType.Strip
     plug0 = _mocked_plug()
     plug0.alias = "Plug0"
     plug0.device_id = "bb:bb:cc:dd:ee:ff_PLUG0DEVICEID"
@@ -205,16 +210,14 @@ def _patch_discovery(device=None, no_device=False):
 
 @contextmanager
 def _patch_single_discovery(device=None, no_device=False):
-    async def _discover_single(*args, **kwargs):
+    async def _make_device(*args, **kwargs):
         if no_device:
             raise SmartDeviceException
         return device if device else _mocked_bulb()
 
     with patch(
-        "homeassistant.components.tplink.Discover.discover_single", new=_discover_single
-    ), patch(
-        "homeassistant.components.tplink.Discover.connect_single", new=_discover_single
-    ):
+        "homeassistant.components.tplink.Discover.discover_single", new=_make_device
+    ), patch("homeassistant.components.tplink.SmartDevice.connect", new=_make_device):
         yield
 
 
