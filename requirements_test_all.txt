@@ -215,7 +215,7 @@ aioelectricitymaps==0.1.5
 aioemonitor==1.0.5
 
 # homeassistant.components.esphome
-aioesphomeapi==18.5.7
+aioesphomeapi==18.5.9
 
 # homeassistant.components.flo
 aioflo==2021.11.0
@@ -329,7 +329,7 @@ aioruuvigateway==0.1.0
 aiosenz==1.0.0
 
 # homeassistant.components.shelly
-aioshelly==6.0.0
+aioshelly==6.1.0
 
 # homeassistant.components.skybell
 aioskybell==22.7.0
