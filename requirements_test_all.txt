@@ -215,7 +215,7 @@ aioelectricitymaps==0.1.5
 aioemonitor==1.0.5
 
 # homeassistant.components.esphome
-aioesphomeapi==19.1.4
+aioesphomeapi==19.1.5
 
 # homeassistant.components.flo
 aioflo==2021.11.0
@@ -415,9 +415,6 @@ aranet4==2.2.2
 # homeassistant.components.arcam_fmj
 arcam-fmj==1.4.0
 
-# homeassistant.components.esphome
-async-interrupt==1.1.1
-
 # homeassistant.components.dlna_dmr
 # homeassistant.components.dlna_dms
 # homeassistant.components.samsungtv
@@ -557,6 +554,9 @@ demetriek==0.4.0
 
 # homeassistant.components.denonavr
 denonavr==0.11.4
+
+# homeassistant.components.devialet
+devialet==1.4.3
 
 # homeassistant.components.devolo_home_control
 devolo-home-control-api==0.18.2
