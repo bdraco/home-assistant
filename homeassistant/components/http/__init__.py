@@ -520,11 +520,7 @@ class HomeAssistantHTTP:
         # pylint: disable-next=protected-access
         self.app._router.freeze = lambda: None  # type: ignore[method-assign]
 
-<<<<<<< HEAD
-        self.runner = web.AppRunner(self.app)
-=======
         self.runner = web.AppRunner(self.app, handler_cancellation=True)
->>>>>>> aiohttp_cancel
         await self.runner.setup()
 
         self.site = HomeAssistantTCPSite(
