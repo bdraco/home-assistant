@@ -5,7 +5,6 @@ import bisect
 from contextlib import suppress
 import datetime as dt
 from functools import partial
-import platform
 import re
 import time
 from typing import Any
@@ -496,9 +495,10 @@ def __gen_monotonic_time_coarse() -> partial[float]:
 
 
 monotonic_time_coarse = time.monotonic
-with suppress(Exception):
-    if (
-        platform.system() == "Linux"
-        and abs(time.monotonic() - __gen_monotonic_time_coarse()()) < 1
-    ):
-        monotonic_time_coarse = __gen_monotonic_time_coarse()
+
+# with suppress(Exception):
+#    if (
+#        platform.system() == "Linux"
+#        and abs(time.monotonic() - __gen_monotonic_time_coarse()()) < 1
+#    ):
+#        monotonic_time_coarse = __gen_monotonic_time_coarse()
