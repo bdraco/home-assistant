@@ -11,7 +11,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.components.hassio import HassioServiceInfo
 from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
@@ -19,24 +19,7 @@ from . import CONF_STUN_SERVER, DATA_SERVER_URL, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-DATA_SCHEMA = vol.Schema({})
-
-
-async def _test_connection(hass: HomeAssistant, url: str) -> str | None:
-    """Test the connection and return any relevant errors."""
-    result = urlparse(url)
-    if not all([result.scheme, result.netloc]):
-        return "invalid_url"
-    client = rtsp_to_webrtc.client.Client(async_get_clientsession(hass), url)
-    try:
-        await client.heartbeat()
-    except rtsp_to_webrtc.exceptions.ResponseError as err:
-        _LOGGER.error("RTSPtoWebRTC server failure: %s", str(err))
-        return "server_failure"
-    except rtsp_to_webrtc.exceptions.ClientError as err:
-        _LOGGER.error("RTSPtoWebRTC communication failure: %s", str(err))
-        return "server_unreachable"
-    return None
+DATA_SCHEMA = vol.Schema({vol.Required(DATA_SERVER_URL): str})
 
 
 class RTSPToWebRTCConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -47,24 +30,47 @@ class RTSPToWebRTCConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Configure the RTSPtoWebRTC server."""
+        """Configure the RTSPtoWebRTC server url."""
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")
 
         if user_input is None:
             return self.async_show_form(step_id="user", data_schema=DATA_SCHEMA)
 
-        self._set_confirm_only()
+        url = user_input[DATA_SERVER_URL]
+        result = urlparse(url)
+        if not all([result.scheme, result.netloc]):
+            return self.async_show_form(
+                step_id="user",
+                data_schema=DATA_SCHEMA,
+                errors={DATA_SERVER_URL: "invalid_url"},
+            )
+
+        if error_code := await self._test_connection(url):
+            return self.async_show_form(
+                step_id="user",
+                data_schema=DATA_SCHEMA,
+                errors={"base": error_code},
+            )
+
         await self.async_set_unique_id(DOMAIN)
         return self.async_create_entry(
-            title=DOMAIN,
-            data={},
-            options={DATA_SERVER_URL: None},
+            title=url,
+            data={DATA_SERVER_URL: url},
         )
 
-    async def async_step_import(self, user_input: dict[str, Any]) -> FlowResult:
-        """Handle import from configuration.yaml."""
-        return await self.async_step_user({})
+    async def _test_connection(self, url: str) -> str | None:
+        """Test the connection and return any relevant errors."""
+        client = rtsp_to_webrtc.client.Client(async_get_clientsession(self.hass), url)
+        try:
+            await client.heartbeat()
+        except rtsp_to_webrtc.exceptions.ResponseError as err:
+            _LOGGER.error("RTSPtoWebRTC server failure: %s", str(err))
+            return "server_failure"
+        except rtsp_to_webrtc.exceptions.ClientError as err:
+            _LOGGER.error("RTSPtoWebRTC communication failure: %s", str(err))
+            return "server_unreachable"
+        return None
 
     async def async_step_hassio(self, discovery_info: HassioServiceInfo) -> FlowResult:
         """Prepare configuration for the RTSPtoWebRTC server add-on discovery."""
@@ -84,7 +90,7 @@ class RTSPToWebRTCConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             host = self._hassio_discovery[CONF_HOST]
             port = self._hassio_discovery[CONF_PORT]
             url = f"http://{host}:{port}"
-            if error_code := await _test_connection(self.hass, url):
+            if error_code := await self._test_connection(url):
                 return self.async_abort(reason=error_code)
 
         if user_input is None or errors:
@@ -120,27 +126,13 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Manage the options."""
-        errors: dict[str, str] = {}
         if user_input is not None:
-            if not (url := user_input.get(DATA_SERVER_URL)) or not (
-                error_code := await _test_connection(self.hass, url)
-            ):
-                return self.async_create_entry(title="", data=user_input)
-            errors = {DATA_SERVER_URL: error_code}
+            return self.async_create_entry(title="", data=user_input)
 
         return self.async_show_form(
             step_id="init",
-            errors=errors,
             data_schema=vol.Schema(
                 {
-                    vol.Optional(
-                        DATA_SERVER_URL,
-                        description={
-                            "suggested_value": self.config_entry.options.get(
-                                DATA_SERVER_URL
-                            ),
-                        },
-                    ): str,
                     vol.Optional(
                         CONF_STUN_SERVER,
                         description={
