@@ -168,7 +168,7 @@ class BluetoothManager:
         self.slot_manager = slot_manager
         self._debug = _LOGGER.isEnabledFor(logging.DEBUG)
         self.shutdown = False
-        self._start_time = MONOTONIC_TIME()
+        self._start_time = 0.0
 
     @property
     def supports_passive_scan(self) -> bool:
@@ -258,6 +258,7 @@ class BluetoothManager:
                 continue
             seen.add(address)
             self._async_trigger_matching_discovery(service_info)
+        self._start_time = MONOTONIC_TIME()
 
     @hass_callback
     def async_stop(self, event: Event) -> None:
@@ -550,6 +551,9 @@ class BluetoothManager:
                 or service_info.service_uuids != old_service_info.service_uuids
                 or service_info.name != old_service_info.name
             )
+            # If the data is older than when we started, we always
+            # want to accept it over the old data
+            and old_service_info.time - self._start_time > 0
         ):
             _LOGGER.warning(
                 "Duplicate advertisement data for %s with time %s",
