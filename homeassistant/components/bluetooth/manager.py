@@ -555,11 +555,6 @@ class BluetoothManager:
             # want to accept it over the old data
             and old_service_info.time - self._start_time > 0
         ):
-            _LOGGER.warning(
-                "Duplicate advertisement data for %s with time %s",
-                address,
-                old_service_info.time - self._start_time,
-            )
             return
 
         if not connectable and old_connectable_service_info:
