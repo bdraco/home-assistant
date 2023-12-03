@@ -125,6 +125,7 @@ class BluetoothManager:
         "slot_manager",
         "_debug",
         "shutdown",
+        "_start_time",
     )
 
     def __init__(
@@ -167,6 +168,7 @@ class BluetoothManager:
         self.slot_manager = slot_manager
         self._debug = _LOGGER.isEnabledFor(logging.DEBUG)
         self.shutdown = False
+        self._start_time = MONOTONIC_TIME()
 
     @property
     def supports_passive_scan(self) -> bool:
@@ -552,7 +554,7 @@ class BluetoothManager:
             _LOGGER.warning(
                 "Duplicate advertisement data for %s with time %s",
                 address,
-                old_service_info.time,
+                old_service_info.time - self._start_time,
             )
             return
 
