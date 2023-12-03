@@ -549,6 +549,11 @@ class BluetoothManager:
                 or service_info.name != old_service_info.name
             )
         ):
+            _LOGGER.warning(
+                "Duplicate advertisement data for %s with time %s",
+                address,
+                old_service_info.time,
+            )
             return
 
         if not connectable and old_connectable_service_info:
