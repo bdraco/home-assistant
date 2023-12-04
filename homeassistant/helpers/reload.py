@@ -13,7 +13,6 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.loader import async_get_integration
 from homeassistant.setup import async_setup_component
 
-from . import config_per_platform
 from .entity import Entity
 from .entity_component import EntityComponent
 from .entity_platform import EntityPlatform, async_get_platforms
@@ -69,25 +68,11 @@ async def _resetup_platform(
 
     root_config: dict[str, list[ConfigType]] = {platform_domain: []}
     # Extract only the config for template, ignore the rest.
-    for p_type, p_config in config_per_platform(conf, platform_domain):
+    for p_type, p_config in conf_util.config_per_platform(conf, platform_domain):
         if p_type != integration_domain:
             continue
 
         root_config[platform_domain].append(p_config)
-
-    # If new adr0007 style, include that as well.
-    if integration_config := conf.get(integration_name):
-        # Check if it's a multi-platform config
-        added = False
-        for item in integration_config:
-            if isinstance(item, dict) and (
-                current_platform_config := item.get(integration_platform)
-            ):
-                added = True
-                root_config[integration_platform].extend(current_platform_config)
-        # If no valid item was found, it's a simple single platform config
-        if not added:
-            root_config[integration_platform].extend(conf[integration_name])
 
     component = integration.get_component()
 
