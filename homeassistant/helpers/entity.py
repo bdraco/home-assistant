@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from abc import ABC
 import asyncio
+from collections import deque
 from collections.abc import Coroutine, Iterable, Mapping, MutableMapping
 from dataclasses import dataclass
 from datetime import timedelta
@@ -73,6 +74,9 @@ DATA_ENTITY_SOURCE = "entity_info"
 # Used when converting float states to string: limit precision according to machine
 # epsilon to make the string representation readable
 FLOAT_PRECISION = abs(int(math.floor(math.log10(abs(sys.float_info.epsilon))))) - 1
+
+# How many times per hour we allow capabilities to be updated before logging a warning
+CAPABILITIES_UPDATE_LIMIT = 100
 
 
 @callback
@@ -311,6 +315,8 @@ class Entity(ABC):
     # and removes the need for constant None checks or asserts.
     _state_info: StateInfo = None  # type: ignore[assignment]
 
+    __capabilities_updated_at: deque[float]
+    __capabilities_updated_at_reported: bool = False
     __remove_event: asyncio.Event | None = None
 
     # Entity Properties
@@ -775,12 +781,14 @@ class Entity(ABC):
         return f"{device_name} {name}" if device_name else name
 
     @callback
-    def _async_generate_attributes(self) -> tuple[str, dict[str, Any]]:
+    def _async_generate_attributes(
+        self,
+    ) -> tuple[str, Mapping[str, Any] | None, dict[str, Any]]:
         """Calculate state string and attribute mapping."""
         entry = self.registry_entry
 
-        attr = self.capability_attributes
-        attr = dict(attr) if attr else {}
+        capability_attr = self.capability_attributes
+        attr = dict(capability_attr) if capability_attr else {}
 
         available = self.available  # only call self.available once per update cycle
         state = self._stringify_state(available)
@@ -816,7 +824,7 @@ class Entity(ABC):
         if (supported_features := self.supported_features) is not None:
             attr[ATTR_SUPPORTED_FEATURES] = supported_features
 
-        return (state, attr)
+        return (state, capability_attr, attr)
 
     @callback
     def _async_write_ha_state(self) -> None:
@@ -842,7 +850,7 @@ class Entity(ABC):
             return
 
         start = timer()
-        state, attr = self._async_generate_attributes()
+        state, capabilities, attr = self._async_generate_attributes()
         end = timer()
 
         if end - start > 0.4 and not self._slow_reported:
@@ -857,6 +865,7 @@ class Entity(ABC):
             )
 
         # Overwrite properties that have been set in the config file.
+        # Note: This needs to be fixed
         if customize := hass.data.get(DATA_CUSTOMIZE):
             attr.update(customize.get(entity_id))
 
@@ -868,8 +877,9 @@ class Entity(ABC):
             self._context = None
             self._context_set = None
 
+        state_updated = False
         try:
-            hass.states.async_set(
+            state_updated = hass.states.async_set(
                 entity_id,
                 state,
                 attr,
@@ -884,6 +894,44 @@ class Entity(ABC):
             hass.states.async_set(
                 entity_id, STATE_UNKNOWN, {}, self.force_update, self._context
             )
+        if not state_updated:
+            return
+
+        if entry:
+            # Make sure capabilities in the entity registry are up to date. Capabilities
+            # include capability attributes, device class and supported features
+            original_device_class: str | None = self.device_class
+            supported_features: int = attr.get(ATTR_SUPPORTED_FEATURES) or 0
+            if (
+                capabilities != entry.capabilities
+                or original_device_class != entry.original_device_class
+                or supported_features != entry.supported_features
+            ):
+                if not self.__capabilities_updated_at_reported:
+                    time_now = hass.loop.time()
+                    capabilities_updated_at = self.__capabilities_updated_at
+                    capabilities_updated_at.append(time_now)
+                    while time_now - capabilities_updated_at[0] > 3600:
+                        capabilities_updated_at.popleft()
+                    if len(capabilities_updated_at) >= CAPABILITIES_UPDATE_LIMIT:
+                        self.__capabilities_updated_at_reported = True
+                        report_issue = self._suggest_report_issue()
+                        _LOGGER.warning(
+                            (
+                                "Entity %s (%s) is updating its capabilities too often,"
+                                " please %s"
+                            ),
+                            entity_id,
+                            type(self),
+                            report_issue,
+                        )
+                entity_registry = er.async_get(self.hass)
+                self.registry_entry = entity_registry.async_update_entity(
+                    self.entity_id,
+                    capabilities=capabilities,
+                    original_device_class=original_device_class,
+                    supported_features=supported_features,
+                )
 
     def schedule_update_ha_state(self, force_refresh: bool = False) -> None:
         """Schedule an update ha state change task.
@@ -1117,6 +1165,8 @@ class Entity(ABC):
                 )
             )
             self._async_subscribe_device_updates()
+
+        self.__capabilities_updated_at = deque(maxlen=CAPABILITIES_UPDATE_LIMIT)
 
     async def async_internal_will_remove_from_hass(self) -> None:
         """Run when entity will be removed from hass.
