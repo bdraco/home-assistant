@@ -900,7 +900,7 @@ class Entity(ABC):
         if entry:
             # Make sure capabilities in the entity registry are up to date. Capabilities
             # include capability attributes, device class and supported features
-            original_device_class: str | None = self.device_class
+            original_device_class: str | None = attr.get(ATTR_DEVICE_CLASS)
             supported_features: int = attr.get(ATTR_SUPPORTED_FEATURES) or 0
             if (
                 capabilities != entry.capabilities
