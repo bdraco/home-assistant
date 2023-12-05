@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from bluetooth_adapters import DiscoveredDeviceAdvertisementData
 from habluetooth import BaseHaRemoteScanner, HaBluetoothConnector
@@ -17,9 +17,6 @@ from homeassistant.core import (
 )
 
 from . import models
-
-if TYPE_CHECKING:
-    pass
 
 
 class HomeAssistantRemoteScanner(BaseHaRemoteScanner):
@@ -46,10 +43,8 @@ class HomeAssistantRemoteScanner(BaseHaRemoteScanner):
     ) -> None:
         """Initialize the scanner."""
         self.hass = hass
-        manager = models.MANAGER
-        if TYPE_CHECKING:
-            assert manager is not None
-        self._storage = manager.storage
+        assert models.MANAGER is not None
+        self._storage = models.MANAGER.storage
         self._cancel_stop: CALLBACK_TYPE | None = None
         super().__init__(scanner_id, name, new_info_callback, connector, connectable)
 
