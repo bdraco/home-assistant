@@ -437,7 +437,7 @@ anthemav==1.4.1
 apcaccess==0.0.13
 
 # homeassistant.components.weatherkit
-apple_weatherkit==1.1.1
+apple_weatherkit==1.1.2
 
 # homeassistant.components.apprise
 apprise==1.6.0
@@ -792,7 +792,7 @@ eufylife-ble-client==0.1.8
 # evdev==1.6.1
 
 # homeassistant.components.evohome
-evohome-async==0.4.13
+evohome-async==0.4.15
 
 # homeassistant.components.faa_delays
 faadelays==2023.9.1
@@ -1024,7 +1024,7 @@ hole==0.8.0
 holidays==0.37
 
 # homeassistant.components.frontend
-home-assistant-frontend==20231205.0
+home-assistant-frontend==20231206.0
 
 # homeassistant.components.conversation
 home-assistant-intents==2023.12.05
@@ -2191,7 +2191,7 @@ python-mystrom==2.2.0
 python-opendata-transport==0.3.0
 
 # homeassistant.components.opensky
-python-opensky==0.2.1
+python-opensky==1.0.0
 
 # homeassistant.components.otbr
 # homeassistant.components.thread
@@ -2601,7 +2601,7 @@ tesla-wall-connector==1.0.2
 thermobeacon-ble==0.6.0
 
 # homeassistant.components.thermopro
-thermopro-ble==0.4.5
+thermopro-ble==0.5.0
 
 # homeassistant.components.thermoworks_smoke
 thermoworks-smoke==0.1.8
