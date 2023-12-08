@@ -89,6 +89,7 @@ from homeassistant.components.http.ban import (
 )
 from homeassistant.components.http.data_validator import RequestDataValidator
 from homeassistant.components.http.view import HomeAssistantView
+from homeassistant.components.network import async_get_gateway_addresses
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.network import is_cloud_connection
 from homeassistant.util.network import is_local
@@ -184,6 +185,9 @@ class AuthProvidersView(HomeAssistantView):
                 and not cloud_connection
                 and is_local(remote_address)
                 and "person" in hass.config.components
+                # Skip gateways as they are likely to be the result of
+                # port forwarding and not a local device.
+                and remote_address not in await async_get_gateway_addresses(hass)
             ):
                 # We are local, return user id and username
                 users = await provider.store.async_get_users()

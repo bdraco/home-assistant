@@ -25,7 +25,7 @@ from .const import (
     MDNS_TARGET_IP,
     PUBLIC_TARGET_IP,
 )
-from .models import Adapter
+from .models import Adapter, Gateway
 from .network import Network, async_get_network
 
 _LOGGER = logging.getLogger(__name__)
@@ -38,6 +38,12 @@ async def async_get_adapters(hass: HomeAssistant) -> list[Adapter]:
     """Get the network adapter configuration."""
     network: Network = await async_get_network(hass)
     return network.adapters
+
+
+async def async_get_gateways(hass: HomeAssistant) -> list[Gateway]:
+    """Get the network gateway information."""
+    network: Network = await async_get_network(hass)
+    return network.gateways
 
 
 @bind_hass
@@ -148,6 +154,14 @@ async def async_ip_on_same_subnet(
                 ):
                     return True
     return False
+
+
+async def async_get_gateway_addresses(
+    hass: HomeAssistant,
+) -> set[IPv4Address | IPv6Address]:
+    """Return a set of gateway addresses."""
+    network: Network = await async_get_network(hass)
+    return network.gateway_addresses
 
 
 async def async_get_announce_addresses(hass: HomeAssistant) -> list[str]:
