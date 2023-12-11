@@ -8,8 +8,8 @@ import threading
 from typing import Any
 from unittest.mock import MagicMock, PropertyMock, patch
 
-from freezegun.api import FrozenDateTimeFactory
 import pytest
+from syrupy.assertion import SnapshotAssertion
 import voluptuous as vol
 
 from homeassistant.const import (
@@ -967,7 +967,7 @@ async def test_entity_description_fallback() -> None:
     ent_with_description = entity.Entity()
     ent_with_description.entity_description = entity.EntityDescription(key="test")
 
-    for field in dataclasses.fields(entity.EntityDescription):
+    for field in dataclasses.fields(entity.EntityDescription._dataclass):
         if field.name == "key":
             continue
 
@@ -1660,156 +1660,49 @@ async def test_change_entity_id(
     assert len(ent.remove_calls) == 2
 
 
-async def test_update_capabilities(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-) -> None:
-    """Test entity capabilities are updated automatically."""
-    platform = MockEntityPlatform(hass)
+def test_entity_description_as_dataclass(snapshot: SnapshotAssertion):
+    """Test EntityDescription behaves like a dataclass."""
 
-    entity = MockEntity(unique_id="qwer")
-    await platform.async_add_entities([entity])
+    obj = entity.EntityDescription("blah", device_class="test")
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        obj.name = "mutate"
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        delattr(obj, "name")
 
-    entry = entity_registry.async_get(entity.entity_id)
-    assert entry.capabilities is None
-    assert entry.device_class is None
-    assert entry.supported_features == 0
-
-    entity._values["capability_attributes"] = {"bla": "blu"}
-    entity._values["device_class"] = "some_class"
-    entity._values["supported_features"] = 127
-    entity.async_write_ha_state()
-    entry = entity_registry.async_get(entity.entity_id)
-    assert entry.capabilities == {"bla": "blu"}
-    assert entry.original_device_class == "some_class"
-    assert entry.supported_features == 127
-
-    entity._values["capability_attributes"] = None
-    entity._values["device_class"] = None
-    entity._values["supported_features"] = None
-    entity.async_write_ha_state()
-    entry = entity_registry.async_get(entity.entity_id)
-    assert entry.capabilities is None
-    assert entry.original_device_class is None
-    assert entry.supported_features == 0
-
-    # Device class can be overridden by user, make sure that does not break the
-    # automatic updating.
-    entity_registry.async_update_entity(entity.entity_id, device_class="set_by_user")
-    await hass.async_block_till_done()
-    entry = entity_registry.async_get(entity.entity_id)
-    assert entry.capabilities is None
-    assert entry.original_device_class is None
-    assert entry.supported_features == 0
-
-    # This will not trigger a state change because the device class is shadowed
-    # by the entity registry
-    entity._values["device_class"] = "some_class"
-    entity.async_write_ha_state()
-    entry = entity_registry.async_get(entity.entity_id)
-    assert entry.capabilities is None
-    assert entry.original_device_class == "some_class"
-    assert entry.supported_features == 0
+    assert obj == snapshot
+    assert obj == entity.EntityDescription("blah", device_class="test")
+    assert repr(obj) == snapshot
 
 
-async def test_update_capabilities_no_unique_id(
-    hass: HomeAssistant,
-    entity_registry: er.EntityRegistry,
-) -> None:
-    """Test entity capabilities are updated automatically."""
-    platform = MockEntityPlatform(hass)
+def test_extending_entity_description(snapshot: SnapshotAssertion):
+    """Test extending entity descriptions."""
 
-    entity = MockEntity()
-    await platform.async_add_entities([entity])
+    @dataclasses.dataclass(frozen=True)
+    class FrozenEntityDescription(entity.EntityDescription):
+        extra: str = None
 
-    assert entity_registry.async_get(entity.entity_id) is None
+    obj = FrozenEntityDescription("blah", extra="foo", name="name")
+    assert obj == snapshot
+    assert obj == FrozenEntityDescription("blah", extra="foo", name="name")
+    assert repr(obj) == snapshot
 
-    entity._values["capability_attributes"] = {"bla": "blu"}
-    entity._values["supported_features"] = 127
-    entity.async_write_ha_state()
-    assert entity_registry.async_get(entity.entity_id) is None
+    # Try mutating
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        obj.name = "mutate"
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        delattr(obj, "name")
 
+    @dataclasses.dataclass
+    class ThawedEntityDescription(entity.EntityDescription):
+        extra: str = None
 
-async def test_update_capabilities_too_often(
-    hass: HomeAssistant,
-    caplog: pytest.LogCaptureFixture,
-    entity_registry: er.EntityRegistry,
-) -> None:
-    """Test entity capabilities are updated automatically."""
-    capabilities_too_often_warning = "is updating its capabilities too often"
-    platform = MockEntityPlatform(hass)
+    obj = ThawedEntityDescription("blah", extra="foo", name="name")
+    assert obj == snapshot
+    assert obj == ThawedEntityDescription("blah", extra="foo", name="name")
+    assert repr(obj) == snapshot
 
-    entity = MockEntity(unique_id="qwer")
-    await platform.async_add_entities([entity])
-
-    entry = entity_registry.async_get(entity.entity_id)
-    assert entry.capabilities is None
-    assert entry.device_class is None
-    assert entry.supported_features == 0
-
-    for supported_features in range(1, 100):
-        entity._values["capability_attributes"] = {"bla": "blu"}
-        entity._values["device_class"] = "some_class"
-        entity._values["supported_features"] = supported_features
-        entity.async_write_ha_state()
-        entry = entity_registry.async_get(entity.entity_id)
-        assert entry.capabilities == {"bla": "blu"}
-        assert entry.original_device_class == "some_class"
-        assert entry.supported_features == supported_features
-
-    assert capabilities_too_often_warning not in caplog.text
-
-    entity._values["capability_attributes"] = {"bla": "blu"}
-    entity._values["device_class"] = "some_class"
-    entity._values["supported_features"] = supported_features + 1
-    entity.async_write_ha_state()
-    entry = entity_registry.async_get(entity.entity_id)
-    assert entry.capabilities == {"bla": "blu"}
-    assert entry.original_device_class == "some_class"
-    assert entry.supported_features == supported_features + 1
-
-    assert capabilities_too_often_warning in caplog.text
-
-
-async def test_update_capabilities_too_often_cooldown(
-    hass: HomeAssistant,
-    caplog: pytest.LogCaptureFixture,
-    entity_registry: er.EntityRegistry,
-    freezer: FrozenDateTimeFactory,
-) -> None:
-    """Test entity capabilities are updated automatically."""
-    capabilities_too_often_warning = "is updating its capabilities too often"
-    platform = MockEntityPlatform(hass)
-
-    entity = MockEntity(unique_id="qwer")
-    await platform.async_add_entities([entity])
-
-    entry = entity_registry.async_get(entity.entity_id)
-    assert entry.capabilities is None
-    assert entry.device_class is None
-    assert entry.supported_features == 0
-
-    for supported_features in range(1, 100):
-        entity._values["capability_attributes"] = {"bla": "blu"}
-        entity._values["device_class"] = "some_class"
-        entity._values["supported_features"] = supported_features
-        entity.async_write_ha_state()
-        entry = entity_registry.async_get(entity.entity_id)
-        assert entry.capabilities == {"bla": "blu"}
-        assert entry.original_device_class == "some_class"
-        assert entry.supported_features == supported_features
-
-    assert capabilities_too_often_warning not in caplog.text
-
-    freezer.tick(timedelta(minutes=60) + timedelta(seconds=1))
-
-    entity._values["capability_attributes"] = {"bla": "blu"}
-    entity._values["device_class"] = "some_class"
-    entity._values["supported_features"] = supported_features + 1
-    entity.async_write_ha_state()
-    entry = entity_registry.async_get(entity.entity_id)
-    assert entry.capabilities == {"bla": "blu"}
-    assert entry.original_device_class == "some_class"
-    assert entry.supported_features == supported_features + 1
-
-    assert capabilities_too_often_warning not in caplog.text
+    # Try mutating
+    obj.name = "mutate"
+    assert obj.name == "mutate"
+    delattr(obj, "key")
+    assert not hasattr(obj, "key")

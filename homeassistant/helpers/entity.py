@@ -5,7 +5,7 @@ from abc import ABC
 import asyncio
 from collections import deque
 from collections.abc import Coroutine, Iterable, Mapping, MutableMapping
-from dataclasses import dataclass
+import dataclasses
 from datetime import timedelta
 from enum import Enum, auto
 import functools as ft
@@ -24,6 +24,7 @@ from typing import (
     final,
 )
 
+from typing_extensions import dataclass_transform
 import voluptuous as vol
 
 from homeassistant.backports.functools import cached_property
@@ -52,6 +53,7 @@ from homeassistant.exceptions import (
 )
 from homeassistant.loader import async_suggest_report_issue, bind_hass
 from homeassistant.util import ensure_unique_string, slugify
+from homeassistant.util.frozen_dataclass_compat import FrozenOrThawed
 
 from . import device_registry as dr, entity_registry as er
 from .device_registry import DeviceInfo, EventDeviceRegistryUpdatedData
@@ -222,8 +224,17 @@ class EntityPlatformState(Enum):
     REMOVED = auto()
 
 
-@dataclass(slots=True)
-class EntityDescription:
+@dataclass_transform(
+    field_specifiers=(dataclasses.field, dataclasses.Field),
+    kw_only_default=True,  # Set to allow setting kw_only in child classes
+)
+class _EntityDescriptionBase:
+    """Add PEP 681 decorator (dataclass transform)."""
+
+
+class EntityDescription(
+    _EntityDescriptionBase, metaclass=FrozenOrThawed, frozen_or_thawed=True
+):
     """A class that describes Home Assistant entities."""
 
     # This is the key identifier for this entity
@@ -1296,7 +1307,7 @@ class Entity(ABC):
         )
 
 
-@dataclass(slots=True)
+@dataclasses.dataclass(slots=True)
 class ToggleEntityDescription(EntityDescription):
     """A class that describes toggle entities."""
 
