@@ -105,6 +105,7 @@ __all__ = [
     "async_scanner_by_source",
     "async_scanner_count",
     "async_scanner_devices_by_address",
+    "async_get_advertisement_callback",
     "BaseHaScanner",
     "HomeAssistantRemoteScanner",
     "BluetoothCallbackMatcher",
