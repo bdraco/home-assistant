@@ -536,7 +536,7 @@ datadog==0.15.0
 datapoint==0.9.8;python_version<'3.12'
 
 # homeassistant.components.bluetooth
-dbus-fast==2.20.0
+dbus-fast==2.21.0
 
 # homeassistant.components.debugpy
 debugpy==1.8.0
@@ -1601,6 +1601,9 @@ pyspcwebgw==0.7.0
 
 # homeassistant.components.squeezebox
 pysqueezebox==0.7.1
+
+# homeassistant.components.suez_water
+pysuez==0.2.0
 
 # homeassistant.components.switchbee
 pyswitchbee==1.8.0
