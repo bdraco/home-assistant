@@ -55,6 +55,7 @@ from .api import (
     async_address_present,
     async_ble_device_from_address,
     async_discovered_service_info,
+    async_get_advertisement_callback,
     async_get_fallback_availability_interval,
     async_get_learned_advertising_interval,
     async_get_scanner,
