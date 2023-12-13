@@ -34,11 +34,11 @@ class ESPHomeScanner(BaseHaRemoteScanner):
 
     @callback
     def async_on_raw_advertisements(
-        self, advertisements: BluetoothLERawAdvertisementsResponse
+        self, raw: BluetoothLERawAdvertisementsResponse
     ) -> None:
         """Call the registered callback."""
         now = MONOTONIC_TIME()
-        for adv in advertisements.advertisements:
+        for adv in raw.advertisements:
             self._async_on_advertisement(
                 int_to_bluetooth_address(adv.address),
                 adv.rssi,
