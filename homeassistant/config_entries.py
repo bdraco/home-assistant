@@ -911,7 +911,7 @@ class ConfigEntriesFlowManager(data_entry_flow.FlowManager):
         flow.flow_id = flow_id
         flow.context = context
         flow.init_data = data
-        _LOGGER.warning(
+        _LOGGER.debug(
             "Started flow (context=%s) (handler=%s) (init_data=%s)",
             context,
             handler,
