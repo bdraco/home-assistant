@@ -911,12 +911,6 @@ class ConfigEntriesFlowManager(data_entry_flow.FlowManager):
         flow.flow_id = flow_id
         flow.context = context
         flow.init_data = data
-        _LOGGER.debug(
-            "Started flow (context=%s) (handler=%s) (init_data=%s)",
-            context,
-            handler,
-            data,
-        )
         self._async_add_flow_progress(flow)
         try:
             result = await self._async_handle_step(flow, flow.init_step, data)
