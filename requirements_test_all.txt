@@ -451,7 +451,7 @@ bellows==0.37.3
 bimmer-connected[china]==0.14.6
 
 # homeassistant.components.esphome
-bleak-esphome==0.1.0
+bleak-esphome==0.2.0
 
 # homeassistant.components.bluetooth
 bleak-retry-connector==3.3.0
@@ -1766,7 +1766,7 @@ rapt-ble==0.1.2
 regenmaschine==2023.06.0
 
 # homeassistant.components.renault
-renault-api==0.2.0
+renault-api==0.2.1
 
 # homeassistant.components.renson
 renson-endura-delta==1.7.1
@@ -1920,7 +1920,7 @@ subarulink==0.7.9
 sunwatcher==0.2.1
 
 # homeassistant.components.sunweg
-sunweg==2.0.0
+sunweg==2.0.1
 
 # homeassistant.components.surepetcare
 surepy==0.8.0

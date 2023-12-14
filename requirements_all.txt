@@ -535,7 +535,7 @@ bimmer-connected[china]==0.14.6
 bizkaibus==0.1.1
 
 # homeassistant.components.esphome
-bleak-esphome==0.1.0
+bleak-esphome==0.2.0
 
 # homeassistant.components.bluetooth
 bleak-retry-connector==3.3.0
@@ -1054,7 +1054,7 @@ huawei-lte-api==1.7.3
 hyperion-py==0.7.5
 
 # homeassistant.components.iammeter
-iammeter==0.1.7
+iammeter==0.2.1
 
 # homeassistant.components.iaqualink
 iaqualink==0.5.0
@@ -2354,7 +2354,7 @@ raspyrfm-client==1.2.8
 regenmaschine==2023.06.0
 
 # homeassistant.components.renault
-renault-api==0.2.0
+renault-api==0.2.1
 
 # homeassistant.components.renson
 renson-endura-delta==1.7.1
@@ -2559,7 +2559,7 @@ subarulink==0.7.9
 sunwatcher==0.2.1
 
 # homeassistant.components.sunweg
-sunweg==2.0.0
+sunweg==2.0.1
 
 # homeassistant.components.surepetcare
 surepy==0.8.0
