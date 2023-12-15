@@ -4,7 +4,7 @@
 -r requirements_test.txt
 
 # homeassistant.components.aemet
-AEMET-OpenData==0.4.6
+AEMET-OpenData==0.4.7
 
 # homeassistant.components.aladdin_connect
 AIOAladdinConnect==0.1.58
@@ -170,7 +170,7 @@ aioairq==0.3.1
 aioairzone-cloud==0.3.6
 
 # homeassistant.components.airzone
-aioairzone==0.6.9
+aioairzone==0.7.0
 
 # homeassistant.components.ambient_station
 aioambient==2023.04.0
@@ -494,7 +494,7 @@ broadlink==0.18.3
 brother==3.0.0
 
 # homeassistant.components.brottsplatskartan
-brottsplatskartan==0.0.1
+brottsplatskartan==1.0.5
 
 # homeassistant.components.brunt
 brunt==1.2.0
@@ -1099,7 +1099,7 @@ openerz-api==0.2.0
 openhomedevice==2.2.0
 
 # homeassistant.components.opower
-opower==0.0.40
+opower==0.0.41
 
 # homeassistant.components.oralb
 oralb-ble==0.17.6
@@ -1694,7 +1694,7 @@ pytradfri[async]==9.0.1
 # homeassistant.components.trafikverket_ferry
 # homeassistant.components.trafikverket_train
 # homeassistant.components.trafikverket_weatherstation
-pytrafikverket==0.3.9.1
+pytrafikverket==0.3.9.2
 
 # homeassistant.components.v2c
 pytrydan==0.4.0
@@ -1703,7 +1703,7 @@ pytrydan==0.4.0
 pyudev==0.23.2
 
 # homeassistant.components.unifiprotect
-pyunifiprotect==4.22.0
+pyunifiprotect==4.22.3
 
 # homeassistant.components.uptimerobot
 pyuptimerobot==22.2.0
