@@ -350,7 +350,7 @@ aiosyncthing==0.5.1
 aiotractive==0.5.6
 
 # homeassistant.components.unifi
-aiounifi==67
+aiounifi==68
 
 # homeassistant.components.vlc_telnet
 aiovlc==0.1.0
@@ -640,7 +640,7 @@ faadelays==2023.9.1
 fastdotcom==0.0.3
 
 # homeassistant.components.feedreader
-feedparser==6.0.10
+feedparser==6.0.11
 
 # homeassistant.components.file
 file-read-backwards==2.0.0
@@ -1860,7 +1860,7 @@ smhi-pkg==1.0.16
 snapcast==2.3.3
 
 # homeassistant.components.sonos
-soco==0.29.1
+soco==0.30.0
 
 # homeassistant.components.solaredge
 solaredge==0.0.2
