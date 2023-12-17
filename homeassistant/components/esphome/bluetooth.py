@@ -11,7 +11,7 @@ from bleak_esphome.backend.cache import ESPHomeBluetoothCache
 from homeassistant.components.bluetooth import async_register_scanner
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback as hass_callback
 
-from ..entry_data import RuntimeEntryData
+from .entry_data import RuntimeEntryData
 
 
 @hass_callback
