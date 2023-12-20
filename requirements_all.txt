@@ -1643,7 +1643,7 @@ pyasuswrt==0.1.21
 pyatag==0.3.5.3
 
 # homeassistant.components.netatmo
-pyatmo==8.0.0
+pyatmo==8.0.1
 
 # homeassistant.components.apple_tv
 pyatv==0.14.3
@@ -1739,7 +1739,7 @@ pyedimax==0.2.1
 pyefergy==22.1.1
 
 # homeassistant.components.enphase_envoy
-pyenphase==1.14.3
+pyenphase==1.15.1
 
 # homeassistant.components.envisalink
 pyenvisalink==4.6
@@ -2567,7 +2567,7 @@ sunwatcher==0.2.1
 sunweg==2.0.1
 
 # homeassistant.components.surepetcare
-surepy==0.8.0
+surepy==0.9.0
 
 # homeassistant.components.swiss_hydrological_data
 swisshydrodata==0.1.0
