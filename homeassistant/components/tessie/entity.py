@@ -1,13 +1,11 @@
 """Tessie parent entity class."""
 
 from collections.abc import Awaitable, Callable
-from http import HTTPStatus
 from typing import Any
 
 from aiohttp import ClientResponseError
 
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -55,32 +53,19 @@ class TessieEntity(CoordinatorEntity[TessieDataUpdateCoordinator]):
 
     async def run(
         self, func: Callable[..., Awaitable[dict[str, bool]]], **kargs: Any
-    ) -> bool:
+    ) -> None:
         """Run a tessie_api function and handle exceptions."""
         try:
-            response = await func(
+            await func(
                 session=self.coordinator.session,
                 vin=self.vin,
                 api_key=self.coordinator.api_key,
                 **kargs,
             )
         except ClientResponseError as e:
-            if e.status == HTTPStatus.INTERNAL_SERVER_ERROR:
-                # Create issue for Virtual Key setup
-                ir.async_create_issue(
-                    self.hass,
-                    DOMAIN,
-                    "virtual_key",
-                    is_fixable=True,
-                    is_persistent=False,
-                    learn_more_url="https://help.tessie.com/article/117-virtual-key",
-                    severity=ir.IssueSeverity.ERROR,
-                    translation_key="virtual_key",
-                )
             raise HomeAssistantError from e
-        return response.get("result") is True
 
-    def set(self, *args) -> None:
+    def set(self, *args: Any) -> None:
         """Set a value in coordinator data."""
         for key, value in args:
             self.coordinator.data[key] = value

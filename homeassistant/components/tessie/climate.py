@@ -16,11 +16,11 @@ from homeassistant.components.climate import (
     HVACMode,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
+from homeassistant.const import ATTR_TEMPERATURE, PRECISION_HALVES, UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
+from .const import DOMAIN, TessieClimateKeeper
 from .coordinator import TessieDataUpdateCoordinator
 from .entity import TessieEntity
 
@@ -37,7 +37,7 @@ async def async_setup_entry(
 class TessieClimateEntity(TessieEntity, ClimateEntity):
     """Vehicle Location Climate Class."""
 
-    _attr_precision = 0.5
+    _attr_precision = PRECISION_HALVES
     _attr_min_temp = 15
     _attr_max_temp = 28
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
@@ -45,14 +45,19 @@ class TessieClimateEntity(TessieEntity, ClimateEntity):
     _attr_supported_features = (
         ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.PRESET_MODE
     )
-    _attr_preset_modes: list = ["off", "on", "dog", "camp"]
+    _attr_preset_modes: list = [
+        TessieClimateKeeper.OFF,
+        TessieClimateKeeper.ON,
+        TessieClimateKeeper.DOG,
+        TessieClimateKeeper.CAMP,
+    ]
 
     def __init__(
         self,
         coordinator: TessieDataUpdateCoordinator,
     ) -> None:
         """Initialize the Climate entity."""
-        super().__init__(coordinator, "climate")
+        super().__init__(coordinator, "primary")
 
     @property
     def hvac_mode(self) -> HVACMode | None:
@@ -74,12 +79,12 @@ class TessieClimateEntity(TessieEntity, ClimateEntity):
     @property
     def max_temp(self) -> float:
         """Return the maximum temperature."""
-        return self.get("climate_state_max_avail_temp", self._attr_min_temp)
+        return self.get("climate_state_max_avail_temp", self._attr_max_temp)
 
     @property
     def min_temp(self) -> float:
         """Return the minimum temperature."""
-        return self.get("climate_state_min_avail_temp", self._attr_max_temp)
+        return self.get("climate_state_min_avail_temp", self._attr_min_temp)
 
     @property
     def preset_mode(self) -> str | None:
@@ -88,22 +93,22 @@ class TessieClimateEntity(TessieEntity, ClimateEntity):
 
     async def async_turn_on(self) -> None:
         """Set the climate state to on."""
-        if await self.run(start_climate_preconditioning):
-            self.set(("climate_state_is_climate_on", True))
+        await self.run(start_climate_preconditioning)
+        self.set(("climate_state_is_climate_on", True))
 
     async def async_turn_off(self) -> None:
         """Set the climate state to off."""
-        if await self.run(stop_climate):
-            self.set(
-                ("climate_state_is_climate_on", False),
-                ("climate_state_climate_keeper_mode", "off"),
-            )
+        await self.run(stop_climate)
+        self.set(
+            ("climate_state_is_climate_on", False),
+            ("climate_state_climate_keeper_mode", "off"),
+        )
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set the climate temperature."""
         temp = kwargs[ATTR_TEMPERATURE]
-        if await self.run(set_temperature, temperature=temp):
-            self.set(("climate_state_driver_temp_setting", temp))
+        await self.run(set_temperature, temperature=temp)
+        self.set(("climate_state_driver_temp_setting", temp))
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set the climate mode and state."""
@@ -114,16 +119,16 @@ class TessieClimateEntity(TessieEntity, ClimateEntity):
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set the climate preset mode."""
-        if await self.run(
+        await self.run(
             set_climate_keeper_mode, mode=self._attr_preset_modes.index(preset_mode)
-        ):
-            self.set(
-                (
-                    "climate_state_climate_keeper_mode",
-                    preset_mode,
-                ),
-                (
-                    "climate_state_is_climate_on",
-                    preset_mode != self._attr_preset_modes[0],
-                ),
-            )
+        )
+        self.set(
+            (
+                "climate_state_climate_keeper_mode",
+                preset_mode,
+            ),
+            (
+                "climate_state_is_climate_on",
+                preset_mode != self._attr_preset_modes[0],
+            ),
+        )
