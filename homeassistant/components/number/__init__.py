@@ -157,7 +157,18 @@ def floor_decimal(value: float, precision: float = 0) -> float:
     return floor(value * factor) / factor
 
 
-class NumberEntity(Entity):
+CACHED_PROPERTIES_WITH_ATTR_ = {
+    "device_class",
+    "native_max_value",
+    "native_min_value",
+    "native_step",
+    "mode",
+    "native_unit_of_measurement",
+    "native_value",
+}
+
+
+class NumberEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
     """Representation of a Number entity."""
 
     _entity_component_unrecorded_attributes = frozenset(
@@ -366,7 +377,7 @@ class NumberEntity(Entity):
 
         return native_unit_of_measurement
 
-    @property
+    @cached_property
     def native_value(self) -> float | None:
         """Return the value reported by the number."""
         return self._attr_native_value
