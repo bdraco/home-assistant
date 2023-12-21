@@ -561,7 +561,7 @@ demetriek==0.4.0
 denonavr==0.11.4
 
 # homeassistant.components.devialet
-devialet==1.4.4
+devialet==1.4.5
 
 # homeassistant.components.devolo_home_control
 devolo-home-control-api==0.18.3
@@ -1654,6 +1654,9 @@ python-miio==0.5.12
 
 # homeassistant.components.mystrom
 python-mystrom==2.2.0
+
+# homeassistant.components.swiss_public_transport
+python-opendata-transport==0.3.0
 
 # homeassistant.components.opensky
 python-opensky==1.0.0
