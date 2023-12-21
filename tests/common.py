@@ -1227,7 +1227,7 @@ class MockEntity(entity.Entity):
 
 @contextmanager
 def mock_storage(
-    data: dict[str, Any] | None = None
+    data: dict[str, Any] | None = None,
 ) -> Generator[dict[str, Any], None, None]:
     """Mock storage.
 
