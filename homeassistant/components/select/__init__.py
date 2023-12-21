@@ -127,7 +127,13 @@ class SelectEntityDescription(EntityDescription, frozen_or_thawed=True):
     options: list[str] | None = None
 
 
-class SelectEntity(Entity):
+CACHED_PROPERTIES_WITH_ATTR_ = {
+    "current_option",
+    "options",
+}
+
+
+class SelectEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
     """Representation of a Select entity."""
 
     _entity_component_unrecorded_attributes = frozenset({ATTR_OPTIONS})

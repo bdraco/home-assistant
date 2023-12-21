@@ -449,7 +449,20 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return await component.async_unload_entry(entry)
 
 
-class Camera(Entity):
+CACHED_PROPERTIES_WITH_ATTR_ = {
+    "brand",
+    "frame_interval",
+    "frontend_stream_type",
+    "is_on",
+    "is_recording",
+    "is_streaming",
+    "model",
+    "motion_detection_enabled",
+    "supported_features",
+}
+
+
+class Camera(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
     """The base class for camera entities."""
 
     _entity_component_unrecorded_attributes = frozenset(
@@ -640,7 +653,7 @@ class Camera(Entity):
             return STATE_STREAMING
         return STATE_IDLE
 
-    @property
+    @cached_property
     def is_on(self) -> bool:
         """Return true if on."""
         return self._attr_is_on
