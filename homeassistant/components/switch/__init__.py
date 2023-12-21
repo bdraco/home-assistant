@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import timedelta
 from enum import StrEnum
 import logging
+from typing import TYPE_CHECKING
 
 import voluptuous as vol
 
@@ -24,6 +25,10 @@ from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.loader import bind_hass
 
+if TYPE_CHECKING:
+    from functools import cached_property
+else:
+    from homeassistant.backports.functools import cached_property
 from .const import DOMAIN
 
 SCAN_INTERVAL = timedelta(seconds=30)
@@ -100,7 +105,7 @@ class SwitchEntity(ToggleEntity):
     entity_description: SwitchEntityDescription
     _attr_device_class: SwitchDeviceClass | None
 
-    @property
+    @cached_property
     def device_class(self) -> SwitchDeviceClass | None:
         """Return the class of this entity."""
         if hasattr(self, "_attr_device_class"):

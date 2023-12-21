@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 import logging
-from typing import Any, final
+from typing import TYPE_CHECKING, Any, final
 
 import voluptuous as vol
 
@@ -18,6 +18,10 @@ from homeassistant.helpers.entity import Entity, EntityDescription
 from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.helpers.typing import ConfigType
 
+if TYPE_CHECKING:
+    from functools import cached_property
+else:
+    from homeassistant.backports.functools import cached_property
 from .const import (
     ATTR_CYCLE,
     ATTR_OPTION,
@@ -149,7 +153,7 @@ class SelectEntity(Entity):
             return None
         return current_option
 
-    @property
+    @cached_property
     def options(self) -> list[str]:
         """Return a set of selectable options."""
         if hasattr(self, "_attr_options"):
@@ -161,7 +165,7 @@ class SelectEntity(Entity):
             return self.entity_description.options
         raise AttributeError()
 
-    @property
+    @cached_property
     def current_option(self) -> str | None:
         """Return the selected entity option to represent the entity state."""
         return self._attr_current_option

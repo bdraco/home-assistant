@@ -12,12 +12,16 @@ from functools import partial
 import logging
 import os
 from random import SystemRandom
-from typing import Any, Final, cast, final
+from typing import TYPE_CHECKING, Any, Final, cast, final
 
 from aiohttp import hdrs, web
 import attr
 import voluptuous as vol
 
+if TYPE_CHECKING:
+    from functools import cached_property
+else:
+    from homeassistant.backports.functools import cached_property
 from homeassistant.components import websocket_api
 from homeassistant.components.http import KEY_AUTHENTICATED, HomeAssistantView
 from homeassistant.components.media_player import (
@@ -488,37 +492,37 @@ class Camera(Entity):
         """Whether or not to use stream to generate stills."""
         return False
 
-    @property
+    @cached_property
     def supported_features(self) -> CameraEntityFeature:
         """Flag supported features."""
         return self._attr_supported_features
 
-    @property
+    @cached_property
     def is_recording(self) -> bool:
         """Return true if the device is recording."""
         return self._attr_is_recording
 
-    @property
+    @cached_property
     def is_streaming(self) -> bool:
         """Return true if the device is streaming."""
         return self._attr_is_streaming
 
-    @property
+    @cached_property
     def brand(self) -> str | None:
         """Return the camera brand."""
         return self._attr_brand
 
-    @property
+    @cached_property
     def motion_detection_enabled(self) -> bool:
         """Return the camera motion detection status."""
         return self._attr_motion_detection_enabled
 
-    @property
+    @cached_property
     def model(self) -> str | None:
         """Return the camera model."""
         return self._attr_model
 
-    @property
+    @cached_property
     def frame_interval(self) -> float:
         """Return the interval between frames of the mjpeg stream."""
         return self._attr_frame_interval
