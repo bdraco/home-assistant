@@ -511,7 +511,7 @@ class Entity(
 
         Should be True if the entity represents the single main feature of a device.
         """
-        if "_attr_name" in self.__dict__ or hasattr(self, "_attr_name"):
+        if hasattr(self, "_attr_name"):
             return not self._attr_name
 
         if name_translation_key := self._name_translation_key:
@@ -908,7 +908,7 @@ class Entity(
             return name
 
         device_name = device_entry.name_by_user or device_entry.name
-        if self.use_device_name:
+        if name is None and self.use_device_name:
             return device_name
         return f"{device_name} {name}" if device_name else name
 
