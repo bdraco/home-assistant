@@ -24,7 +24,7 @@ from homeassistant.helpers.config_validation import (
     PLATFORM_SCHEMA,
     PLATFORM_SCHEMA_BASE,
 )
-from homeassistant.helpers.entity import EntityDescription
+from homeassistant.helpers.entity import ABCCachedProperties, EntityDescription
 from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.typing import ConfigType
@@ -191,7 +191,24 @@ def _version_is_newer(latest_version: str, installed_version: str) -> bool:
     return AwesomeVersion(latest_version) > installed_version
 
 
-class UpdateEntity(RestoreEntity):
+CACHED_PROPERTIES_WITH_ATTR_ = {
+    "auto_update",
+    "installed_version",
+    "device_class",
+    "in_progress",
+    "latest_version",
+    "release_summary",
+    "release_url",
+    "supported_features",
+    "title",
+}
+
+
+class UpdateEntity(
+    RestoreEntity,
+    metaclass=ABCCachedProperties,
+    cached_properties=CACHED_PROPERTIES_WITH_ATTR_,
+):
     """Representation of an update entity."""
 
     _entity_component_unrecorded_attributes = frozenset(
