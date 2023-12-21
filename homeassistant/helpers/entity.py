@@ -1,10 +1,10 @@
 """An abstract class for entities."""
 from __future__ import annotations
 
-from abc import ABC
+from abc import ABCMeta
 import asyncio
 from collections import deque
-from collections.abc import Coroutine, Iterable, Mapping, MutableMapping
+from collections.abc import Callable, Coroutine, Iterable, Mapping, MutableMapping
 import dataclasses
 from datetime import timedelta
 from enum import Enum, auto
@@ -26,7 +26,6 @@ from typing import (
 
 import voluptuous as vol
 
-from homeassistant.backports.functools import cached_property
 from homeassistant.config import DATA_CUSTOMIZE
 from homeassistant.const import (
     ATTR_ASSUMED_STATE,
@@ -63,8 +62,11 @@ from .event import (
 from .typing import UNDEFINED, EventType, StateType, UndefinedType
 
 if TYPE_CHECKING:
-    from .entity_platform import EntityPlatform
+    from functools import cached_property
 
+    from .entity_platform import EntityPlatform
+else:
+    from homeassistant.backports.functools import cached_property
 
 _T = TypeVar("_T")
 
@@ -259,7 +261,123 @@ class CalculatedState:
     shadowed_attributes: Mapping[str, Any]
 
 
-class Entity(ABC):
+class CachedProperties(type):
+    """Metaclass which invalidates cached entity propertis on write to _attr_."""
+
+    def __new__(
+        mcs,  # noqa: N804  ruff bug, ruff does not understand this is a metaclass
+        name: str,
+        bases: tuple[type, ...],
+        namespace: dict[Any, Any],
+        cached_properties: set[str] | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        """Pop cached_properties and store it in the namespace."""
+        namespace["_CachedProperties__cached_properties"] = cached_properties or set()
+        return super().__new__(mcs, name, bases, namespace)
+
+    def __init__(
+        cls,
+        name: str,
+        bases: tuple[type, ...],
+        namespace: dict[Any, Any],
+        **kwargs: Any,
+    ) -> None:
+        """Wrap _attr_ for cached properties in property objects."""
+
+        def deleter(name: str) -> Callable[[Any], None]:
+            private_attribute_name = "__attr_" + name
+
+            def _deleter(o: Any) -> None:
+                for attr in (name, private_attribute_name):
+                    try:  # noqa: SIM105  suppress is much slower
+                        delattr(o, attr)
+                    except AttributeError:
+                        pass
+
+            return _deleter
+
+        def getter(name: str) -> Callable[[Any], Any]:
+            private_attribute_name = "__attr_" + name
+
+            def _getter(o: Any) -> Any:
+                return getattr(o, private_attribute_name)
+
+            return _getter
+
+        def setter(name: str) -> Callable[[Any, Any], None]:
+            private_attribute_name = "__attr_" + name
+
+            def _setter(o: Any, val: Any) -> None:
+                setattr(o, private_attribute_name, val)
+                try:  # noqa: SIM105  suppress is much slower
+                    delattr(o, name)
+                except AttributeError:
+                    pass
+
+            return _setter
+
+        def make_property(name: str) -> property:
+            return property(fget=getter(name), fset=setter(name), fdel=deleter(name))
+
+        def move_attr(cls: CachedProperties, property_name: str) -> None:
+            attr_name = "_attr_" + property_name
+            private_attr_name = "__attr_" + property_name
+            if hasattr(cls, attr_name):
+                setattr(cls, private_attr_name, getattr(cls, attr_name))
+                annotations = cls.__annotations__
+                if attr_name in annotations:
+                    annotations[private_attr_name] = annotations.pop(attr_name)
+            setattr(cls, attr_name, make_property(property_name))
+
+        cached_properties: set[str] = namespace["_CachedProperties__cached_properties"]
+        for property_name in cached_properties:
+            move_attr(cls, property_name)
+
+        for parent in cls.__mro__[:0:-1]:
+            if not hasattr(parent, "_CachedProperties__cached_properties"):
+                continue
+            cached_properties = getattr(parent, "_CachedProperties__cached_properties")
+            for property_name in cached_properties:
+                attr_name = "_attr_" + property_name
+                if (attr_name) not in cls.__dict__:
+                    continue
+                move_attr(cls, property_name)
+
+
+class ABCCachedProperties(CachedProperties, ABCMeta):
+    """Add ABCMeta to CachedProperties."""
+
+
+CACHED_PROPERTIES_WITH_ATTR_ = {
+    "assumed_state",
+    "attribution",
+    "available",
+    "capability_attributes",
+    "device_class",
+    "device_info",
+    "entity_category",
+    "has_entity_name",
+    "entity_picture",
+    "entity_registry_enabled_default",
+    "entity_registry_visible_default",
+    "extra_state_attributes",
+    "force_update",
+    "icon",
+    "name",
+    "should_poll",
+    "state",
+    "supported_features",
+    "translation_key",
+    "unique_id",
+    "unit_of_measurement",
+}
+
+
+class Entity(
+    metaclass=ABCCachedProperties, cached_properties=CACHED_PROPERTIES_WITH_ATTR_
+):
+    # class Entity(ABC):
     """An abstract class for Home Assistant entities."""
 
     # SAFE TO OVERWRITE
@@ -367,7 +485,7 @@ class Entity(ABC):
             cls._entity_component_unrecorded_attributes | cls._unrecorded_attributes
         )
 
-    @property
+    @cached_property
     def should_poll(self) -> bool:
         """Return True if entity has to be polled for state.
 
@@ -375,7 +493,7 @@ class Entity(ABC):
         """
         return self._attr_should_poll
 
-    @property
+    @cached_property
     def unique_id(self) -> str | None:
         """Return a unique ID."""
         return self._attr_unique_id
@@ -398,7 +516,7 @@ class Entity(ABC):
 
         return not self.name
 
-    @property
+    @cached_property
     def has_entity_name(self) -> bool:
         """Return if the name of the entity is describing only the entity itself."""
         if hasattr(self, "_attr_has_entity_name"):
@@ -482,7 +600,11 @@ class Entity(ABC):
         # The check for self.platform guards against integrations not using an
         # EntityComponent and can be removed in HA Core 2024.1
         # mypy doesn't know about fget: https://github.com/python/mypy/issues/6185
-        if self.__class__.name.fget is Entity.name.fget and self.platform:  # type: ignore[attr-defined]
+        if (
+            type.__getattribute__(self.__class__, "name")
+            is type.__getattribute__(Entity, "name")
+            and self.platform
+        ):
             name = self._name_internal(
                 self._object_id_device_class_name,
                 self.platform.object_id_platform_translations,
@@ -491,7 +613,7 @@ class Entity(ABC):
             name = self.name
         return None if name is UNDEFINED else name
 
-    @property
+    @cached_property
     def name(self) -> str | UndefinedType | None:
         """Return the name of the entity."""
         # The check for self.platform guards against integrations not using an
@@ -503,12 +625,12 @@ class Entity(ABC):
             self.platform.platform_translations,
         )
 
-    @property
+    @cached_property
     def state(self) -> StateType:
         """Return the state of the entity."""
         return self._attr_state
 
-    @property
+    @cached_property
     def capability_attributes(self) -> Mapping[str, Any] | None:
         """Return the capability attributes.
 
@@ -531,7 +653,7 @@ class Entity(ABC):
         """
         return None
 
-    @property
+    @cached_property
     def state_attributes(self) -> dict[str, Any] | None:
         """Return the state attributes.
 
@@ -540,7 +662,7 @@ class Entity(ABC):
         """
         return None
 
-    @property
+    @cached_property
     def extra_state_attributes(self) -> Mapping[str, Any] | None:
         """Return entity specific state attributes.
 
@@ -551,7 +673,7 @@ class Entity(ABC):
             return self._attr_extra_state_attributes
         return None
 
-    @property
+    @cached_property
     def device_info(self) -> DeviceInfo | None:
         """Return device specific attributes.
 
@@ -559,7 +681,7 @@ class Entity(ABC):
         """
         return self._attr_device_info
 
-    @property
+    @cached_property
     def device_class(self) -> str | None:
         """Return the class of this device, from component DEVICE_CLASSES."""
         if hasattr(self, "_attr_device_class"):
@@ -568,7 +690,7 @@ class Entity(ABC):
             return self.entity_description.device_class
         return None
 
-    @property
+    @cached_property
     def unit_of_measurement(self) -> str | None:
         """Return the unit of measurement of this entity, if any."""
         if hasattr(self, "_attr_unit_of_measurement"):
@@ -577,7 +699,7 @@ class Entity(ABC):
             return self.entity_description.unit_of_measurement
         return None
 
-    @property
+    @cached_property
     def icon(self) -> str | None:
         """Return the icon to use in the frontend, if any."""
         if hasattr(self, "_attr_icon"):
@@ -586,22 +708,22 @@ class Entity(ABC):
             return self.entity_description.icon
         return None
 
-    @property
+    @cached_property
     def entity_picture(self) -> str | None:
         """Return the entity picture to use in the frontend, if any."""
         return self._attr_entity_picture
 
-    @property
+    @cached_property
     def available(self) -> bool:
         """Return True if entity is available."""
         return self._attr_available
 
-    @property
+    @cached_property
     def assumed_state(self) -> bool:
         """Return True if unable to access real state of the entity."""
         return self._attr_assumed_state
 
-    @property
+    @cached_property
     def force_update(self) -> bool:
         """Return True if state updates should be forced.
 
@@ -614,12 +736,12 @@ class Entity(ABC):
             return self.entity_description.force_update
         return False
 
-    @property
+    @cached_property
     def supported_features(self) -> int | None:
         """Flag supported features."""
         return self._attr_supported_features
 
-    @property
+    @cached_property
     def entity_registry_enabled_default(self) -> bool:
         """Return if the entity should be enabled when first added.
 
@@ -631,7 +753,7 @@ class Entity(ABC):
             return self.entity_description.entity_registry_enabled_default
         return True
 
-    @property
+    @cached_property
     def entity_registry_visible_default(self) -> bool:
         """Return if the entity should be visible when first added.
 
@@ -643,12 +765,12 @@ class Entity(ABC):
             return self.entity_description.entity_registry_visible_default
         return True
 
-    @property
+    @cached_property
     def attribution(self) -> str | None:
         """Return the attribution."""
         return self._attr_attribution
 
-    @property
+    @cached_property
     def entity_category(self) -> EntityCategory | None:
         """Return the category of the entity, if any."""
         if hasattr(self, "_attr_entity_category"):
@@ -657,7 +779,7 @@ class Entity(ABC):
             return self.entity_description.entity_category
         return None
 
-    @property
+    @cached_property
     def translation_key(self) -> str | None:
         """Return the translation key to translate the entity's states."""
         if hasattr(self, "_attr_translation_key"):
