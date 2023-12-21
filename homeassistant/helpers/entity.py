@@ -511,9 +511,6 @@ class Entity(
 
         Should be True if the entity represents the single main feature of a device.
         """
-        if hasattr(self, "_attr_name"):
-            return not self._attr_name
-
         if name_translation_key := self._name_translation_key:
             if name_translation_key in self.platform.platform_translations:
                 return False
