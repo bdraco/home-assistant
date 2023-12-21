@@ -78,7 +78,12 @@ class ButtonEntityDescription(EntityDescription, frozen_or_thawed=True):
     device_class: ButtonDeviceClass | None = None
 
 
-class ButtonEntity(RestoreEntity):
+CACHED_PROPERTIES_WITH_ATTR_ = {
+    "device_class",
+}
+
+
+class ButtonEntity(RestoreEntity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
     """Representation of a Button entity."""
 
     entity_description: ButtonEntityDescription
