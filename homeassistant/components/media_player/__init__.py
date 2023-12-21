@@ -459,6 +459,42 @@ class MediaPlayerEntityDescription(EntityDescription, frozen_or_thawed=True):
     volume_step: float | None = None
 
 
+CACHED_PROPERTIES_WITH_ATTR_ = {
+    "device_class",
+    "state",
+    "volume_level",
+    "volume_step",
+    "is_volume_muted",
+    "media_content_id",
+    "media_content_type",
+    "media_duration",
+    "media_position",
+    "media_position_updated_at",
+    "media_image_url",
+    "media_image_remotely_accessible",
+    "media_title",
+    "media_artist",
+    "media_album_name",
+    "media_album_artist",
+    "media_track",
+    "media_series_title",
+    "media_season",
+    "media_episode",
+    "media_channel",
+    "media_playlist",
+    "app_id",
+    "app_name",
+    "source",
+    "source_list",
+    "sound_mode",
+    "sound_mode_list",
+    "shuffle",
+    "repeat",
+    "group_members",
+    "supported_features",
+}
+
+
 class MediaPlayerEntity(Entity):
     """ABC for media player entities."""
 
@@ -511,7 +547,7 @@ class MediaPlayerEntity(Entity):
     _attr_volume_step: float
 
     # Implement these for your media player
-    @property
+    @cached_property
     def device_class(self) -> MediaPlayerDeviceClass | None:
         """Return the class of this entity."""
         if hasattr(self, "_attr_device_class"):
