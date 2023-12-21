@@ -99,7 +99,12 @@ class SwitchEntityDescription(ToggleEntityDescription, frozen_or_thawed=True):
     device_class: SwitchDeviceClass | None = None
 
 
-class SwitchEntity(ToggleEntity):
+CACHED_PROPERTIES_WITH_ATTR_ = {
+    "device_class",
+}
+
+
+class SwitchEntity(ToggleEntity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
     """Base class for switch entities."""
 
     entity_description: SwitchEntityDescription
