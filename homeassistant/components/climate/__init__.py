@@ -248,7 +248,7 @@ CACHED_PROPERTIES_WITH_ATTR_ = {
 }
 
 
-class ClimateEntity(Entity):
+class ClimateEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
     """Base class for climate entities."""
 
     _entity_component_unrecorded_attributes = frozenset(
