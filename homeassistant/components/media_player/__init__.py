@@ -135,6 +135,11 @@ from .const import (  # noqa: F401
 )
 from .errors import BrowseError
 
+if TYPE_CHECKING:
+    from functools import cached_property
+else:
+    from homeassistant.backports.functools import cached_property
+
 _LOGGER = logging.getLogger(__name__)
 
 ENTITY_ID_FORMAT = DOMAIN + ".{}"
@@ -495,7 +500,7 @@ CACHED_PROPERTIES_WITH_ATTR_ = {
 }
 
 
-class MediaPlayerEntity(Entity):
+class MediaPlayerEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
     """ABC for media player entities."""
 
     _entity_component_unrecorded_attributes = frozenset(
