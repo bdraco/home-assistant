@@ -675,6 +675,11 @@ ZEROCONF = {
             "domain": "apple_tv",
         },
     ],
+    "_tvm._tcp.local.": [
+        {
+            "domain": "motionmount",
+        },
+    ],
     "_uzg-01._tcp.local.": [
         {
             "domain": "zha",
