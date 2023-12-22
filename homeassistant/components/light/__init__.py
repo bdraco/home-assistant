@@ -838,6 +838,8 @@ CACHED_PROPERTIES_WITH_ATTR_ = {
     "max_mireds",
     "effect_list",
     "effect",
+    "supported_color_modes",
+    "supported_features",
 }
 
 
@@ -1159,12 +1161,12 @@ class LightEntity(ToggleEntity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
         return supported_color_modes
 
-    @property
+    @cached_property
     def supported_color_modes(self) -> set[ColorMode] | set[str] | None:
         """Flag supported color modes."""
         return self._attr_supported_color_modes
 
-    @property
+    @cached_property
     def supported_features(self) -> LightEntityFeature:
         """Flag supported features."""
         return self._attr_supported_features
