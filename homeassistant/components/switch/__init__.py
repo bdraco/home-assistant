@@ -37,6 +37,11 @@ else:
     from homeassistant.backports.functools import cached_property
 from .const import DOMAIN
 
+if TYPE_CHECKING:
+    from functools import cached_property
+else:
+    from homeassistant.backports.functools import cached_property
+
 SCAN_INTERVAL = timedelta(seconds=30)
 
 ENTITY_ID_FORMAT = DOMAIN + ".{}"
