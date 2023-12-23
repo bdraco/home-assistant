@@ -46,6 +46,11 @@ from .const import (
     UpdateEntityFeature,
 )
 
+if TYPE_CHECKING:
+    from functools import cached_property
+else:
+    from homeassistant.backports.functools import cached_property
+
 SCAN_INTERVAL = timedelta(minutes=15)
 
 ENTITY_ID_FORMAT: Final = DOMAIN + ".{}"

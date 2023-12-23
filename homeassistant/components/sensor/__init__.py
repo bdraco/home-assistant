@@ -96,6 +96,11 @@ from .const import (  # noqa: F401
 )
 from .websocket_api import async_setup as async_setup_ws_api
 
+if TYPE_CHECKING:
+    from functools import cached_property
+else:
+    from homeassistant.backports.functools import cached_property
+
 _LOGGER: Final = logging.getLogger(__name__)
 
 ENTITY_ID_FORMAT: Final = DOMAIN + ".{}"

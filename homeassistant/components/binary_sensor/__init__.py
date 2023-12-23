@@ -26,13 +26,14 @@ from homeassistant.helpers.entity import Entity, EntityDescription
 from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.helpers.typing import ConfigType
 
-_LOGGER = logging.getLogger(__name__)
-
-
 if TYPE_CHECKING:
     from functools import cached_property
 else:
     from homeassistant.backports.functools import cached_property
+
+_LOGGER = logging.getLogger(__name__)
+
+
 DOMAIN = "binary_sensor"
 SCAN_INTERVAL = timedelta(seconds=30)
 
