@@ -2,11 +2,11 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Final
+from typing import Any
 
 from aiolookin import Remote, SensorID
 
-from homeassistant.components.fan import SUPPORT_OSCILLATE, FanEntity
+from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -15,7 +15,6 @@ from .const import DOMAIN
 from .entity import LookinPowerEntity
 from .models import LookinData
 
-FAN_SUPPORT_FLAGS: Final = SUPPORT_OSCILLATE
 LOGGER = logging.getLogger(__name__)
 
 ON_VALUE = "1000"
@@ -106,6 +105,8 @@ class LookinFanBase(LookinPowerEntity, FanEntity):
 class LookinFan(LookinFanBase):
     """A lookin fan."""
 
+    _attr_supported_features = FanEntityFeature.OSCILLATE
+
     def __init__(
         self,
         uuid: str,
@@ -115,11 +116,6 @@ class LookinFan(LookinFanBase):
         """IR controlled fan."""
         super().__init__(uuid, device, lookin_data)
         self._oscillating: bool = False
-
-    @property
-    def supported_features(self) -> int:
-        """Flag supported features."""
-        return FAN_SUPPORT_FLAGS
 
     @property
     def oscillating(self) -> bool:
@@ -136,16 +132,10 @@ class LookinFan(LookinFanBase):
 class LookinHumidifierFan(LookinFanBase):
     """A lookin humidifer fan."""
 
-    @property
-    def icon(self) -> str:
-        """Icon for a lookin humidifer fan."""
-        return "mdi:water-percent"
+    _attr_icon = "mdi:water-percent"
 
 
 class LookinPurifierFan(LookinFanBase):
     """A lookin air purifier fan."""
 
-    @property
-    def icon(self) -> str:
-        """Icon for a lookin purifier fan."""
-        return "mdi:water"
+    _attr_icon = "mdi:water"
