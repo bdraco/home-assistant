@@ -18,15 +18,16 @@
         }
       },
       "add_process": {
+        "description": "Configure a monitoring sensor for a running process",
         "data": {
-          "process": "Process"
+          "process": "Process to add as sensor"
         },
         "data_description": {
-          "process": "Binary, as example `octave-cli`"
+          "process": "Select a running process from list or specify your own process to add as sensor"
         }
       },
       "remove_process": {
-        "description": "Select the processes to be removed"
+        "description": "Select previously configured sensor(s) to be removed"
       }
     }
   }

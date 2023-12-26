@@ -267,6 +267,17 @@ def check_required_arg(value: Any) -> Any:
     return value
 
 
+def check_legacy_resource(resource: str, resources: list[str]) -> bool:
+    """Return True if legacy resource was configured."""
+    # This function to check legacy resources can be removed
+    # once we are removing the import from YAML
+    if resource in resources:
+        _LOGGER.debug("Checking %s in %s returns True", resource, ", ".join(resources))
+        return True
+    _LOGGER.debug("Checking %s in %s returns False", resource, ", ".join(resources))
+    return False
+
+
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Optional(CONF_RESOURCES, default={CONF_TYPE: "disk_use"}): vol.All(
@@ -345,9 +356,28 @@ async def async_setup_platform(
         for resource in config[CONF_RESOURCES]
         if resource[CONF_TYPE] == "process"
     ]
+    legacy_config: list[dict[str, str]] = config[CONF_RESOURCES]
+    resources = []
+    for resource_conf in legacy_config:
+        if (_type := resource_conf[CONF_TYPE]).startswith("disk_"):
+            if (arg := resource_conf.get(CONF_ARG)) is None:
+                resources.append(f"{_type}_/")
+                continue
+            resources.append(f"{_type}_{arg}")
+            continue
+        resources.append(f"{_type}_{resource_conf.get(CONF_ARG, '')}")
+    _LOGGER.debug(
+        "Importing config with processes: %s, resources: %s", processes, resources
+    )
+
+    # With removal of the import also cleanup legacy_resources logic in setup_entry
+    # Also cleanup entry.options["resources"] which is only imported for legacy reasons
+
     hass.async_create_task(
         hass.config_entries.flow.async_init(
-            DOMAIN, context={"source": SOURCE_IMPORT}, data={"processes": processes}
+            DOMAIN,
+            context={"source": SOURCE_IMPORT},
+            data={"processes": processes, "legacy_resources": resources},
         )
     )
 
@@ -358,39 +388,55 @@ async def async_setup_entry(
     """Set up System Montor sensors based on a config entry."""
     entities = []
     sensor_registry: dict[tuple[str, str], SensorData] = {}
+    legacy_resources = entry.options["resources"]
+    disk_arguments = await hass.async_add_executor_job(get_all_disk_mounts)
+    network_arguments = await hass.async_add_executor_job(get_all_network_interfaces)
+    cpu_temperature = await hass.async_add_executor_job(_read_cpu_temperature)
+
+    _LOGGER.debug("Setup from options %s", entry.options)
+
     for _type, sensor_description in SENSOR_TYPES.items():
         if _type.startswith("disk_"):
-            arguments = await hass.async_add_executor_job(get_all_disk_mounts)
-            for argument in arguments:
+            for argument in disk_arguments:
                 sensor_registry[(_type, argument)] = SensorData(
                     argument, None, None, None, None
                 )
+                is_enabled = check_legacy_resource(
+                    f"{_type}_{argument}", legacy_resources
+                )
                 entities.append(
                     SystemMonitorSensor(
-                        sensor_registry, sensor_description, entry.entry_id, argument
+                        sensor_registry,
+                        sensor_description,
+                        entry.entry_id,
+                        argument,
+                        is_enabled,
                     )
                 )
             continue
 
         if _type in NETWORK_TYPES:
-            arguments = await hass.async_add_executor_job(get_all_network_interfaces)
-            for argument in arguments:
+            for argument in network_arguments:
                 sensor_registry[(_type, argument)] = SensorData(
                     argument, None, None, None, None
                 )
+                is_enabled = check_legacy_resource(
+                    f"{_type}_{argument}", legacy_resources
+                )
                 entities.append(
                     SystemMonitorSensor(
-                        sensor_registry, sensor_description, entry.entry_id, argument
+                        sensor_registry,
+                        sensor_description,
+                        entry.entry_id,
+                        argument,
+                        is_enabled,
                     )
                 )
             continue
 
         # Verify if we can retrieve CPU / processor temperatures.
         # If not, do not create the entity and add a warning to the log
-        if (
-            _type == "processor_temperature"
-            and await hass.async_add_executor_job(_read_cpu_temperature) is None
-        ):
+        if _type == "processor_temperature" and cpu_temperature is None:
             _LOGGER.warning("Cannot read CPU / processor temperature information")
             continue
 
@@ -407,13 +453,21 @@ async def async_setup_entry(
                             sensor_description,
                             entry.entry_id,
                             argument,
+                            True,
                         )
                     )
             continue
 
         sensor_registry[(_type, "")] = SensorData("", None, None, None, None)
+        is_enabled = check_legacy_resource(f"{_type}_", legacy_resources)
         entities.append(
-            SystemMonitorSensor(sensor_registry, sensor_description, entry.entry_id, "")
+            SystemMonitorSensor(
+                sensor_registry,
+                sensor_description,
+                entry.entry_id,
+                "",
+                is_enabled,
+            )
         )
 
     scan_interval = DEFAULT_SCAN_INTERVAL
@@ -485,7 +539,6 @@ class SystemMonitorSensor(SensorEntity):
 
     should_poll = False
     _attr_has_entity_name = True
-    _attr_entity_registry_enabled_default = False
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(
@@ -494,6 +547,7 @@ class SystemMonitorSensor(SensorEntity):
         sensor_description: SysMonitorSensorEntityDescription,
         entry_id: str,
         argument: str = "",
+        legacy_enabled: bool = False,
     ) -> None:
         """Initialize the sensor."""
         self.entity_description = sensor_description
@@ -501,6 +555,7 @@ class SystemMonitorSensor(SensorEntity):
         self._attr_unique_id: str = slugify(f"{sensor_description.key}_{argument}")
         self._sensor_registry = sensor_registry
         self._argument: str = argument
+        self._attr_entity_registry_enabled_default = legacy_enabled
         self._attr_device_info = DeviceInfo(
             entry_type=DeviceEntryType.SERVICE,
             identifiers={(DOMAIN, entry_id)},

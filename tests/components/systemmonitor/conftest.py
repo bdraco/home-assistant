@@ -9,7 +9,7 @@ import pytest
 
 @pytest.fixture
 def mock_setup_entry() -> Generator[AsyncMock, None, None]:
-    """Automatically path uuid generator."""
+    """Mock setup entry."""
     with patch(
         "homeassistant.components.systemmonitor.async_setup_entry",
         return_value=True,
