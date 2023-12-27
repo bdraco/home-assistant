@@ -2176,7 +2176,7 @@ zeroconf==0.131.0
 zeversolar==0.3.1
 
 # homeassistant.components.zha
-zha-quirks==0.0.108
+zha-quirks==0.0.109
 
 # homeassistant.components.zha
 zigpy-deconz==0.22.3
@@ -2194,7 +2194,7 @@ zigpy-znp==0.12.1
 zigpy==0.60.2
 
 # homeassistant.components.zwave_js
-zwave-js-server-python==0.55.1
+zwave-js-server-python==0.55.2
 
 # homeassistant.components.zwave_me
 zwave-me-ws==0.4.3
