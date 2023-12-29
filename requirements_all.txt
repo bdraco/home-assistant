@@ -128,7 +128,7 @@ RtmAPI==0.7.2
 
 # homeassistant.components.recorder
 # homeassistant.components.sql
-SQLAlchemy==2.0.23
+SQLAlchemy==2.0.24
 
 # homeassistant.components.tami4
 Tami4EdgeAPI==2.1
@@ -2136,6 +2136,9 @@ pytankerkoenig==0.0.6
 
 # homeassistant.components.tautulli
 pytautulli==23.1.1
+
+# homeassistant.components.tedee
+pytedee-async==0.2.1
 
 # homeassistant.components.tfiac
 pytfiac==0.4
