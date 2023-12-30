@@ -103,6 +103,7 @@ SENSOR_TYPES: dict[str, SysMonitorSensorEntityDescription] = {
         device_class=SensorDeviceClass.DATA_SIZE,
         icon="mdi:harddisk",
         state_class=SensorStateClass.MEASUREMENT,
+        value_disk=lambda data: round(data.free / 1024**3, 1),
     ),
     "disk_use": SysMonitorSensorEntityDescription(
         key="disk_use",
@@ -111,6 +112,7 @@ SENSOR_TYPES: dict[str, SysMonitorSensorEntityDescription] = {
         device_class=SensorDeviceClass.DATA_SIZE,
         icon="mdi:harddisk",
         state_class=SensorStateClass.MEASUREMENT,
+        value_disk=lambda data: round(data.used / 1024**3, 1),
     ),
     "disk_use_percent": SysMonitorSensorEntityDescription(
         key="disk_use_percent",
@@ -118,41 +120,48 @@ SENSOR_TYPES: dict[str, SysMonitorSensorEntityDescription] = {
         native_unit_of_measurement=PERCENTAGE,
         icon="mdi:harddisk",
         state_class=SensorStateClass.MEASUREMENT,
+        value_disk=lambda data: data.percent,
     ),
     "ipv4_address": SysMonitorSensorEntityDescription(
         key="ipv4_address",
         name="IPv4 address",
         icon="mdi:ip-network",
         mandatory_arg=True,
+        value_net_addr=lambda data: data,
     ),
     "ipv6_address": SysMonitorSensorEntityDescription(
         key="ipv6_address",
         name="IPv6 address",
         icon="mdi:ip-network",
         mandatory_arg=True,
+        value_net_addr=lambda data: data,
     ),
     "last_boot": SysMonitorSensorEntityDescription(
         key="last_boot",
         name="Last boot",
         device_class=SensorDeviceClass.TIMESTAMP,
+        value_boot_time=lambda data: data,
     ),
     "load_15m": SysMonitorSensorEntityDescription(
         key="load_15m",
         name="Load (15m)",
         icon=get_cpu_icon(),
         state_class=SensorStateClass.MEASUREMENT,
+        value_load=lambda data: round(data[2], 2),
     ),
     "load_1m": SysMonitorSensorEntityDescription(
         key="load_1m",
         name="Load (1m)",
         icon=get_cpu_icon(),
         state_class=SensorStateClass.MEASUREMENT,
+        value_load=lambda data: round(data[0], 2),
     ),
     "load_5m": SysMonitorSensorEntityDescription(
         key="load_5m",
         name="Load (5m)",
         icon=get_cpu_icon(),
         state_class=SensorStateClass.MEASUREMENT,
+        value_load=lambda data: round(data[1], 2),
     ),
     "memory_free": SysMonitorSensorEntityDescription(
         key="memory_free",
@@ -161,6 +170,7 @@ SENSOR_TYPES: dict[str, SysMonitorSensorEntityDescription] = {
         device_class=SensorDeviceClass.DATA_SIZE,
         icon="mdi:memory",
         state_class=SensorStateClass.MEASUREMENT,
+        value_memory=lambda data: round(data.available / 1024**2, 1),
     ),
     "memory_use": SysMonitorSensorEntityDescription(
         key="memory_use",
@@ -169,6 +179,7 @@ SENSOR_TYPES: dict[str, SysMonitorSensorEntityDescription] = {
         device_class=SensorDeviceClass.DATA_SIZE,
         icon="mdi:memory",
         state_class=SensorStateClass.MEASUREMENT,
+        value_memory=lambda data: round((data.total - data.available) / 1024**2, 1),
     ),
     "memory_use_percent": SysMonitorSensorEntityDescription(
         key="memory_use_percent",
@@ -176,6 +187,7 @@ SENSOR_TYPES: dict[str, SysMonitorSensorEntityDescription] = {
         native_unit_of_measurement=PERCENTAGE,
         icon="mdi:memory",
         state_class=SensorStateClass.MEASUREMENT,
+        value_memory=lambda data: data.percent,
     ),
     "network_in": SysMonitorSensorEntityDescription(
         key="network_in",
@@ -185,6 +197,7 @@ SENSOR_TYPES: dict[str, SysMonitorSensorEntityDescription] = {
         icon="mdi:server-network",
         state_class=SensorStateClass.TOTAL_INCREASING,
         mandatory_arg=True,
+        value_net_io=lambda data: round(data / 1024**2, 1),
     ),
     "network_out": SysMonitorSensorEntityDescription(
         key="network_out",
@@ -194,6 +207,7 @@ SENSOR_TYPES: dict[str, SysMonitorSensorEntityDescription] = {
         icon="mdi:server-network",
         state_class=SensorStateClass.TOTAL_INCREASING,
         mandatory_arg=True,
+        value_net_io=lambda data: round(data / 1024**2, 1),
     ),
     "packets_in": SysMonitorSensorEntityDescription(
         key="packets_in",
@@ -201,6 +215,7 @@ SENSOR_TYPES: dict[str, SysMonitorSensorEntityDescription] = {
         icon="mdi:server-network",
         state_class=SensorStateClass.TOTAL_INCREASING,
         mandatory_arg=True,
+        value_net_io=lambda data: data,
     ),
     "packets_out": SysMonitorSensorEntityDescription(
         key="packets_out",
@@ -208,6 +223,7 @@ SENSOR_TYPES: dict[str, SysMonitorSensorEntityDescription] = {
         icon="mdi:server-network",
         state_class=SensorStateClass.TOTAL_INCREASING,
         mandatory_arg=True,
+        value_net_io=lambda data: data,
     ),
     "throughput_network_in": SysMonitorSensorEntityDescription(
         key="throughput_network_in",
@@ -216,6 +232,7 @@ SENSOR_TYPES: dict[str, SysMonitorSensorEntityDescription] = {
         device_class=SensorDeviceClass.DATA_RATE,
         state_class=SensorStateClass.MEASUREMENT,
         mandatory_arg=True,
+        value_net_throughput=lambda data: data,
     ),
     "throughput_network_out": SysMonitorSensorEntityDescription(
         key="throughput_network_out",
@@ -224,12 +241,14 @@ SENSOR_TYPES: dict[str, SysMonitorSensorEntityDescription] = {
         device_class=SensorDeviceClass.DATA_RATE,
         state_class=SensorStateClass.MEASUREMENT,
         mandatory_arg=True,
+        value_net_throughput=lambda data: data,
     ),
     "process": SysMonitorSensorEntityDescription(
         key="process",
         name="Process",
         icon=get_cpu_icon(),
         mandatory_arg=True,
+        value_process=lambda data: STATE_ON if data is True else STATE_OFF,
     ),
     "processor_use": SysMonitorSensorEntityDescription(
         key="processor_use",
@@ -237,6 +256,7 @@ SENSOR_TYPES: dict[str, SysMonitorSensorEntityDescription] = {
         native_unit_of_measurement=PERCENTAGE,
         icon=get_cpu_icon(),
         state_class=SensorStateClass.MEASUREMENT,
+        value_processor=lambda data: data,
     ),
     "processor_temperature": SysMonitorSensorEntityDescription(
         key="processor_temperature",
@@ -244,6 +264,7 @@ SENSOR_TYPES: dict[str, SysMonitorSensorEntityDescription] = {
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
+        value_cpu_temp=lambda data: data,
     ),
     "swap_free": SysMonitorSensorEntityDescription(
         key="swap_free",
@@ -252,6 +273,7 @@ SENSOR_TYPES: dict[str, SysMonitorSensorEntityDescription] = {
         device_class=SensorDeviceClass.DATA_SIZE,
         icon="mdi:harddisk",
         state_class=SensorStateClass.MEASUREMENT,
+        value_swap=lambda data: round(data.free / 1024**2, 1),
     ),
     "swap_use": SysMonitorSensorEntityDescription(
         key="swap_use",
@@ -260,6 +282,7 @@ SENSOR_TYPES: dict[str, SysMonitorSensorEntityDescription] = {
         device_class=SensorDeviceClass.DATA_SIZE,
         icon="mdi:harddisk",
         state_class=SensorStateClass.MEASUREMENT,
+        value_swap=lambda data: round(data.used / 1024**2, 1),
     ),
     "swap_use_percent": SysMonitorSensorEntityDescription(
         key="swap_use_percent",
@@ -267,6 +290,7 @@ SENSOR_TYPES: dict[str, SysMonitorSensorEntityDescription] = {
         native_unit_of_measurement=PERCENTAGE,
         icon="mdi:harddisk",
         state_class=SensorStateClass.MEASUREMENT,
+        value_swap=lambda data: data.percent,
     ),
 }
 
