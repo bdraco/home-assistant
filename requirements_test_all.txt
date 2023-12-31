@@ -797,7 +797,7 @@ ha-philipsjs==3.1.1
 habitipy==0.2.0
 
 # homeassistant.components.bluetooth
-habluetooth==2.0.0
+habluetooth==2.0.1
 
 # homeassistant.components.cloud
 hass-nabucasa==0.75.1
@@ -1806,7 +1806,7 @@ renault-api==0.2.1
 renson-endura-delta==1.7.1
 
 # homeassistant.components.reolink
-reolink-aio==0.8.4
+reolink-aio==0.8.5
 
 # homeassistant.components.rflink
 rflink==0.0.65
