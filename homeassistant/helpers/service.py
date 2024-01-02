@@ -946,7 +946,11 @@ async def _handle_entity_call(
     if task is not None:
         result = await task
 
-    if asyncio.iscoroutine(result):
+    if (
+        result
+        and type(result) not in (str, int, float, bool)
+        and asyncio.iscoroutine(result)
+    ):
         _LOGGER.error(
             (
                 "Service %s for %s incorrectly returns a coroutine object. Await result"
