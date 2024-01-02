@@ -656,6 +656,9 @@ feedparser==6.0.11
 # homeassistant.components.file
 file-read-backwards==2.0.0
 
+# homeassistant.components.fints
+fints==3.1.0
+
 # homeassistant.components.fitbit
 fitbit==0.3.1
 
@@ -2194,7 +2197,7 @@ zigpy-zigate==0.12.0
 zigpy-znp==0.12.1
 
 # homeassistant.components.zha
-zigpy==0.60.3
+zigpy==0.60.4
 
 # homeassistant.components.zwave_js
 zwave-js-server-python==0.55.2
