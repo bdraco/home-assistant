@@ -4,6 +4,7 @@ import datetime
 from functools import cache
 import socket
 import ssl
+from typing import Any
 
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
@@ -26,15 +27,14 @@ async def async_get_cert(
     hass: HomeAssistant,
     host: str,
     port: int,
-):
+) -> dict[str, Any]:
     """Get the certificate for the host and port combination."""
-    ctx = _get_default_ssl_context()
     transport, _ = await hass.loop.create_connection(
         asyncio.Protocol,
         host,
         port,
-        ssl=ctx,
-        happy_eyeballs_delay=1,
+        ssl=_get_default_ssl_context(),
+        happy_eyeballs_delay=0.25,
         server_hostname=host,
     )
     try:
