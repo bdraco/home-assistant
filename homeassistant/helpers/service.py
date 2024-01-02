@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Awaitable, Callable, Coroutine, Iterable
+from collections.abc import Awaitable, Callable, Iterable
 import dataclasses
 from enum import Enum
 from functools import cache, partial, wraps
@@ -790,9 +790,7 @@ def _get_permissible_entity_candidates(
 async def entity_service_call(
     hass: HomeAssistant,
     registered_entities: dict[str, Entity],
-    func: str
-    | Callable[..., Coroutine[Any, Any, ServiceResponse]]
-    | Callable[..., ServiceResponse],
+    func: str | HassJob,
     call: ServiceCall,
     required_features: Iterable[int] | None = None,
 ) -> EntityServiceResponse | None:
@@ -928,9 +926,7 @@ async def entity_service_call(
 async def _handle_entity_call(
     hass: HomeAssistant,
     entity: Entity,
-    func: str
-    | Callable[..., Coroutine[Any, Any, ServiceResponse]]
-    | Callable[..., ServiceResponse],
+    func: str | HassJob,
     data: dict | ServiceCall,
     context: Context,
 ) -> ServiceResponse:
@@ -943,7 +939,7 @@ async def _handle_entity_call(
             HassJob(partial(getattr(entity, func), **data))  # type: ignore[arg-type]
         )
     else:
-        task = hass.async_run_hass_job(HassJob(func), entity, data)
+        task = hass.async_run_hass_job(func, entity, data)
 
     # Guard because callback functions do not return a task when passed to
     # async_run_job.
