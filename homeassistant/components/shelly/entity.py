@@ -9,6 +9,7 @@ from aioshelly.block_device import Block
 from aioshelly.exceptions import DeviceConnectionError, InvalidAuthError, RpcCallError
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, State, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
@@ -418,13 +419,16 @@ class ShellyBlockAttributeEntity(ShellyBlockEntity, Entity):
         block: Block,
         attribute: str,
         description: BlockEntityDescription,
+        domain: str | None = None,
     ) -> None:
         """Initialize sensor."""
         super().__init__(coordinator, block)
         self.attribute = attribute
         self.entity_description = description
 
-        self._attr_unique_id: str = f"{super().unique_id}-{self.attribute}"
+        self._attr_unique_id: str = f"{super().unique_id}"
+        if domain != Platform.SWITCH:
+            self._attr_unique_id += f"-{self.attribute}"
         self._attr_name = get_block_entity_name(
             coordinator.device, block, description.name
         )
@@ -507,13 +511,16 @@ class ShellyRpcAttributeEntity(ShellyRpcEntity, Entity):
         key: str,
         attribute: str,
         description: RpcEntityDescription,
+        domain: str | None = None,
     ) -> None:
         """Initialize sensor."""
         super().__init__(coordinator, key)
         self.attribute = attribute
         self.entity_description = description
 
-        self._attr_unique_id = f"{super().unique_id}-{attribute}"
+        self._attr_unique_id = f"{super().unique_id}"
+        if domain != Platform.SWITCH:
+            self._attr_unique_id += f"-{attribute}"
         self._attr_name = get_rpc_entity_name(coordinator.device, key, description.name)
         self._last_value = None
 
