@@ -2209,6 +2209,32 @@ async def test_cached_entity_property_class_attribute(hass: HomeAssistant) -> No
         assert getattr(ent[1], property) == values[0]
 
 
+async def test_cached_entity_property_multi_inheritance(hass: HomeAssistant) -> None:
+    """Test entity properties work with multi inheritance."""
+
+    class BaseIntegrationEntity(entity.Entity):
+        """Test entity."""
+
+        _attr_is_on = None
+        _attr_should_poll = False
+
+    class IntegrationToggleEntity(BaseIntegrationEntity, entity.ToggleEntity):
+        """Test toggle entity."""
+
+        def set_state(self, on: bool) -> None:
+            """Set the state."""
+            self._attr_is_on = on
+
+    ent = IntegrationToggleEntity()
+
+    assert ent.is_on is None
+    assert ent.should_poll is False
+    ent.set_state(True)
+    assert ent.is_on is True
+    ent.set_state(False)
+    assert ent.is_on is False
+
+
 async def test_entity_report_deprecated_supported_features_values(
     caplog: pytest.LogCaptureFixture,
 ) -> None:

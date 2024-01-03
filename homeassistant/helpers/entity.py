@@ -382,27 +382,39 @@ class CachedProperties(type):
             setattr(cls, attr_name, make_property(property_name))
 
         cached_properties: set[str] = namespace["_CachedProperties__cached_properties"]
-        seen_props: set[str] = set()  # Keep track of properties which have been handled
+        seen_props: dict[
+            str, CachedProperties
+        ] = {}  # Keep track of properties which have been handled
         for property_name in cached_properties:
             wrap_attr(cls, property_name)
-            seen_props.add(property_name)
+            seen_props[property_name] = cls
 
         # Look for cached properties of parent classes where this class has
         # corresponding _attr_ class attributes and re-wrap them.
         for parent in cls.__mro__[:0:-1]:
             if "_CachedProperties__cached_properties" not in parent.__dict__:
                 continue
+
             cached_properties = getattr(parent, "_CachedProperties__cached_properties")
+
+            for property_name, cls in seen_props.items():
+                attr_name = f"_attr_{property_name}"
+                if attr_name not in parent.__dict__ or parent is cls:
+                    continue
+                #                setattr(cls, f"__attr_{property_name}", getattr(parent, attr_name))
+                delattr(parent, attr_name)
+
             for property_name in cached_properties:
                 if property_name in seen_props:
                     continue
                 attr_name = f"_attr_{property_name}"
                 # Check if an _attr_ class attribute exits. We check __dict__ here because
                 # we don't care about _attr_ class attributes in parents.
-                if (attr_name) not in cls.__dict__:
+                if attr_name not in cls.__dict__:
+                    seen_props[property_name] = parent
                     continue
                 wrap_attr(cls, property_name)
-                seen_props.add(property_name)
+                seen_props[property_name] = parent
 
 
 class ABCCachedProperties(CachedProperties, ABCMeta):
