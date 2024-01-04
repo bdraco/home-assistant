@@ -1,9 +1,9 @@
 """Tests for the TP-Link component."""
 
-from contextlib import contextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from kasa import (
+    DeviceConfig,
     SmartBulb,
     SmartDevice,
     SmartDimmer,
@@ -11,7 +11,6 @@ from kasa import (
     SmartPlug,
     SmartStrip,
 )
-from kasa.device_type import DeviceType
 from kasa.exceptions import SmartDeviceException
 from kasa.protocol import TPLinkSmartHomeProtocol
 
@@ -28,6 +27,9 @@ ALIAS = "My Bulb"
 MODEL = "HS100"
 MAC_ADDRESS = "aa:bb:cc:dd:ee:ff"
 DEFAULT_ENTRY_TITLE = f"{ALIAS} {MODEL}"
+CREDENTIALS_HASH = ""
+DEVICE_CONFIG = DeviceConfig(IP_ADDRESS)
+DEVICE_CONFIG_DICT = DEVICE_CONFIG.to_dict(credentials_hash=CREDENTIALS_HASH)
 
 
 def _mock_protocol() -> TPLinkSmartHomeProtocol:
@@ -64,7 +66,8 @@ def _mocked_bulb() -> SmartBulb:
     bulb.set_hsv = AsyncMock()
     bulb.set_color_temp = AsyncMock()
     bulb.protocol = _mock_protocol()
-    bulb.device_type = DeviceType.Bulb
+    bulb.config = DEVICE_CONFIG
+    bulb.credentials_hash = CREDENTIALS_HASH
     return bulb
 
 
@@ -106,7 +109,8 @@ def _mocked_smart_light_strip() -> SmartLightStrip:
     strip.set_effect = AsyncMock()
     strip.set_custom_effect = AsyncMock()
     strip.protocol = _mock_protocol()
-    strip.device_type = DeviceType.Strip
+    strip.config = DEVICE_CONFIG
+    strip.credentials_hash = CREDENTIALS_HASH
     return strip
 
 
@@ -138,7 +142,8 @@ def _mocked_dimmer() -> SmartDimmer:
     dimmer.set_color_temp = AsyncMock()
     dimmer.set_led = AsyncMock()
     dimmer.protocol = _mock_protocol()
-    dimmer.device_type = DeviceType.Dimmer
+    dimmer.config = DEVICE_CONFIG
+    dimmer.credentials_hash = CREDENTIALS_HASH
     return dimmer
 
 
@@ -160,7 +165,8 @@ def _mocked_plug() -> SmartPlug:
     plug.turn_on = AsyncMock()
     plug.set_led = AsyncMock()
     plug.protocol = _mock_protocol()
-    plug.device_type = DeviceType.Plug
+    plug.config = DEVICE_CONFIG
+    plug.credentials_hash = CREDENTIALS_HASH
     return plug
 
 
@@ -182,7 +188,8 @@ def _mocked_strip() -> SmartStrip:
     strip.turn_on = AsyncMock()
     strip.set_led = AsyncMock()
     strip.protocol = _mock_protocol()
-    strip.device_type = DeviceType.Strip
+    strip.config = DEVICE_CONFIG
+    strip.credentials_hash = CREDENTIALS_HASH
     plug0 = _mocked_plug()
     plug0.alias = "Plug0"
     plug0.device_id = "bb:bb:cc:dd:ee:ff_PLUG0DEVICEID"
@@ -208,17 +215,24 @@ def _patch_discovery(device=None, no_device=False):
     return patch("homeassistant.components.tplink.Discover.discover", new=_discovery)
 
 
-@contextmanager
 def _patch_single_discovery(device=None, no_device=False):
-    async def _make_device(*args, **kwargs):
+    async def _discover_single(*args, **kwargs):
         if no_device:
             raise SmartDeviceException
         return device if device else _mocked_bulb()
 
-    with patch(
-        "homeassistant.components.tplink.Discover.discover_single", new=_make_device
-    ), patch("homeassistant.components.tplink.SmartDevice.connect", new=_make_device):
-        yield
+    return patch(
+        "homeassistant.components.tplink.Discover.discover_single", new=_discover_single
+    )
+
+
+def _patch_connect(device=None, no_device=False):
+    async def _connect(*args, **kwargs):
+        if no_device:
+            raise SmartDeviceException
+        return device if device else _mocked_bulb()
+
+    return patch("homeassistant.components.tplink.SmartDevice.connect", new=_connect)
 
 
 async def initialize_config_entry_for_device(
@@ -234,7 +248,9 @@ async def initialize_config_entry_for_device(
     )
     config_entry.add_to_hass(hass)
 
-    with _patch_discovery(device=dev), _patch_single_discovery(device=dev):
+    with _patch_discovery(device=dev), _patch_single_discovery(
+        device=dev
+    ), _patch_connect(device=dev):
         await hass.config_entries.async_setup(config_entry.entry_id)
         await hass.async_block_till_done()
 

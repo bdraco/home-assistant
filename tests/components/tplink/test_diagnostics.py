@@ -4,7 +4,6 @@ import json
 from kasa import SmartDevice
 import pytest
 
-from homeassistant.components.tplink.const import CONF_DEVICE_TYPE
 from homeassistant.core import HomeAssistant
 
 from . import _mocked_bulb, _mocked_plug, initialize_config_entry_for_device
@@ -45,8 +44,6 @@ async def test_diagnostics(
     mocked_dev.internal_state = diagnostics_data["device_last_response"]
 
     config_entry = await initialize_config_entry_for_device(hass, mocked_dev)
-
-    assert config_entry.data[CONF_DEVICE_TYPE] == mocked_dev.device_type.value
     result = await get_diagnostics_for_config_entry(hass, hass_client, config_entry)
 
     assert isinstance(result, dict)
