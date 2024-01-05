@@ -161,32 +161,34 @@ class HomeKitLight(HomeKitEntity, LightEntity):
 
         characteristics: dict[str, Any] = {}
 
-        if hs_color is not None:
-            characteristics[CharacteristicsTypes.HUE] = hs_color[0]
-            characteristics[CharacteristicsTypes.SATURATION] = hs_color[1]
-
         if brightness is not None:
             characteristics[CharacteristicsTypes.BRIGHTNESS] = int(
                 brightness * 100 / 255
             )
 
+        # If they send both temperature and hs_color, and the device
+        # does not support both, temperature will win. This is not
+        # expected to happen in the UI, but it is possible via a manual
+        # service call.
         if temperature is not None:
             if self.service.has(CharacteristicsTypes.COLOR_TEMPERATURE):
                 characteristics[CharacteristicsTypes.COLOR_TEMPERATURE] = int(
                     temperature
                 )
-            else:
+            elif hs_color is None:
                 # Some HomeKit devices implement color temperature with HS
-                # since he spec does not permit the COLOR_TEMPERATURE characteristic
-                # and the HUE and SATURATION characteristics to be present at the
-                # same time. In practice there are a lot of devices that have
-                # both. If we have both, we use the COLOR_TEMPERATURE characteristic
-                # and ignore the HS characteristics when setting color temperature.
+                # since the spec "technically" does not permit the COLOR_TEMPERATURE
+                # characteristic and the HUE and SATURATION characteristics to be
+                # present at the same time.
                 hue_sat = color_util.color_temperature_to_hs(
                     color_util.color_temperature_mired_to_kelvin(temperature)
                 )
                 characteristics[CharacteristicsTypes.HUE] = hue_sat[0]
                 characteristics[CharacteristicsTypes.SATURATION] = hue_sat[1]
+
+        if hs_color is not None:
+            characteristics[CharacteristicsTypes.HUE] = hs_color[0]
+            characteristics[CharacteristicsTypes.SATURATION] = hs_color[1]
 
         characteristics[CharacteristicsTypes.ON] = True
 
