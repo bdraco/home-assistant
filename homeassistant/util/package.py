@@ -3,12 +3,7 @@ from __future__ import annotations
 
 import asyncio
 from functools import cache
-from importlib.metadata import (
-    PackageNotFoundError,
-    distribution,
-    distributions,
-    version,
-)
+from importlib.metadata import PackageNotFoundError, distribution, version
 import logging
 import os
 from pathlib import Path
@@ -33,11 +28,6 @@ def is_virtual_env() -> bool:
 def is_docker_env() -> bool:
     """Return True if we run in a docker env."""
     return Path("/.dockerenv").exists()
-
-
-def get_installed_packages() -> set[str]:
-    """Return a set of installed packages."""
-    return {f"{pkg.name}=={pkg.version}" for pkg in distributions()}
 
 
 def is_installed(package: str) -> bool:
