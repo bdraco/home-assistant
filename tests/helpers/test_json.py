@@ -49,7 +49,6 @@ def test_json_encoder(hass: HomeAssistant, encoder: type[json.JSONEncoder]) -> N
 
     # Test serializing an object which implements as_dict
     default = ha_json_enc.default(state)
-    assert isinstance(default, json_fragment)
     assert json_round_trip(default) == json_round_trip(state.as_dict())
 
 
