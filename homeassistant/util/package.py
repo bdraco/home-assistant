@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import asyncio
 from functools import cache
-from importlib.metadata import PackageNotFoundError, version
+from importlib.metadata import PackageNotFoundError, distribution, version
 import logging
 import os
 from pathlib import Path
@@ -30,30 +30,22 @@ def is_docker_env() -> bool:
     return Path("/.dockerenv").exists()
 
 
-def get_installed_versions(specifiers: set[str]) -> set[str]:
-    """Return a set of installed packages and versions."""
-    return {specifier for specifier in specifiers if is_installed(specifier)}
-
-
-def is_installed(requirement_str: str) -> bool:
+def is_installed(package: str) -> bool:
     """Check if a package is installed and will be loaded when we import it.
-
-    expected input is a pip compatible package specifier
-    e.g. "package==1.0.0" or "package>=1.0.0,<2.0.0"
 
     Returns True when the requirement is met.
     Returns False when the package is not installed or doesn't meet req.
     """
     try:
-        req = Requirement(requirement_str)
-    except InvalidRequirement:
-        # This is a zip file. We no longer use this in Home Assistant,
-        # leaving it in for custom components.
+        distribution(package)
+        return True
+    except (IndexError, PackageNotFoundError):
         try:
-            req = Requirement(urlparse(requirement_str).fragment)
+            req = Requirement(package)
         except InvalidRequirement:
-            _LOGGER.error("Invalid requirement '%s'", requirement_str)
-            return False
+            # This is a zip file. We no longer use this in Home Assistant,
+            # leaving it in for custom components.
+            req = Requirement(urlparse(package).fragment)
 
     try:
         installed_version = version(req.name)
