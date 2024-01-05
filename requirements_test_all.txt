@@ -1180,15 +1180,7 @@ prometheus-client==0.17.1
 psutil-home-assistant==0.0.1
 
 # homeassistant.components.systemmonitor
-<<<<<<< HEAD
-<<<<<<< HEAD
-psutil==5.9.6
-=======
 psutil==5.9.7
->>>>>>> systemmonitor-configflow-2
-=======
-psutil==5.9.7
->>>>>>> upstream/dev
 
 # homeassistant.components.androidtv
 pure-python-adb[async]==0.3.0.dev0
@@ -1670,7 +1662,7 @@ python-izone==1.2.9
 python-juicenet==1.1.0
 
 # homeassistant.components.tplink
-python-kasa[speedups]==0.6.0.dev0
+python-kasa[speedups]==0.6.0.dev1
 
 # homeassistant.components.matter
 python-matter-server==5.1.1
