@@ -1013,8 +1013,12 @@ class Context:
         return bool(self.__class__ == other.__class__ and self.id == other.id)
 
     @cached_property
-    def _as_mutable_dict(self) -> dict[str, str | None]:
-        """Return a dictionary representation of the context."""
+    def _as_dict(self) -> dict[str, str | None]:
+        """Return a dictionary representation of the context.
+
+        Callers should be careful to not mutate the returned dictionary
+        as it will mutate the cached version.
+        """
         return {
             "id": self.id,
             "parent_id": self.parent_id,
@@ -1028,12 +1032,12 @@ class Context:
     @cached_property
     def _as_read_only_dict(self) -> ReadOnlyDict[str, str | None]:
         """Return a ReadOnlyDict representation of the context."""
-        return ReadOnlyDict(self._as_mutable_dict)
+        return ReadOnlyDict(self._as_dict)
 
     @cached_property
-    def as_json_fragment(self) -> json_fragment:
+    def json_fragment(self) -> json_fragment:
         """Return a JSON fragment of the context."""
-        return json_fragment(json_dumps(self._as_mutable_dict))
+        return json_fragment(json_dumps(self._as_dict))
 
 
 class EventOrigin(enum.Enum):
@@ -1073,16 +1077,20 @@ class Event:
 
     @cached_property
     def _as_dict(self) -> dict[str, Any]:
-        """Create a dict representation of this Event."""
+        """Create a dict representation of this Event.
+
+        Callers should be careful to not mutate the returned dictionary
+        as it will mutate the cached version.
+        """
         return {
             "event_type": self.event_type,
             "data": self.data,
             "origin": self.origin.value,
             "time_fired": self.time_fired.isoformat(),
-            # _as_mutable_dict is marked as protected
+            # _as_dict is marked as protected
             # to avoid callers outside of this module
             # from misusing it by mistake.
-            "context": self.context._as_mutable_dict,  # pylint: disable=protected-access
+            "context": self.context._as_dict,  # pylint: disable=protected-access
         }
 
     def as_dict(self) -> ReadOnlyDict[str, Any]:
@@ -1098,7 +1106,7 @@ class Event:
         as_dict = self._as_dict
         data = as_dict["data"]
         context = as_dict["context"]
-        # as_json_fragment will serialize data from a ReadOnlyDict
+        # json_fragment will serialize data from a ReadOnlyDict
         # or a normal dict so its ok to have either. We only
         # mutate the cache if someone asks for the as_dict version
         # to avoid storing multiple copies of the data in memory.
@@ -1109,7 +1117,7 @@ class Event:
         return ReadOnlyDict(as_dict)
 
     @cached_property
-    def as_json_fragment(self) -> json_fragment:
+    def json_fragment(self) -> json_fragment:
         """Return an event as a JSON fragment."""
         return json_fragment(json_dumps(self._as_dict))
 
@@ -1437,7 +1445,11 @@ class State:
 
     @cached_property
     def _as_dict(self) -> dict[str, Any]:
-        """Return a dict representation of the State."""
+        """Return a dict representation of the State.
+
+        Callers should be careful to not mutate the returned dictionary
+        as it will mutate the cached version.
+        """
         last_changed_isoformat = self.last_changed.isoformat()
         if self.last_changed == self.last_updated:
             last_updated_isoformat = last_changed_isoformat
@@ -1449,10 +1461,10 @@ class State:
             "attributes": self.attributes,
             "last_changed": last_changed_isoformat,
             "last_updated": last_updated_isoformat,
-            # _as_mutable_dict is marked as protected
+            # _as_dict is marked as protected
             # to avoid callers outside of this module
             # from misusing it by mistake.
-            "context": self.context._as_mutable_dict,  # pylint: disable=protected-access
+            "context": self.context._as_dict,  # pylint: disable=protected-access
         }
 
     def as_dict(
@@ -1474,7 +1486,7 @@ class State:
         """Return a ReadOnlyDict representation of the State."""
         as_dict = self._as_dict
         context = as_dict["context"]
-        # as_json_fragment will serialize data from a ReadOnlyDict
+        # json_fragment will serialize data from a ReadOnlyDict
         # or a normal dict so its ok to have either. We only
         # mutate the cache if someone asks for the as_dict version
         # to avoid storing multiple copies of the data in memory.
@@ -1488,7 +1500,7 @@ class State:
         return json_dumps(self._as_dict)
 
     @cached_property
-    def as_json_fragment(self) -> json_fragment:
+    def json_fragment(self) -> json_fragment:
         """Return a JSON fragment of the State."""
         return json_fragment(self.as_dict_json)
 
@@ -1504,10 +1516,10 @@ class State:
         if state_context.parent_id is None and state_context.user_id is None:
             context: dict[str, Any] | str = state_context.id
         else:
-            # _as_mutable_dict is marked as protected
+            # _as_dict is marked as protected
             # to avoid callers outside of this module
             # from misusing it by mistake.
-            context = state_context._as_mutable_dict  # pylint: disable=protected-access
+            context = state_context._as_dict  # pylint: disable=protected-access
         compressed_state = {
             COMPRESSED_STATE_STATE: self.state,
             COMPRESSED_STATE_ATTRIBUTES: self.attributes,
