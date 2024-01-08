@@ -3123,6 +3123,9 @@ async def test_updating_entry_with_and_without_changes(
         state=config_entries.ConfigEntryState.SETUP_ERROR,
     )
     entry.add_to_manager(manager)
+    assert "abc123" in str(entry)
+
+    assert manager.async_entry_for_domain_unique_id("test", "abc123") is entry
 
     assert manager.async_update_entry(entry) is False
 
@@ -3137,6 +3140,10 @@ async def test_updating_entry_with_and_without_changes(
     ):
         assert manager.async_update_entry(entry, **change) is True
         assert manager.async_update_entry(entry, **change) is False
+
+    assert manager.async_entry_for_domain_unique_id("test", "abc123") is None
+    assert manager.async_entry_for_domain_unique_id("test", "abcd1234") is entry
+    assert "abcd1234" in str(entry)
 
 
 async def test_entry_reload_calls_on_unload_listeners(
