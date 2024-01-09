@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from collections.abc import Iterator
 from datetime import datetime
 import logging
 import os
@@ -31,7 +30,7 @@ dataT = TypeVar(
     | dict[str, snetio]
     | float
     | int
-    | Iterator[psutil.Process]
+    | list[psutil.Process]
     | sswap
     | str
     | svmem
@@ -49,7 +48,7 @@ class MonitorCoordinator(DataUpdateCoordinator[dataT]):
         super().__init__(
             hass,
             _LOGGER,
-            name=f"{DOMAIN} {self.__repr__}",
+            name=DOMAIN,
             update_interval=DEFAULT_SCAN_INTERVAL,
             always_update=False,
         )
@@ -132,12 +131,13 @@ class SystemMonitorBootTimeCoordinator(MonitorCoordinator[datetime]):
         return dt_util.utc_from_timestamp(psutil.boot_time())
 
 
-class SystemMonitorProcessCoordinator(MonitorCoordinator[Iterator[psutil.Process]]):
+class SystemMonitorProcessCoordinator(MonitorCoordinator[list[psutil.Process]]):
     """A System monitor Process Data Update Coordinator."""
 
-    def update_data(self) -> Iterator[psutil.Process]:
+    def update_data(self) -> list[psutil.Process]:
         """Fetch data."""
-        return psutil.process_iter()
+        processes = psutil.process_iter()
+        return list(processes)
 
 
 class SystemMonitorCPUtempCoordinator(MonitorCoordinator[dict[str, list[shwtemp]]]):
