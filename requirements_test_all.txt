@@ -239,7 +239,7 @@ aiohomekit==3.1.2
 aiohttp-fast-url-dispatcher==0.3.0
 
 # homeassistant.components.http
-aiohttp-zlib-ng==0.3.0
+aiohttp-zlib-ng==0.3.1
 
 # homeassistant.components.emulated_hue
 # homeassistant.components.http
@@ -1466,7 +1466,7 @@ pymata-express==1.19
 pymelcloud==2.5.8
 
 # homeassistant.components.meteoclimatic
-pymeteoclimatic==0.0.6
+pymeteoclimatic==0.1.0
 
 # homeassistant.components.mochad
 pymochad==0.2.0
