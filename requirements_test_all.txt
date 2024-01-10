@@ -766,7 +766,7 @@ googlemaps==2.5.1
 gotailwind==0.2.2
 
 # homeassistant.components.govee_ble
-govee-ble==0.24.0
+govee-ble==0.26.0
 
 # homeassistant.components.gree
 greeclimate==1.4.1
@@ -1337,7 +1337,7 @@ pyeconet==0.1.22
 pyefergy==22.1.1
 
 # homeassistant.components.enphase_envoy
-pyenphase==1.15.2
+pyenphase==1.16.0
 
 # homeassistant.components.everlights
 pyeverlights==0.1.0
@@ -1647,7 +1647,7 @@ pytankerkoenig==0.0.6
 pytautulli==23.1.1
 
 # homeassistant.components.tedee
-pytedee-async==0.2.10
+pytedee-async==0.2.11
 
 # homeassistant.components.motionmount
 python-MotionMount==0.3.1

@@ -36,7 +36,7 @@ async def test_form_source_user(hass: HomeAssistant) -> None:
     assert result["type"] == "form"
     assert result["errors"] == {}
 
-    mock_powerwall = await _mock_powerwall_site_name(hass, "My site")
+    mock_powerwall = await _mock_powerwall_site_name(hass, "MySite")
 
     with patch(
         "homeassistant.components.powerwall.config_flow.Powerwall",
@@ -52,7 +52,7 @@ async def test_form_source_user(hass: HomeAssistant) -> None:
         await hass.async_block_till_done()
 
     assert result2["type"] == "create_entry"
-    assert result2["title"] == "My site"
+    assert result2["title"] == "MySite"
     assert result2["data"] == VALID_CONFIG
     assert len(mock_setup_entry.mock_calls) == 1
 
@@ -360,6 +360,7 @@ async def test_dhcp_discovery_update_ip_address(hass: HomeAssistant) -> None:
     )
     entry.add_to_hass(hass)
     mock_powerwall = MagicMock(login=MagicMock(side_effect=PowerwallUnreachableError))
+    mock_powerwall.__aenter__.return_value = mock_powerwall
 
     with patch(
         "homeassistant.components.powerwall.config_flow.Powerwall",
