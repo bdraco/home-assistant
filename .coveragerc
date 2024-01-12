@@ -1614,6 +1614,7 @@ omit =
     homeassistant/components/yolink/lock.py
     homeassistant/components/yolink/number.py
     homeassistant/components/yolink/sensor.py
+    homeassistant/components/yolink/services.py
     homeassistant/components/yolink/siren.py
     homeassistant/components/yolink/switch.py
     homeassistant/components/youless/__init__.py
@@ -1652,6 +1653,13 @@ omit =
     homeassistant/components/zwave_me/switch.py
     homeassistant/components/electrasmart/climate.py
     homeassistant/components/electrasmart/__init__.py
+    homeassistant/components/myuplink/__init__.py
+    homeassistant/components/myuplink/api.py
+    homeassistant/components/myuplink/application_credentials.py
+    homeassistant/components/myuplink/coordinator.py
+    homeassistant/components/myuplink/entity.py
+    homeassistant/components/myuplink/sensor.py
+
 
 [report]
 # Regexes for lines to exclude from consideration
