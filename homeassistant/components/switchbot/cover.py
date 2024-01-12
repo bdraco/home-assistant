@@ -80,6 +80,8 @@ class SwitchBotCurtainEntity(SwitchbotEntity, CoverEntity, RestoreEntity):
         self._attr_is_opening = True
         self._attr_is_closing = False
         self._last_run_success = bool(await self._device.open())
+        self._attr_is_opening = self._device.is_opening()
+        self._attr_is_closing = self._device.is_closing()
         self.async_write_ha_state()
 
     async def async_close_cover(self, **kwargs: Any) -> None:
@@ -89,6 +91,8 @@ class SwitchBotCurtainEntity(SwitchbotEntity, CoverEntity, RestoreEntity):
         self._attr_is_opening = False
         self._attr_is_closing = True
         self._last_run_success = bool(await self._device.close())
+        self._attr_is_opening = self._device.is_opening()
+        self._attr_is_closing = self._device.is_closing()
         self.async_write_ha_state()
 
     async def async_stop_cover(self, **kwargs: Any) -> None:
@@ -98,6 +102,8 @@ class SwitchBotCurtainEntity(SwitchbotEntity, CoverEntity, RestoreEntity):
         self._attr_is_opening = False
         self._attr_is_closing = False
         self._last_run_success = bool(await self._device.stop())
+        self._attr_is_opening = self._device.is_opening()
+        self._attr_is_closing = self._device.is_closing()
         self.async_write_ha_state()
 
     async def async_set_cover_position(self, **kwargs: Any) -> None:
@@ -109,6 +115,8 @@ class SwitchBotCurtainEntity(SwitchbotEntity, CoverEntity, RestoreEntity):
             self._attr_is_opening = position > self._attr_current_cover_position
             self._attr_is_closing = position < self._attr_current_cover_position
         self._last_run_success = bool(await self._device.set_position(position))
+        self._attr_is_opening = self._device.is_opening()
+        self._attr_is_closing = self._device.is_closing()
         self.async_write_ha_state()
 
     @callback
