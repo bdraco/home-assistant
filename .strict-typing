@@ -339,6 +339,7 @@ homeassistant.components.remote.*
 homeassistant.components.renault.*
 homeassistant.components.repairs.*
 homeassistant.components.rest.*
+homeassistant.components.rest_command.*
 homeassistant.components.rfxtrx.*
 homeassistant.components.rhasspy.*
 homeassistant.components.ridwell.*
@@ -388,6 +389,7 @@ homeassistant.components.switchbot_cloud.*
 homeassistant.components.switcher_kis.*
 homeassistant.components.synology_dsm.*
 homeassistant.components.system_health.*
+homeassistant.components.system_log.*
 homeassistant.components.systemmonitor.*
 homeassistant.components.tag.*
 homeassistant.components.tailscale.*
