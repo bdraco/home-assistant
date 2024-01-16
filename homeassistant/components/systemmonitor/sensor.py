@@ -8,6 +8,7 @@ from functools import lru_cache
 import logging
 import socket
 import sys
+import time
 from typing import Any, Generic, Literal
 
 import psutil
@@ -40,7 +41,7 @@ from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType, StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util import dt as dt_util, slugify
+from homeassistant.util import slugify
 
 from .const import CONF_PROCESS, DOMAIN, NET_IO_TYPES
 from .coordinator import (
@@ -55,8 +56,8 @@ from .coordinator import (
     SystemMonitorProcessCoordinator,
     SystemMonitorProcessorCoordinator,
     SystemMonitorSwapCoordinator,
+    VirtualMemory,
     dataT,
-    virtual_memory,
 )
 from .util import get_all_disk_mounts, get_all_network_interfaces, read_cpu_temperature
 
@@ -130,12 +131,14 @@ def get_throughput(entity: SystemMonitorSensor[dict[str, snetio]]) -> float | No
     state = None
     if entity.argument in counters:
         counter = counters[entity.argument][IO_COUNTER[entity.entity_description.key]]
-        now = dt_util.utcnow()
-        if entity.value and entity.update_time and entity.value < counter:
+        now = time.monotonic()
+        if (
+            (value := entity.value)
+            and (update_time := entity.update_time)
+            and value < counter
+        ):
             state = round(
-                (counter - entity.value)
-                / 1000**2
-                / (now - (entity.update_time)).total_seconds(),
+                (counter - value) / 1000**2 / (now - update_time),
                 3,
             )
         entity.update_time = now
@@ -231,7 +234,7 @@ SENSOR_TYPES: dict[str, SysMonitorSensorEntityDescription[Any]] = {
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda entity: round(entity.coordinator.data[1], 2),
     ),
-    "memory_free": SysMonitorSensorEntityDescription[virtual_memory](
+    "memory_free": SysMonitorSensorEntityDescription[VirtualMemory](
         key="memory_free",
         name="Memory free",
         native_unit_of_measurement=UnitOfInformation.MEBIBYTES,
@@ -240,7 +243,7 @@ SENSOR_TYPES: dict[str, SysMonitorSensorEntityDescription[Any]] = {
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda entity: round(entity.coordinator.data.available / 1024**2, 1),
     ),
-    "memory_use": SysMonitorSensorEntityDescription[virtual_memory](
+    "memory_use": SysMonitorSensorEntityDescription[VirtualMemory](
         key="memory_use",
         name="Memory use",
         native_unit_of_measurement=UnitOfInformation.MEBIBYTES,
@@ -253,7 +256,7 @@ SENSOR_TYPES: dict[str, SysMonitorSensorEntityDescription[Any]] = {
             1,
         ),
     ),
-    "memory_use_percent": SysMonitorSensorEntityDescription[virtual_memory](
+    "memory_use_percent": SysMonitorSensorEntityDescription[VirtualMemory](
         key="memory_use_percent",
         name="Memory use (percent)",
         native_unit_of_measurement=PERCENTAGE,
@@ -745,7 +748,7 @@ class SystemMonitorSensor(CoordinatorEntity[MonitorCoordinator[dataT]], SensorEn
         )
         self.argument = argument
         self.value: int | None = None
-        self.update_time: datetime | None = None
+        self.update_time: float | None = None
 
     @property
     def native_value(self) -> StateType | datetime:
