@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
+from collections import namedtuple
 from datetime import datetime
 import logging
 import os
@@ -9,46 +10,44 @@ from typing import TypeVar
 
 import psutil
 from psutil._common import sdiskusage, shwtemp, snetio, snicaddr, sswap
-from psutil._pslinux import svmem
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_component import DEFAULT_SCAN_INTERVAL
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN
-
 _LOGGER = logging.getLogger(__name__)
+# psutil define virtual_memory by platform. Create our own definition here to be platform independent.
+virtual_memory = namedtuple(
+    "virtual_memory",
+    ["total", "available", "percent", "used", "free"],
+)
 
 
 dataT = TypeVar(
     "dataT",
-    bound=bool
-    | datetime
+    bound=datetime
     | dict[str, list[shwtemp]]
     | dict[str, list[snicaddr]]
     | dict[str, snetio]
     | float
-    | int
     | list[psutil.Process]
     | sswap
-    | str
-    | svmem
+    | virtual_memory
     | tuple[float, float, float]
-    | sdiskusage
-    | None,
+    | sdiskusage,
 )
 
 
 class MonitorCoordinator(DataUpdateCoordinator[dataT]):
     """A System monitor Base Data Update Coordinator."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, hass: HomeAssistant, name: str) -> None:
         """Initialize the coordinator."""
         super().__init__(
             hass,
             _LOGGER,
-            name=DOMAIN,
+            name=f"System Monitor {name}",
             update_interval=DEFAULT_SCAN_INTERVAL,
             always_update=False,
         )
@@ -65,9 +64,9 @@ class MonitorCoordinator(DataUpdateCoordinator[dataT]):
 class SystemMonitorDiskCoordinator(MonitorCoordinator[sdiskusage]):
     """A System monitor Disk Data Update Coordinator."""
 
-    def __init__(self, hass: HomeAssistant, argument: str) -> None:
+    def __init__(self, hass: HomeAssistant, name: str, argument: str) -> None:
         """Initialize the disk coordinator."""
-        super().__init__(hass)
+        super().__init__(hass, name)
         self._argument = argument
 
     def update_data(self) -> sdiskusage:
@@ -83,12 +82,15 @@ class SystemMonitorSwapCoordinator(MonitorCoordinator[sswap]):
         return psutil.swap_memory()
 
 
-class SystemMonitorMemoryCoordinator(MonitorCoordinator[svmem]):
+class SystemMonitorMemoryCoordinator(MonitorCoordinator[virtual_memory]):
     """A System monitor Memory Data Update Coordinator."""
 
-    def update_data(self) -> svmem:
+    def update_data(self) -> virtual_memory:
         """Fetch data."""
-        return psutil.virtual_memory()
+        memory = psutil.virtual_memory()
+        return virtual_memory(
+            memory.total, memory.available, memory.percent, memory.used, memory.free
+        )
 
 
 class SystemMonitorNetIOCoordinator(MonitorCoordinator[dict[str, snetio]]):
@@ -145,4 +147,7 @@ class SystemMonitorCPUtempCoordinator(MonitorCoordinator[dict[str, list[shwtemp]
 
     def update_data(self) -> dict[str, list[shwtemp]]:
         """Fetch data."""
-        return psutil.sensors_temperatures()
+        try:
+            return psutil.sensors_temperatures()
+        except AttributeError as err:
+            raise UpdateFailed("OS does not provide temperature sensors") from err
