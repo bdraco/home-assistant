@@ -276,7 +276,7 @@ aiohue==4.7.0
 aioimaplib==1.0.1
 
 # homeassistant.components.apache_kafka
-aiokafka==0.7.2
+aiokafka==0.10.0
 
 # homeassistant.components.kef
 aiokef==0.2.16
@@ -2228,7 +2228,7 @@ python-matter-server==5.1.1
 python-miio==0.5.12
 
 # homeassistant.components.mpd
-python-mpd2==3.0.5
+python-mpd2==3.1.1
 
 # homeassistant.components.mystrom
 python-mystrom==2.2.0
