@@ -7,9 +7,11 @@ from typing import Any, Optional
 from kasa import (
     AuthenticationException,
     Credentials,
+    DeviceConfig,
     Discover,
     SmartDevice,
     SmartDeviceException,
+    TimeoutException,
 )
 import voluptuous as vol
 
@@ -28,10 +30,15 @@ from homeassistant.const import (
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.httpx_client import create_async_httpx_client
 from homeassistant.helpers.typing import DiscoveryInfoType
 
-from . import async_discover_devices, get_credentials, set_credentials
+from . import (
+    async_discover_devices,
+    create_async_tplink_clientsession,
+    get_credentials,
+    mac_alias,
+    set_credentials,
+)
 from .const import CONF_DEVICE_CONFIG, CONNECT_TIMEOUT, DOMAIN
 
 STEP_AUTH_DATA_SCHEMA = vol.Schema(
@@ -69,6 +76,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     @callback
     def _update_config_if_entry_in_setup_retry(self, config: dict) -> None:
+        """If discovery encounters a device that is in SETUP_RETRY update the device config."""
         for entry in self._async_current_entries(include_ignore=True):
             if entry.unique_id != self.unique_id:
                 continue
@@ -87,7 +95,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, host: str, mac: str, config: Optional[dict] = None
     ) -> FlowResult:
         """Handle any discovery."""
-        await self.async_set_unique_id(dr.format_mac(mac))
+        await self.async_set_unique_id(dr.format_mac(mac), raise_on_progress=False)
         if config:
             self._update_config_if_entry_in_setup_retry(config)
         self._abort_if_unique_id_configured(updates={CONF_HOST: host})
@@ -116,7 +124,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         credentials = await get_credentials(self.hass)
-        if credentials != self._discovered_device.config.credentials:
+        if credentials and credentials != self._discovered_device.config.credentials:
             try:
                 device = await self._async_try_connect(
                     self._discovered_device, credentials
@@ -138,7 +146,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             except AuthenticationException:
                 errors["base"] = "invalid_auth"
             except SmartDeviceException:
-                return self.async_abort(reason="cannot_connect")
+                errors["base"] = "cannot_connect"
             else:
                 self._discovered_device = device
                 await set_credentials(self.hass, username, password)
@@ -146,7 +154,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return await self.async_step_discovery_confirm()
 
         placeholders = {
-            "name": self._discovered_device.alias,
+            "name": self._discovered_device.alias
+            or mac_alias(self._discovered_device.mac),
             "model": self._discovered_device.model,
             "host": self._discovered_device.host,
         }
@@ -265,7 +274,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._discovered_devices = await async_discover_devices(self.hass)
         devices_name = {
             formatted_mac: (
-                f"{device.alias} {device.model} ({device.host}) {formatted_mac}"
+                f"{device.alias or mac_alias(device.mac)} {device.model} ({device.host}) {formatted_mac}"
             )
             for formatted_mac, device in self._discovered_devices.items()
             if formatted_mac not in configured_devices
@@ -314,14 +323,21 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         raise_on_progress: bool,
     ) -> SmartDevice:
         """Try to connect."""
-        self._discovered_device = await Discover.discover_single(
-            host, credentials=credentials
-        )
-        if self._discovered_device.config.uses_http:
-            self._discovered_device.config.http_client = create_async_httpx_client(
-                self.hass, verify_ssl=False
+        try:
+            self._discovered_device = await Discover.discover_single(
+                host, credentials=credentials
             )
-        await self._discovered_device.update()
+            if self._discovered_device.config.uses_http:
+                self._discovered_device.config.http_client = (
+                    create_async_tplink_clientsession(self.hass)
+                )
+        except TimeoutException:
+            # Try connect() to legacy devices if discovery fails
+            self._discovered_device = await SmartDevice.connect(
+                config=DeviceConfig(host)
+            )
+        else:
+            await self._discovered_device.update()
         await self.async_set_unique_id(
             dr.format_mac(self._discovered_device.mac),
             raise_on_progress=raise_on_progress,
@@ -341,7 +357,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             config.credentials = credentials
         config.timeout = CONNECT_TIMEOUT
         if config.uses_http:
-            config.http_client = create_async_httpx_client(self.hass, verify_ssl=False)
+            config.http_client = create_async_tplink_clientsession(self.hass)
 
         self._discovered_device = await SmartDevice.connect(config=config)
         await self.async_set_unique_id(
@@ -378,7 +394,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             except AuthenticationException:
                 errors["base"] = "invalid_auth"
             except SmartDeviceException:
-                errors["base"] = "unknown"
+                errors["base"] = "cannot_connect"
             else:
                 await set_credentials(self.hass, username, password)
                 await self.hass.config_entries.async_reload(self.reauth_entry.entry_id)

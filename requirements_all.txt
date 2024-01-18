@@ -380,7 +380,7 @@ aiosyncthing==0.5.1
 aiotractive==0.5.6
 
 # homeassistant.components.unifi
-aiounifi==68
+aiounifi==69
 
 # homeassistant.components.vlc_telnet
 aiovlc==0.1.0
@@ -1210,7 +1210,7 @@ linear-garage-door==0.2.7
 linode-api==4.1.9b1
 
 # homeassistant.components.lamarzocco
-lmcloud==0.4.34
+lmcloud==0.4.35
 
 # homeassistant.components.google_maps
 locationsharinglib==5.0.1
@@ -2213,7 +2213,7 @@ python-join-api==0.0.9
 python-juicenet==1.1.0
 
 # homeassistant.components.tplink
-python-kasa[speedups]==0.6.0.dev1
+python-kasa[speedups]==0.6.0.dev3
 
 # homeassistant.components.lirc
 # python-lirc==1.2.3
@@ -2400,7 +2400,7 @@ renault-api==0.2.1
 renson-endura-delta==1.7.1
 
 # homeassistant.components.reolink
-reolink-aio==0.8.6
+reolink-aio==0.8.7
 
 # homeassistant.components.idteck_prox
 rfk101py==0.0.1
@@ -2908,7 +2908,7 @@ zigpy-zigate==0.12.0
 zigpy-znp==0.12.1
 
 # homeassistant.components.zha
-zigpy==0.60.4
+zigpy==0.60.6
 
 # homeassistant.components.zoneminder
 zm-py==0.5.4
