@@ -393,12 +393,12 @@ class HomeAssistant:
         self._stop_future: concurrent.futures.Future[None] | None = None
         self._shutdown_jobs: list[HassJobWithArgs] = []
 
-    @property
+    @cached_property
     def is_running(self) -> bool:
         """Return if Home Assistant is running."""
         return self.state in (CoreState.starting, CoreState.running)
 
-    @property
+    @cached_property
     def is_stopping(self) -> bool:
         """Return if Home Assistant is stopping."""
         return self.state in (CoreState.stopping, CoreState.final_write)
