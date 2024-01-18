@@ -62,7 +62,7 @@ class SmartPlugLedSwitch(CoordinatedTPLinkEntity, SwitchEntity):
         """Initialize the LED switch."""
         super().__init__(device, coordinator)
         self._attr_unique_id = f"{self.device.mac}_led"
-        self._update_attrs()
+        self._async_update_attrs()
 
     @async_refresh_after
     async def async_turn_on(self, **kwargs: Any) -> None:
@@ -75,7 +75,7 @@ class SmartPlugLedSwitch(CoordinatedTPLinkEntity, SwitchEntity):
         await self.device.set_led(False)
 
     @callback
-    def _update_attrs(self) -> None:
+    def _async_update_attrs(self) -> None:
         """Update the entity's attributes."""
         is_on = self.device.led
         self._attr_is_on = is_on
@@ -84,7 +84,7 @@ class SmartPlugLedSwitch(CoordinatedTPLinkEntity, SwitchEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        self._update_attrs()
+        self._async_update_attrs()
         super()._handle_coordinator_update()
 
 
@@ -102,7 +102,7 @@ class SmartPlugSwitch(CoordinatedTPLinkEntity, SwitchEntity):
         super().__init__(device, coordinator)
         # For backwards compat with pyHS100
         self._attr_unique_id = legacy_device_id(device)
-        self._update_attrs()
+        self._async_update_attrs()
 
     @async_refresh_after
     async def async_turn_on(self, **kwargs: Any) -> None:
@@ -115,14 +115,14 @@ class SmartPlugSwitch(CoordinatedTPLinkEntity, SwitchEntity):
         await self.device.turn_off()
 
     @callback
-    def _update_attrs(self) -> None:
+    def _async_update_attrs(self) -> None:
         """Update the entity's attributes."""
         self._attr_is_on = self.device.is_on
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        self._update_attrs()
+        self._async_update_attrs()
         super()._handle_coordinator_update()
 
 
@@ -152,12 +152,6 @@ class SmartPlugSwitchChild(SmartPlugSwitch):
         await self._plug.turn_off()
 
     @callback
-    def _update_attrs(self) -> None:
+    def _async_update_attrs(self) -> None:
         """Update the entity's attributes."""
         self._attr_is_on = self._plug.is_on
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator."""
-        self._update_attrs()
-        super()._handle_coordinator_update()
