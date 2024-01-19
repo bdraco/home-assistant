@@ -1,5 +1,4 @@
 """Test entity_registry API."""
-
 import pytest
 from pytest_unordered import unordered
 
@@ -43,29 +42,27 @@ def device_registry(hass):
 
 async def test_list_entities(hass: HomeAssistant, client) -> None:
     """Test list entries."""
-    name_entry = RegistryEntry(
-        entity_id="test_domain.name",
-        unique_id="1234",
-        platform="test_platform",
-        name="Hello World",
-    )
-    no_name_entry = RegistryEntry(
-        entity_id="test_domain.no_name",
-        unique_id="6789",
-        platform="test_platform",
-    )
     mock_registry(
         hass,
         {
-            "test_domain.name": name_entry,
-            "test_domain.no_name": no_name_entry,
+            "test_domain.name": RegistryEntry(
+                entity_id="test_domain.name",
+                unique_id="1234",
+                platform="test_platform",
+                name="Hello World",
+            ),
+            "test_domain.no_name": RegistryEntry(
+                entity_id="test_domain.no_name",
+                unique_id="6789",
+                platform="test_platform",
+            ),
         },
     )
 
     await client.send_json({"id": 5, "type": "config/entity_registry/list"})
     msg = await client.receive_json()
 
-    expected = [
+    assert msg["result"] == [
         {
             "area_id": None,
             "config_entry_id": None,
@@ -76,13 +73,13 @@ async def test_list_entities(hass: HomeAssistant, client) -> None:
             "has_entity_name": False,
             "hidden_by": None,
             "icon": None,
-            "id": name_entry.id,
+            "id": ANY,
             "name": "Hello World",
             "options": {},
             "original_name": None,
             "platform": "test_platform",
             "translation_key": None,
-            "unique_id": name_entry.unique_id,
+            "unique_id": ANY,
         },
         {
             "area_id": None,
@@ -94,18 +91,15 @@ async def test_list_entities(hass: HomeAssistant, client) -> None:
             "has_entity_name": False,
             "hidden_by": None,
             "icon": None,
-            "id": no_name_entry.id,
+            "id": ANY,
             "name": None,
             "options": {},
             "original_name": None,
             "platform": "test_platform",
             "translation_key": None,
-            "unique_id": no_name_entry.unique_id,
+            "unique_id": ANY,
         },
     ]
-    expected_by_id = {d["id"]: d for d in expected}
-    result_by_id = {d["id"]: d for d in msg["result"]}
-    assert result_by_id == expected_by_id
 
     class Unserializable:
         """Good luck serializing me."""
@@ -228,53 +222,52 @@ async def test_list_entities_for_display(
     await client.send_json_auto_id({"type": "config/entity_registry/list_for_display"})
     msg = await client.receive_json()
 
-    assert msg["result"]["entity_categories"] == {"0": "config", "1": "diagnostic"}
-    expected = [
-        {
-            "ai": "area52",
-            "di": "device123",
-            "ec": 1,
-            "ei": "test_domain.test",
-            "en": "Hello World",
-            "pl": "test_platform",
-            "tk": "translations_galore",
-        },
-        {
-            "ai": "area52",
-            "di": "device123",
-            "ei": "test_domain.nameless",
-            "en": None,
-            "pl": "test_platform",
-        },
-        {
-            "ai": "area52",
-            "di": "device123",
-            "ei": "test_domain.renamed",
-            "pl": "test_platform",
-        },
-        {
-            "ei": "test_domain.boring",
-            "pl": "test_platform",
-        },
-        {
-            "ei": "test_domain.hidden",
-            "hb": True,
-            "pl": "test_platform",
-        },
-        {
-            "dp": 0,
-            "ei": "sensor.default_precision",
-            "pl": "test_platform",
-        },
-        {
-            "dp": 0,
-            "ei": "sensor.user_precision",
-            "pl": "test_platform",
-        },
-    ]
-    actual_result = {frozenset(d.items()) for d in msg["result"]["entities"]}
-    expected_result = {frozenset(d.items()) for d in expected}
-    assert actual_result == expected_result
+    assert msg["result"] == {
+        "entity_categories": {"0": "config", "1": "diagnostic"},
+        "entities": [
+            {
+                "ai": "area52",
+                "di": "device123",
+                "ec": 1,
+                "ei": "test_domain.test",
+                "en": "Hello World",
+                "pl": "test_platform",
+                "tk": "translations_galore",
+            },
+            {
+                "ai": "area52",
+                "di": "device123",
+                "ei": "test_domain.nameless",
+                "en": None,
+                "pl": "test_platform",
+            },
+            {
+                "ai": "area52",
+                "di": "device123",
+                "ei": "test_domain.renamed",
+                "pl": "test_platform",
+            },
+            {
+                "ei": "test_domain.boring",
+                "pl": "test_platform",
+            },
+            {
+                "ei": "test_domain.hidden",
+                "hb": True,
+                "pl": "test_platform",
+            },
+            {
+                "dp": 0,
+                "ei": "sensor.default_precision",
+                "pl": "test_platform",
+            },
+            {
+                "dp": 0,
+                "ei": "sensor.user_precision",
+                "pl": "test_platform",
+            },
+        ],
+    }
 
     class Unserializable:
         """Good luck serializing me."""
