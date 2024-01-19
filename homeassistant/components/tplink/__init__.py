@@ -131,23 +131,21 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up TPLink from a config entry."""
-    host = entry.data[CONF_HOST]
-
+    host: str = entry.data[CONF_HOST]
     credentials = await get_credentials(hass)
 
-    config = None
+    config: DeviceConfig | None = None
     if config_dict := entry.data.get(CONF_DEVICE_CONFIG):
         try:
             config = DeviceConfig.from_dict(config_dict)
-        except (
-            SmartDeviceException,
-            KeyError,
-        ):  # Remove KeyError when library raises SmartDeviceException
+        except SmartDeviceException:
             _LOGGER.warning(
                 "Invalid connection type dict for %s: %s", host, config_dict
             )
+
     if not config:
         config = DeviceConfig(host)
+
     config.timeout = CONNECT_TIMEOUT
     if config.uses_http is True:
         config.http_client = create_async_tplink_clientsession(hass)
@@ -241,11 +239,10 @@ async def get_credentials(hass: HomeAssistant) -> Optional[Credentials]:
 
 async def set_credentials(hass: HomeAssistant, username: str, password: str) -> None:
     """Save the credentials to HASS data."""
-    auth = {
+    hass.data.setdefault(DOMAIN, {})[CONF_AUTHENTICATION] = {
         CONF_USERNAME: username,
         CONF_PASSWORD: password,
     }
-    hass.data.setdefault(DOMAIN, {})[CONF_AUTHENTICATION] = auth
 
 
 def mac_alias(mac: str) -> str:
