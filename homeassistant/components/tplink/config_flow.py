@@ -75,16 +75,16 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     @callback
-    def _update_config_if_entry_in_setup_retry(
+    def _update_config_if_entry_in_setup_error(
         self, entry: ConfigEntry, host: str, config: dict
     ) -> None:
-        """If discovery encounters a device that is in SETUP_RETRY update the device config."""
-        if entry.state != ConfigEntryState.SETUP_RETRY:
+        """If discovery encounters a device that is in SETUP_ERROR update the device config."""
+        if entry.state != ConfigEntryState.SETUP_ERROR:
             return
         entry_data = entry.data
         entry_config_dict = entry_data.get(CONF_DEVICE_CONFIG)
         if entry_config_dict == config and entry_data[CONF_HOST] == host:
-            return
+            return  # pragma: no cover
         self.hass.config_entries.async_update_entry(
             entry, data={**entry.data, CONF_DEVICE_CONFIG: config, CONF_HOST: host}
         )
@@ -102,7 +102,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             formatted_mac, raise_on_progress=False
         )
         if config and current_entry:
-            self._update_config_if_entry_in_setup_retry(current_entry, host, config)
+            self._update_config_if_entry_in_setup_error(current_entry, host, config)
         self._abort_if_unique_id_configured(updates={CONF_HOST: host})
         self._async_abort_entries_match({CONF_HOST: host})
         self.context[CONF_HOST] = host
@@ -296,6 +296,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def _async_reload_requires_auth_entries(self) -> None:
         """Reload any in progress config flow that now have credentials."""
         _config_entries = self.hass.config_entries
+
+        if reauth_entry := self.reauth_entry:
+            await _config_entries.async_reload(reauth_entry.entry_id)
+
         for flow in _config_entries.flow.async_progress_by_handler(
             DOMAIN, include_uninitialized=True
         ):
@@ -303,10 +307,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if context.get("source") != SOURCE_REAUTH:
                 continue
             entry_id: str = context["entry_id"]
-            if (
-                reauth_entry := self.reauth_entry
-            ) and entry_id == reauth_entry.entry_id:
-                continue
             if entry := _config_entries.async_get_entry(entry_id):
                 await _config_entries.async_reload(entry.entry_id)
                 if entry.state is ConfigEntryState.LOADED:
@@ -335,7 +335,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         credentials: Optional[Credentials],
         raise_on_progress: bool,
     ) -> SmartDevice:
-        """Try to connect."""
+        """Try to discover the device and call update.
+
+        Will try to connect to legacy devices if discovery fails.
+        """
         try:
             self._discovered_device = await Discover.discover_single(
                 host, credentials=credentials
@@ -380,7 +383,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self._discovered_device
 
     async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
-        """Handle reauth upon an API authentication error."""
+        """Start the reauthentication flow if the device needs updated credentials."""
         self.reauth_entry = self.hass.config_entries.async_get_entry(
             self.context["entry_id"]
         )
@@ -412,7 +415,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
             else:
                 await set_credentials(self.hass, username, password)
-                await self.hass.config_entries.async_reload(reauth_entry.entry_id)
                 self.hass.async_create_task(self._async_reload_requires_auth_entries())
                 return self.async_abort(reason="reauth_successful")
 
