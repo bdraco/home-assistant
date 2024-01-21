@@ -1,7 +1,7 @@
-"""Support for Xiaogui devices."""
+"""Support for Leaone devices."""
 from __future__ import annotations
 
-from xiaogui_ble import DeviceKey
+from leaone_ble import DeviceKey
 
 from homeassistant.components.bluetooth.passive_update_processor import (
     PassiveBluetoothEntityKey,

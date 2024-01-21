@@ -1,7 +1,7 @@
-"""Support for Xiaogui sensors."""
+"""Support for Leaone sensors."""
 from __future__ import annotations
 
-from xiaogui_ble import DeviceClass as XiaoguiSensorDeviceClass, SensorUpdate, Units
+from leaone_ble import DeviceClass as LeaoneSensorDeviceClass, SensorUpdate, Units
 
 from homeassistant import config_entries
 from homeassistant.components.bluetooth.passive_update_processor import (
@@ -30,23 +30,23 @@ from .device import device_key_to_bluetooth_entity_key
 
 SENSOR_DESCRIPTIONS = {
     (
-        XiaoguiSensorDeviceClass.MASS_NON_STABILIZED,
+        LeaoneSensorDeviceClass.MASS_NON_STABILIZED,
         Units.MASS_KILOGRAMS,
     ): SensorEntityDescription(
-        key=f"{XiaoguiSensorDeviceClass.MASS_NON_STABILIZED}_{Units.MASS_KILOGRAMS}",
+        key=f"{LeaoneSensorDeviceClass.MASS_NON_STABILIZED}_{Units.MASS_KILOGRAMS}",
         device_class=SensorDeviceClass.WEIGHT,
         native_unit_of_measurement=UnitOfMass.KILOGRAMS,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
-    (XiaoguiSensorDeviceClass.MASS, Units.MASS_KILOGRAMS): SensorEntityDescription(
-        key=f"{XiaoguiSensorDeviceClass.MASS}_{Units.MASS_KILOGRAMS}",
+    (LeaoneSensorDeviceClass.MASS, Units.MASS_KILOGRAMS): SensorEntityDescription(
+        key=f"{LeaoneSensorDeviceClass.MASS}_{Units.MASS_KILOGRAMS}",
         device_class=SensorDeviceClass.WEIGHT,
         native_unit_of_measurement=UnitOfMass.KILOGRAMS,
         state_class=SensorStateClass.MEASUREMENT,
     ),
-    (XiaoguiSensorDeviceClass.IMPEDANCE, Units.OHM): SensorEntityDescription(
-        key=f"{XiaoguiSensorDeviceClass.IMPEDANCE}_{Units.OHM}",
+    (LeaoneSensorDeviceClass.IMPEDANCE, Units.OHM): SensorEntityDescription(
+        key=f"{LeaoneSensorDeviceClass.IMPEDANCE}_{Units.OHM}",
         icon="mdi:omega",
         native_unit_of_measurement=Units.OHM,
         state_class=SensorStateClass.MEASUREMENT,
@@ -54,10 +54,10 @@ SENSOR_DESCRIPTIONS = {
         entity_registry_enabled_default=False,
     ),
     (
-        XiaoguiSensorDeviceClass.SIGNAL_STRENGTH,
+        LeaoneSensorDeviceClass.SIGNAL_STRENGTH,
         Units.SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
     ): SensorEntityDescription(
-        key=f"{XiaoguiSensorDeviceClass.SIGNAL_STRENGTH}_{Units.SIGNAL_STRENGTH_DECIBELS_MILLIWATT}",
+        key=f"{LeaoneSensorDeviceClass.SIGNAL_STRENGTH}_{Units.SIGNAL_STRENGTH_DECIBELS_MILLIWATT}",
         device_class=SensorDeviceClass.SIGNAL_STRENGTH,
         native_unit_of_measurement=SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
         state_class=SensorStateClass.MEASUREMENT,
@@ -65,10 +65,10 @@ SENSOR_DESCRIPTIONS = {
         entity_registry_enabled_default=False,
     ),
     (
-        XiaoguiSensorDeviceClass.PACKET_ID,
+        LeaoneSensorDeviceClass.PACKET_ID,
         None,
     ): SensorEntityDescription(
-        key=str(XiaoguiSensorDeviceClass.PACKET_ID),
+        key=str(LeaoneSensorDeviceClass.PACKET_ID),
         entity_category=EntityCategory.DIAGNOSTIC,
         state_class=SensorStateClass.MEASUREMENT,
         entity_registry_enabled_default=False,
@@ -108,14 +108,14 @@ async def async_setup_entry(
     entry: config_entries.ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the Xiaogui BLE sensors."""
+    """Set up the Leaone BLE sensors."""
     coordinator: PassiveBluetoothProcessorCoordinator = hass.data[DOMAIN][
         entry.entry_id
     ]
     processor = PassiveBluetoothDataProcessor(sensor_update_to_bluetooth_data_update)
     entry.async_on_unload(
         processor.async_add_entities_listener(
-            XiaoguiBluetoothSensorEntity, async_add_entities
+            LeaoneBluetoothSensorEntity, async_add_entities
         )
     )
     entry.async_on_unload(
@@ -123,11 +123,11 @@ async def async_setup_entry(
     )
 
 
-class XiaoguiBluetoothSensorEntity(
+class LeaoneBluetoothSensorEntity(
     PassiveBluetoothProcessorEntity[PassiveBluetoothDataProcessor[float | int | None]],
     SensorEntity,
 ):
-    """Representation of a Xiaogui sensor."""
+    """Representation of a Leaone sensor."""
 
     @property
     def native_value(self) -> int | float | None:

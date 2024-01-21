@@ -1,4 +1,4 @@
-"""Xiaogui session fixtures."""
+"""Leaone session fixtures."""
 
 import pytest
 

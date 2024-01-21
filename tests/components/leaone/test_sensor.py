@@ -1,7 +1,7 @@
-"""Test the Xiaogui sensors."""
+"""Test the Leaone sensors."""
 
+from homeassistant.components.leaone.const import DOMAIN
 from homeassistant.components.sensor import ATTR_STATE_CLASS
-from homeassistant.components.xiaogui.const import DOMAIN
 from homeassistant.const import ATTR_FRIENDLY_NAME, ATTR_UNIT_OF_MEASUREMENT
 from homeassistant.core import HomeAssistant
 

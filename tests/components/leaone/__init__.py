@@ -1,4 +1,4 @@
-"""Tests for the Xiaogui integration."""
+"""Tests for the Leaone integration."""
 
 
 from homeassistant.helpers.service_info.bluetooth import BluetoothServiceInfo

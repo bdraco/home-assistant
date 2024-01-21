@@ -939,6 +939,9 @@ laundrify-aio==1.1.2
 # homeassistant.components.ld2410_ble
 ld2410-ble==0.1.1
 
+# homeassistant.components.leaone
+leaone-ble==0.1.0
+
 # homeassistant.components.led_ble
 led-ble==1.0.1
 
@@ -2148,9 +2151,6 @@ wyoming==1.5.0
 
 # homeassistant.components.xbox
 xbox-webapi==2.0.11
-
-# homeassistant.components.xiaogui
-xiaogui-ble==0.1.0
 
 # homeassistant.components.xiaomi_ble
 xiaomi-ble==0.21.2

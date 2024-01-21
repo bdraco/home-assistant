@@ -1,9 +1,9 @@
-"""The Xiaogui integration."""
+"""The Leaone integration."""
 from __future__ import annotations
 
 import logging
 
-from xiaogui_ble import XiaoguiBluetoothDeviceData
+from leaone_ble import LeaoneBluetoothDeviceData
 
 from homeassistant.components.bluetooth import BluetoothScanningMode
 from homeassistant.components.bluetooth.passive_update_processor import (
@@ -21,10 +21,10 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up Xiaogui BLE device from a config entry."""
+    """Set up Leaone BLE device from a config entry."""
     address = entry.unique_id
     assert address is not None
-    data = XiaoguiBluetoothDeviceData()
+    data = LeaoneBluetoothDeviceData()
     coordinator = hass.data.setdefault(DOMAIN, {})[
         entry.entry_id
     ] = PassiveBluetoothProcessorCoordinator(

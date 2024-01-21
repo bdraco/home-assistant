@@ -1,10 +1,10 @@
-"""Config flow for Xiaogui integration."""
+"""Config flow for Leaone integration."""
 from __future__ import annotations
 
 from typing import Any
 
+from leaone_ble import LeaoneBluetoothDeviceData as DeviceData
 import voluptuous as vol
-from xiaogui_ble import XiaoguiBluetoothDeviceData as DeviceData
 
 from homeassistant.components.bluetooth import async_discovered_service_info
 from homeassistant.config_entries import ConfigFlow
@@ -14,8 +14,8 @@ from homeassistant.data_entry_flow import FlowResult
 from .const import DOMAIN
 
 
-class XiaoguiConfigFlow(ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for xiaogui."""
+class LeaoneConfigFlow(ConfigFlow, domain=DOMAIN):
+    """Handle a config flow for leaone."""
 
     VERSION = 1
 

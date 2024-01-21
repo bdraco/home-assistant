@@ -707,6 +707,8 @@ build.json @home-assistant/supervisor
 /tests/components/lcn/ @alengwenus
 /homeassistant/components/ld2410_ble/ @930913
 /tests/components/ld2410_ble/ @930913
+/homeassistant/components/leaone/ @bdraco
+/tests/components/leaone/ @bdraco
 /homeassistant/components/led_ble/ @bdraco
 /tests/components/led_ble/ @bdraco
 /homeassistant/components/lg_netcast/ @Drafteed
@@ -1522,8 +1524,6 @@ build.json @home-assistant/supervisor
 /tests/components/wyoming/ @balloob @synesthesiam
 /homeassistant/components/xbox/ @hunterjm
 /tests/components/xbox/ @hunterjm
-/homeassistant/components/xiaogui/ @bdraco
-/tests/components/xiaogui/ @bdraco
 /homeassistant/components/xiaomi_aqara/ @danielhiversen @syssi
 /tests/components/xiaomi_aqara/ @danielhiversen @syssi
 /homeassistant/components/xiaomi_ble/ @Jc2k @Ernst79
