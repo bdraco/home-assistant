@@ -25,6 +25,7 @@ from homeassistant.util import dt as dt_util
 
 from . import (
     CREATE_ENTRY_DATA_AUTH,
+    DEVICE_CONFIG_AUTH,
     IP_ADDRESS,
     MAC_ADDRESS,
     _mocked_dimmer,
@@ -155,7 +156,7 @@ async def test_config_entry_device_config(
     mock_discovery: AsyncMock,
     mock_connect: AsyncMock,
 ) -> None:
-    """Test that a config entry can be reloaded."""
+    """Test that a config entry can be loaded with DeviceConfig."""
     mock_config_entry = MockConfigEntry(
         title="TPLink",
         domain=DOMAIN,
@@ -173,7 +174,8 @@ async def test_config_entry_with_stored_credentials(
     mock_discovery: AsyncMock,
     mock_connect: AsyncMock,
 ) -> None:
-    """Test that a config entry can be reloaded."""
+    """Test that a config entry can be loaded when stored credentials are set."""
+    stored_credentials = tplink.Credentials("fake_username1", "fake_password1")
     mock_config_entry = MockConfigEntry(
         title="TPLink",
         domain=DOMAIN,
@@ -181,14 +183,19 @@ async def test_config_entry_with_stored_credentials(
         unique_id=MAC_ADDRESS,
     )
     auth = {
-        CONF_USERNAME: "fake_username1",
-        CONF_PASSWORD: "fake_password1",
+        CONF_USERNAME: stored_credentials.username,
+        CONF_PASSWORD: stored_credentials.password,
     }
+
     hass.data.setdefault(DOMAIN, {})[CONF_AUTHENTICATION] = auth
     mock_config_entry.add_to_hass(hass)
     await hass.config_entries.async_setup(mock_config_entry.entry_id)
     await hass.async_block_till_done()
     assert mock_config_entry.state is ConfigEntryState.LOADED
+    config = DEVICE_CONFIG_AUTH
+    assert config.credentials != stored_credentials
+    config.credentials = stored_credentials
+    mock_connect["connect"].assert_called_once_with(config=config)
 
 
 async def test_config_entry_device_config_invalid(
@@ -197,7 +204,7 @@ async def test_config_entry_device_config_invalid(
     mock_connect: AsyncMock,
     caplog,
 ) -> None:
-    """Test that a config entry can be reloaded."""
+    """Test that an invalid device config logs an error and loads the config entry."""
     entry_data = copy.deepcopy(CREATE_ENTRY_DATA_AUTH)
     entry_data[CONF_DEVICE_CONFIG] = {"foo": "bar"}
     mock_config_entry = MockConfigEntry(
@@ -233,7 +240,7 @@ async def test_config_entry_errors(
     entry_state,
     reauth_flows,
 ) -> None:
-    """Test that a config entry can be reloaded."""
+    """Test that device exceptions are handled correctly during init."""
     mock_connect["connect"].side_effect = error_type
     mock_config_entry = MockConfigEntry(
         title="TPLink",
@@ -242,7 +249,6 @@ async def test_config_entry_errors(
         unique_id=MAC_ADDRESS,
     )
     mock_config_entry.add_to_hass(hass)
-    # with pytest.raises(raises):
     await hass.config_entries.async_setup(mock_config_entry.entry_id)
     await hass.async_block_till_done()
     assert mock_config_entry.state is entry_state
