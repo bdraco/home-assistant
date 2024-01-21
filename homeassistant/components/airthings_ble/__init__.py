@@ -45,6 +45,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def _async_update_method() -> AirthingsDevice:
         """Get data from Airthings BLE."""
         ble_device = bluetooth.async_ble_device_from_address(hass, address)
+
         try:
             data = await airthings.update_device(ble_device)  # type: ignore[arg-type]
         except Exception as err:
