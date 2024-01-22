@@ -212,7 +212,6 @@ def validate_state(state: str) -> str:
 
 def callback(func: _CallableT) -> _CallableT:
     """Annotation to mark method as safe to call from within the event loop."""
-    _LOGGER.warning("Decorating: %s", func)
     setattr(func, "_hass_callback", True)
     return func
 
