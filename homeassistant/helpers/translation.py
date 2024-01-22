@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Iterable, Mapping
+from itertools import chain
 import logging
 import string
 from typing import Any
@@ -218,11 +219,13 @@ class _TranslationCache:
                 if components_to_load := components - loaded:
                     await self._async_load(language, components_to_load)
 
-        result: dict[str, str] = {}
         category_cache = self.cache.get(language, {}).get(category, {})
-        for component in components.intersection(category_cache):
-            result.update(category_cache[component])
-        return result
+        return dict(
+            chain.from_iterable(
+                category_cache[component].items()
+                for component in components.intersection(category_cache)
+            )
+        )
 
     async def _async_load(self, language: str, components: set[str]) -> None:
         """Populate the cache for a given set of components."""
