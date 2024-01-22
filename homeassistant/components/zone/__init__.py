@@ -117,24 +117,24 @@ def async_active_zone(
     zone_entity_ids: Iterable[str] = hass.data.get(ZONE_ENTITY_IDS, ())
 
     for entity_id in zone_entity_ids:
-        if not (zone := hass.states.get(entity_id)) or zone.state == STATE_UNAVAILABLE:
-            continue
-
-        if (zone_attrs := zone.attributes).get(ATTR_PASSIVE):
-            continue
-
         if (
-            zone_dist := distance(
-                latitude,
-                longitude,
-                zone_attrs[ATTR_LATITUDE],
-                zone_attrs[ATTR_LONGITUDE],
+            not (zone := hass.states.get(entity_id))
+            # Skip unavailable zones
+            or zone.state == STATE_UNAVAILABLE
+            # Skip passive zones
+            or (zone_attrs := zone.attributes).get(ATTR_PASSIVE)
+            # Skip zones where we cannot calculate distance
+            or not (
+                zone_dist := distance(
+                    latitude,
+                    longitude,
+                    zone_attrs[ATTR_LATITUDE],
+                    zone_attrs[ATTR_LONGITUDE],
+                )
             )
-        ) is None:
-            continue
-
-        # If not within the zone radius, skip it
-        if not zone_dist - (radius := zone_attrs[ATTR_RADIUS]) < radius:
+            # Skip zone that are outside the radius
+            or not (zone_dist - (radius := zone_attrs[ATTR_RADIUS]) < radius)
+        ):
             continue
 
         # If have a closest and its not closer than the closest skip it
