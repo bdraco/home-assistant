@@ -18,7 +18,6 @@ from homeassistant.util.json import load_json
 
 _LOGGER = logging.getLogger(__name__)
 
-TRANSLATION_LOAD_LOCK = "translation_load_lock"
 TRANSLATION_FLATTEN_CACHE = "translation_flatten_cache"
 LOCALE_EN = "en"
 
@@ -212,7 +211,7 @@ class _TranslationCache:
             # Translations are never unloaded so if there are no components to load
             # we can skip the lock which reduces contention when multiple different
             # translations categories are being fetched at the same time which is
-            # common form the frontend.
+            # common from the frontend.
             async with self.lock:
                 # Check components to load again, as another task might have loaded
                 # them while we were waiting for the lock.
