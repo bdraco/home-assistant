@@ -71,16 +71,19 @@ def setup_security_filter(app: Application) -> None:
                 )
                 raise HTTPBadRequest
 
-        if FILTERS.search(_recursive_unquote(request.path)):
+        if FILTERS.search(_recursive_unquote(request.url.path_qs)):
+            # Check the full path with query string first, if its
+            # a hit, than check just the query string to give a more
+            # specific warning.
+            if FILTERS.search(_recursive_unquote(request.query_string)):
+                _LOGGER.warning(
+                    "Filtered a request with a potential harmful query string: %s",
+                    request.raw_path,
+                )
+                raise HTTPBadRequest
+
             _LOGGER.warning(
                 "Filtered a potential harmful request to: %s", request.raw_path
-            )
-            raise HTTPBadRequest
-
-        if FILTERS.search(_recursive_unquote(request.query_string)):
-            _LOGGER.warning(
-                "Filtered a request with a potential harmful query string: %s",
-                request.raw_path,
             )
             raise HTTPBadRequest
 
