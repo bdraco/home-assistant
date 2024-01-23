@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
+from functools import lru_cache
 import logging
 import re
 from typing import Final
@@ -43,6 +44,7 @@ UNSAFE_URL_BYTES = ["\t", "\r", "\n"]
 def setup_security_filter(app: Application) -> None:
     """Create security filter middleware for the app."""
 
+    @lru_cache
     def _recursive_unquote(value: str) -> str:
         """Handle values that are encoded multiple times."""
         if (unquoted := unquote(value)) != value:
