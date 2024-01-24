@@ -369,14 +369,14 @@ class WebSocketHandler:
             #
             # After the auth phase is completed, and we are not concerned about
             # the user being a malicious client, we set the limit to force a drain
-            # to 4MiB. 4MiB is the maximum expected size of the serialized entity
+            # to 1MiB. 1MiB is the maximum expected size of the serialized entity
             # registry, which is the largest message we usually send.
             #
             # https://github.com/aio-libs/aiohttp/commit/b3c80ee3f7d5d8f0b8bc27afe52e4d46621eaf99
             # added a way to set the limit, but there is no way to actually
             # reach the code to set the limit, so we have to set it directly.
             #
-            writer._limit = 2**20 * 4  # pylint: disable=protected-access
+            writer._limit = 2**20  # pylint: disable=protected-access
             async_handle_str = connection.async_handle
             async_handle_binary = connection.async_handle_binary
 
