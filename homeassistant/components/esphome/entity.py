@@ -17,7 +17,7 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_platform, entity_registry as er
+from homeassistant.helpers import entity_platform
 import homeassistant.helpers.config_validation as cv
 import homeassistant.helpers.device_registry as dr
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -62,7 +62,14 @@ def async_static_info_updated(
 
     # Anything still in current_infos is now gone
     if current_infos:
-        hass.async_create_task(entry_data.async_remove_entities(current_infos.values()))
+        device_info = entry_data.device_info
+        if TYPE_CHECKING:
+            assert device_info is not None
+        hass.async_create_task(
+            entry_data.async_remove_entities(
+                hass, current_infos.values(), device_info.mac_address
+            )
+        )
 
     # Then update the actual info
     entry_data.info[info_type] = new_infos
@@ -196,11 +203,8 @@ class EsphomeEntity(Entity, Generic[_InfoT, _StateT]):
         self._attr_has_entity_name = True
         self.entity_id = f"{domain}.{device_info.name}_{entity_info.object_id}"
 
-    async def _async_remove_entity(self) -> None:
-        """Fully remove this entity from the state machine and registry."""
-        if self.registry_entry:
-            entity_registry = er.async_get(self.hass)
-            entity_registry.async_remove(self.entity_id)
+    async def _async_remove_forced(self) -> None:
+        """Fully remove this entity from the state machine."""
         await self.async_remove(force_remove=True)
 
     async def async_added_to_hass(self) -> None:
@@ -213,7 +217,7 @@ class EsphomeEntity(Entity, Generic[_InfoT, _StateT]):
         self.async_on_remove(
             entry_data.async_register_key_static_info_remove_callback(
                 static_info,
-                self._async_remove_entity,
+                self._async_remove_forced,
             )
         )
         self.async_on_remove(
