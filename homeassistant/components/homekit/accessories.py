@@ -603,12 +603,6 @@ class HomeAccessory(Accessory):  # type: ignore[misc]
             ATTR_VALUE: value,
         }
         context = Context()
-        _LOGGER.warning(
-            "HomeKit is triggering %s.%s with %s",
-            domain,
-            service,
-            service_data,
-        )
 
         self.hass.bus.async_fire(EVENT_HOMEKIT_CHANGED, event_data, context=context)
         self.hass.async_create_task(

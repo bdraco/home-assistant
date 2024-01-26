@@ -29,7 +29,7 @@ import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.icon import async_get_icons
 from homeassistant.helpers.json import json_dumps_sorted
 from homeassistant.helpers.storage import Store
-from homeassistant.helpers.translation import async_get_translations_for_categories
+from homeassistant.helpers.translation import async_get_translations
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.loader import async_get_integration, bind_hass
 
@@ -644,11 +644,9 @@ class ManifestJSONView(HomeAssistantView):
     @callback
     def get(self, request: web.Request) -> web.Response:
         """Return the manifest.json."""
-        response = web.Response(
+        return web.Response(
             text=MANIFEST_JSON.json, content_type="application/manifest+json"
         )
-        response.enable_compression()
-        return response
 
 
 @websocket_api.websocket_command(
@@ -733,16 +731,15 @@ async def websocket_get_translations(
     hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle get translations command."""
-    category: str = msg["category"]
-    resources = await async_get_translations_for_categories(
+    resources = await async_get_translations(
         hass,
         msg["language"],
-        {category},
+        msg["category"],
         msg.get("integration"),
         msg.get("config_flow"),
     )
     connection.send_message(
-        websocket_api.result_message(msg["id"], {"resources": resources[category]})
+        websocket_api.result_message(msg["id"], {"resources": resources})
     )
 
 
