@@ -16,7 +16,6 @@ from homeassistant.components.switch import (
 )
 from homeassistant.components.valve import DOMAIN as VALVE_DOMAIN
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity_registry import RegistryEntry
@@ -94,12 +93,7 @@ async def async_setup_entry(
         )
 
     return async_setup_entry_attribute_entities(
-        hass,
-        config_entry,
-        async_add_entities,
-        SWITCHES,
-        BlockRelaySwitch,
-        _build_block_description,
+        hass, config_entry, async_add_entities, SWITCHES, BlockRelaySwitch
     )
 
 
@@ -213,7 +207,8 @@ class BlockRelaySwitch(ShellyBlockAttributeEntity, SwitchEntity):
         description: BlockSwitchDescription,
     ) -> None:
         """Initialize relay switch."""
-        super().__init__(coordinator, block, attribute, description, Platform.SWITCH)
+        super().__init__(coordinator, block, attribute, description)
+        self._attr_unique_id: str = f"{super().unique_id}"
         self.control_result: dict[str, Any] | None = None
 
     @property
@@ -254,7 +249,8 @@ class RpcRelaySwitch(ShellyRpcAttributeEntity, SwitchEntity):
         description: RpcEntityDescription,
     ) -> None:
         """Initialize sensor."""
-        super().__init__(coordinator, key, attribute, description, Platform.SWITCH)
+        super().__init__(coordinator, key, attribute, description)
+        self._attr_unique_id = f"{super().unique_id}"
 
     @property
     def is_on(self) -> bool:
