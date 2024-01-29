@@ -176,7 +176,7 @@ aio-geojson-geonetnz-quakes==0.15
 aio-geojson-geonetnz-volcano==0.8
 
 # homeassistant.components.nsw_rural_fire_service_feed
-aio-geojson-nsw-rfs-incidents==0.6
+aio-geojson-nsw-rfs-incidents==0.7
 
 # homeassistant.components.usgs_earthquakes_feed
 aio-geojson-usgs-earthquakes==0.2
@@ -1322,7 +1322,7 @@ mutagen==1.47.0
 mutesync==0.0.1
 
 # homeassistant.components.permobil
-mypermobil==0.1.6
+mypermobil==0.1.8
 
 # homeassistant.components.myuplink
 myuplink==0.0.9
@@ -2180,6 +2180,9 @@ python-awair==0.2.4
 # homeassistant.components.blockchain
 python-blockchain-api==0.0.2
 
+# homeassistant.components.bring
+python-bring-api==2.0.0
+
 # homeassistant.components.bsblan
 python-bsblan==0.5.18
 
@@ -2214,7 +2217,7 @@ python-gitlab==1.6.0
 python-homeassistant-analytics==0.6.0
 
 # homeassistant.components.homewizard
-python-homewizard-energy==4.2.1
+python-homewizard-energy==4.2.2
 
 # homeassistant.components.hp_ilo
 python-hpilo==4.3
@@ -2229,7 +2232,7 @@ python-join-api==0.0.9
 python-juicenet==1.1.0
 
 # homeassistant.components.tplink
-python-kasa[speedups]==0.6.1
+python-kasa[speedups]==0.6.2
 
 # homeassistant.components.lirc
 # python-lirc==1.2.3
