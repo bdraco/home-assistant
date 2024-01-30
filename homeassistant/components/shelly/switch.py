@@ -18,7 +18,6 @@ from homeassistant.components.valve import DOMAIN as VALVE_DOMAIN
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.entity_registry import RegistryEntry
 from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue
 
 from .const import DOMAIN, GAS_VALVE_OPEN_STATES
@@ -73,15 +72,6 @@ RPC_SWITCHES: Final = {
         removal_condition=is_rpc_channel_type_light,
     )
 }
-
-
-def _build_block_description(entry: RegistryEntry) -> BlockSwitchDescription:
-    """Build description when restoring block attribute entities."""
-    return BlockSwitchDescription(
-        key="",
-        name="",
-        icon=entry.original_icon,
-    )
 
 
 async def async_setup_entry(
