@@ -10,18 +10,12 @@ from typing import Any, Generic, TypeVar, cast
 from aioshelly.ble import async_ensure_ble_enabled, async_stop_scanner
 from aioshelly.block_device import BlockDevice, BlockUpdateType
 from aioshelly.const import MODEL_NAMES, MODEL_VALVE
-from aioshelly.exceptions import (
-    DeviceConnectionError,
-    FirmwareUnsupported,
-    InvalidAuthError,
-    RpcCallError,
-)
+from aioshelly.exceptions import DeviceConnectionError, InvalidAuthError, RpcCallError
 from aioshelly.rpc_device import RpcDevice, RpcUpdateType
 
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.const import ATTR_DEVICE_ID, CONF_HOST, EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.device_registry import (
@@ -303,8 +297,6 @@ class ShellyBlockCoordinator(ShellyCoordinatorBase[BlockDevice]):
             raise UpdateFailed(f"Error fetching data: {repr(err)}") from err
         except InvalidAuthError:
             self.entry.async_start_reauth(self.hass)
-        except FirmwareUnsupported as err:
-            raise ConfigEntryNotReady(repr(err)) from err
 
     @callback
     def _async_handle_update(
@@ -543,8 +535,6 @@ class ShellyRpcCoordinator(ShellyCoordinatorBase[RpcDevice]):
             raise UpdateFailed(f"Device disconnected: {repr(err)}") from err
         except InvalidAuthError:
             self.entry.async_start_reauth(self.hass)
-        except FirmwareUnsupported as err:
-            raise ConfigEntryNotReady(repr(err)) from err
 
     async def _async_disconnected(self) -> None:
         """Handle device disconnected."""
