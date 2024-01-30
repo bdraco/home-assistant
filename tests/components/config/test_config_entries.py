@@ -9,6 +9,7 @@ import voluptuous as vol
 from homeassistant import config_entries as core_ce, data_entry_flow
 from homeassistant.components.config import config_entries
 from homeassistant.config_entries import HANDLERS, ConfigFlow
+from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE, CONF_RADIUS
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.generated import config_flows
 from homeassistant.helpers import config_entry_flow, config_validation as cv
@@ -1019,12 +1020,7 @@ async def test_options_flow_with_invalid_data(hass: HomeAssistant, client) -> No
         )
         assert resp.status == HTTPStatus.BAD_REQUEST
         data = await resp.json()
-        assert data == {
-            "message": (
-                "User input malformed: invalid is not a valid option for "
-                "dictionary value @ data['choices']"
-            )
-        }
+        assert data == {"errors": {"choices": "invalid is not a valid option"}}
 
 
 async def test_get_single(
@@ -2029,100 +2025,87 @@ async def test_subscribe_entries_ws_filtered(
     ]
 
 
-async def test_get_entries_ws_back_compat(hass, hass_ws_client, clear_handlers):
-    """Test get entries with the websocket api and integration is translated to new types."""
-    assert await async_setup_component(hass, "config", {})
-    mock_integration(hass, MockModule("comp1"))
+async def test_flow_with_multiple_schema_errors(hass: HomeAssistant, client) -> None:
+    """Test an config flow with multiple schema errors."""
     mock_integration(
-        hass, MockModule("comp2", partial_manifest={"integration_type": "helper"})
+        hass, MockModule("test", async_setup_entry=AsyncMock(return_value=True))
     )
-    mock_integration(
-        hass, MockModule("comp3", partial_manifest={"integration_type": "hub"})
-    )
-    mock_integration(
-        hass, MockModule("comp4", partial_manifest={"integration_type": "device"})
-    )
-    mock_integration(
-        hass, MockModule("comp5", partial_manifest={"integration_type": "service"})
-    )
+    mock_platform(hass, "test.config_flow", None)
 
-    for domain in ("comp1", "comp2", "comp3", "comp4", "comp5"):
-        entry = MockConfigEntry(
-            domain=domain,
-            title=f"Test {domain}",
-            source="bla",
+    class TestFlow(core_ce.ConfigFlow):
+        async def async_step_user(self, user_input=None):
+            return self.async_show_form(
+                step_id="user",
+                data_schema=vol.Schema(
+                    {
+                        vol.Required(CONF_LATITUDE): cv.latitude,
+                        vol.Required(CONF_LONGITUDE): cv.longitude,
+                        vol.Required(CONF_RADIUS): vol.All(int, vol.Range(min=5)),
+                    }
+                ),
+            )
+
+    with patch.dict(HANDLERS, {"test": TestFlow}):
+        resp = await client.post(
+            "/api/config/config_entries/flow", json={"handler": "test"}
         )
-        entry.add_to_hass(hass)
+        assert resp.status == HTTPStatus.OK
+        flow_id = (await resp.json())["flow_id"]
 
-    ws_client = await hass_ws_client(hass)
-
-    # Verify backwards compatibility with asking for 'integration'
-    # since the cache will not be cleared on upgrade
-    await ws_client.send_json(
-        {
-            "id": 12,
-            "type": "config_entries/get",
-            "type_filter": "integration",
+        resp = await client.post(
+            f"/api/config/config_entries/flow/{flow_id}",
+            json={"latitude": 30000, "longitude": 30000, "radius": 1},
+        )
+        assert resp.status == HTTPStatus.BAD_REQUEST
+        data = await resp.json()
+        assert data == {
+            "errors": {
+                "latitude": "invalid latitude",
+                "longitude": "invalid longitude",
+                "radius": "value must be at least 5",
+            }
         }
-    )
-    response = await ws_client.receive_json()
 
-    assert response["id"] == 12
-    assert response["result"] == [
-        {
-            "disabled_by": None,
-            "domain": "comp1",
-            "entry_id": ANY,
-            "pref_disable_new_entities": False,
-            "pref_disable_polling": False,
-            "reason": None,
-            "source": "bla",
-            "state": "not_loaded",
-            "supports_options": False,
-            "supports_remove_device": False,
-            "supports_unload": False,
-            "title": "Test comp1",
-        },
-        {
-            "disabled_by": None,
-            "domain": "comp3",
-            "entry_id": ANY,
-            "pref_disable_new_entities": False,
-            "pref_disable_polling": False,
-            "reason": None,
-            "source": "bla",
-            "state": "not_loaded",
-            "supports_options": False,
-            "supports_remove_device": False,
-            "supports_unload": False,
-            "title": "Test comp3",
-        },
-        {
-            "disabled_by": None,
-            "domain": "comp4",
-            "entry_id": ANY,
-            "pref_disable_new_entities": False,
-            "pref_disable_polling": False,
-            "reason": None,
-            "source": "bla",
-            "state": "not_loaded",
-            "supports_options": False,
-            "supports_remove_device": False,
-            "supports_unload": False,
-            "title": "Test comp4",
-        },
-        {
-            "disabled_by": None,
-            "domain": "comp5",
-            "entry_id": ANY,
-            "pref_disable_new_entities": False,
-            "pref_disable_polling": False,
-            "reason": None,
-            "source": "bla",
-            "state": "not_loaded",
-            "supports_options": False,
-            "supports_remove_device": False,
-            "supports_unload": False,
-            "title": "Test comp5",
-        },
-    ]
+
+async def test_flow_with_multiple_schema_errors_base(
+    hass: HomeAssistant, client
+) -> None:
+    """Test an config flow with multiple schema errors where fields are not in the schema."""
+    mock_integration(
+        hass, MockModule("test", async_setup_entry=AsyncMock(return_value=True))
+    )
+    mock_platform(hass, "test.config_flow", None)
+
+    class TestFlow(core_ce.ConfigFlow):
+        async def async_step_user(self, user_input=None):
+            return self.async_show_form(
+                step_id="user",
+                data_schema=vol.Schema(
+                    {
+                        vol.Required(CONF_LATITUDE): cv.latitude,
+                    }
+                ),
+            )
+
+    with patch.dict(HANDLERS, {"test": TestFlow}):
+        resp = await client.post(
+            "/api/config/config_entries/flow", json={"handler": "test"}
+        )
+        assert resp.status == HTTPStatus.OK
+        flow_id = (await resp.json())["flow_id"]
+
+        resp = await client.post(
+            f"/api/config/config_entries/flow/{flow_id}",
+            json={"invalid": 30000, "invalid_2": 30000},
+        )
+        assert resp.status == HTTPStatus.BAD_REQUEST
+        data = await resp.json()
+        assert data == {
+            "errors": {
+                "base": [
+                    "extra keys not allowed @ data['invalid']",
+                    "extra keys not allowed @ data['invalid_2']",
+                ],
+                "latitude": "required key not provided",
+            }
+        }
