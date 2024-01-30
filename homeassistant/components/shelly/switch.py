@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Any, Final, cast
 
 from aioshelly.block_device import Block
-from aioshelly.const import RPC_GENERATIONS
+from aioshelly.const import MODEL_GAS, RPC_GENERATIONS
 
 from homeassistant.components.automation import automations_with_entity
 from homeassistant.components.script import scripts_with_entity
@@ -22,7 +22,7 @@ from homeassistant.helpers.entity_registry import RegistryEntry
 from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue
 
 from .const import DOMAIN, GAS_VALVE_OPEN_STATES
-from .coordinator import ShellyBlockCoordinator, ShellyRpcCoordinator
+from .coordinator import ShellyBlockCoordinator, ShellyRpcCoordinator, get_entry_data
 from .entity import (
     BlockEntityDescription,
     RpcEntityDescription,
@@ -48,18 +48,21 @@ class RpcSwitchDescription(RpcEntityDescription, SwitchEntityDescription):
     """Class to describe a RPC sensor."""
 
 
-SWITCHES: Final = {
-    ("relay", "output"): BlockSwitchDescription(
-        key="relay|output",
-        removal_condition=is_block_exclude_from_relay,
-    ),
-    # This entity description is deprecated and will be removed in Home Assistant 2024.7.0.
+# This entity description is deprecated and will be removed in Home Assistant 2024.7.0.
+GAS_VALVE_SWITCH: Final = {
     ("valve", "valve"): BlockSwitchDescription(
         key="valve|valve",
         name="Valve",
         available=lambda block: block.valve not in ("failure", "checking"),
         removal_condition=lambda _, block: block.valve in ("not_connected", "unknown"),
         entity_registry_enabled_default=False,
+    )
+}
+
+SWITCHES: Final = {
+    ("relay", "output"): BlockSwitchDescription(
+        key="relay|output",
+        removal_condition=is_block_exclude_from_relay,
     ),
 }
 
@@ -92,9 +95,112 @@ async def async_setup_entry(
             hass, config_entry, async_add_entities, RPC_SWITCHES, RpcRelaySwitch
         )
 
+    coordinator = get_entry_data(hass)[config_entry.entry_id].block
+    if coordinator and coordinator.model is MODEL_GAS:
+        return async_setup_entry_attribute_entities(
+            hass, config_entry, async_add_entities, GAS_VALVE_SWITCH, BlockValveSwitch
+        )
+
     return async_setup_entry_attribute_entities(
         hass, config_entry, async_add_entities, SWITCHES, BlockRelaySwitch
     )
+
+
+class BlockValveSwitch(ShellyBlockAttributeEntity, SwitchEntity):
+    """Entity that controls a Gas Valve on Block based Shelly devices.
+
+    This class is deprecated and will be removed in Home Assistant 2024.7.0.
+    """
+
+    entity_description: BlockSwitchDescription
+
+    def __init__(
+        self,
+        coordinator: ShellyBlockCoordinator,
+        block: Block,
+        attribute: str,
+        description: BlockSwitchDescription,
+    ) -> None:
+        """Initialize valve."""
+        super().__init__(coordinator, block, attribute, description)
+        self.control_result: dict[str, Any] | None = None
+
+    @property
+    def is_on(self) -> bool:
+        """If valve is open."""
+        if self.control_result:
+            return self.control_result["state"] in GAS_VALVE_OPEN_STATES
+
+        return self.attribute_value in GAS_VALVE_OPEN_STATES
+
+    @property
+    def icon(self) -> str:
+        """Return the icon."""
+        return "mdi:valve-open" if self.is_on else "mdi:valve-closed"
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Open valve."""
+        async_create_issue(
+            self.hass,
+            DOMAIN,
+            "deprecated_valve_switch",
+            breaks_in_ha_version="2024.7.0",
+            is_fixable=True,
+            severity=IssueSeverity.WARNING,
+            translation_key="deprecated_valve_switch",
+            translation_placeholders={
+                "entity": f"{VALVE_DOMAIN}.{cast(str, self.name).lower().replace(' ', '_')}",
+                "service": f"{VALVE_DOMAIN}.open_valve",
+            },
+        )
+        self.control_result = await self.set_state(go="open")
+        self.async_write_ha_state()
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Close valve."""
+        async_create_issue(
+            self.hass,
+            DOMAIN,
+            "deprecated_valve_switch",
+            breaks_in_ha_version="2024.7.0",
+            is_fixable=True,
+            severity=IssueSeverity.WARNING,
+            translation_key="deprecated_valve_switche",
+            translation_placeholders={
+                "entity": f"{VALVE_DOMAIN}.{cast(str, self.name).lower().replace(' ', '_')}",
+                "service": f"{VALVE_DOMAIN}.close_valve",
+            },
+        )
+        self.control_result = await self.set_state(go="close")
+        self.async_write_ha_state()
+
+    async def async_added_to_hass(self) -> None:
+        """Set up a listener when this entity is added to HA."""
+        await super().async_added_to_hass()
+
+        entity_automations = automations_with_entity(self.hass, self.entity_id)
+        entity_scripts = scripts_with_entity(self.hass, self.entity_id)
+        for item in entity_automations + entity_scripts:
+            async_create_issue(
+                self.hass,
+                DOMAIN,
+                f"deprecated_valve_{self.entity_id}_{item}",
+                breaks_in_ha_version="2024.7.0",
+                is_fixable=True,
+                severity=IssueSeverity.WARNING,
+                translation_key="deprecated_valve_switch_entity",
+                translation_placeholders={
+                    "entity": f"{SWITCH_DOMAIN}.{cast(str, self.name).lower().replace(' ', '_')}",
+                    "info": item,
+                },
+            )
+
+    @callback
+    def _update_callback(self) -> None:
+        """When device updates, clear control result that overrides state."""
+        self.control_result = None
+
+        super()._update_callback()
 
 
 class BlockRelaySwitch(ShellyBlockAttributeEntity, SwitchEntity):
@@ -113,69 +219,23 @@ class BlockRelaySwitch(ShellyBlockAttributeEntity, SwitchEntity):
         super().__init__(coordinator, block, attribute, description)
         self._attr_unique_id: str = f"{super().unique_id}"
         self.control_result: dict[str, Any] | None = None
-        self._valve = description.name == "Valve"
-
-    @property
-    def icon(self) -> str:
-        """Return the icon."""
-        if not self._valve:
-            return "mdi:switch-variant"
-
-        return "mdi:valve-open" if self.is_on else "mdi:valve-closed"
 
     @property
     def is_on(self) -> bool:
         """If switch is on."""
         if self.control_result:
-            if self._valve:
-                return self.control_result["state"] in GAS_VALVE_OPEN_STATES
             return cast(bool, self.control_result["ison"])
-
-        if self._valve:
-            return self.attribute_value in GAS_VALVE_OPEN_STATES
 
         return bool(self.block.output)
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on relay."""
-        if self._valve:
-            async_create_issue(
-                self.hass,
-                DOMAIN,
-                "deprecated_valve_switch",
-                breaks_in_ha_version="2024.7.0",
-                is_fixable=True,
-                severity=IssueSeverity.WARNING,
-                translation_key="deprecated_valve_switch",
-                translation_placeholders={
-                    "entity": f"{VALVE_DOMAIN}.{cast(str, self.name).lower().replace(' ', '_')}",
-                    "service": f"{VALVE_DOMAIN}.open_valve",
-                },
-            )
-            self.control_result = await self.set_state(go="open")
-        else:
-            self.control_result = await self.set_state(turn="on")
+        self.control_result = await self.set_state(turn="on")
         self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off relay."""
-        if self._valve:
-            async_create_issue(
-                self.hass,
-                DOMAIN,
-                "deprecated_valve_switch",
-                breaks_in_ha_version="2024.7.0",
-                is_fixable=True,
-                severity=IssueSeverity.WARNING,
-                translation_key="deprecated_valve_switche",
-                translation_placeholders={
-                    "entity": f"{VALVE_DOMAIN}.{cast(str, self.name).lower().replace(' ', '_')}",
-                    "service": f"{VALVE_DOMAIN}.close_valve",
-                },
-            )
-            self.control_result = await self.set_state(go="close")
-        else:
-            self.control_result = await self.set_state(turn="off")
+        self.control_result = await self.set_state(turn="off")
         self.async_write_ha_state()
 
     @callback
@@ -183,28 +243,6 @@ class BlockRelaySwitch(ShellyBlockAttributeEntity, SwitchEntity):
         """When device updates, clear control result that overrides state."""
         self.control_result = None
         super()._update_callback()
-
-    async def async_added_to_hass(self) -> None:
-        """Set up a listener when this entity is added to HA."""
-        await super().async_added_to_hass()
-
-        if self._valve:
-            entity_automations = automations_with_entity(self.hass, self.entity_id)
-            entity_scripts = scripts_with_entity(self.hass, self.entity_id)
-            for item in entity_automations + entity_scripts:
-                async_create_issue(
-                    self.hass,
-                    DOMAIN,
-                    f"deprecated_valve_{self.entity_id}_{item}",
-                    breaks_in_ha_version="2024.7.0",
-                    is_fixable=True,
-                    severity=IssueSeverity.WARNING,
-                    translation_key="deprecated_valve_switch_entity",
-                    translation_placeholders={
-                        "entity": f"{SWITCH_DOMAIN}.{cast(str, self.name).lower().replace(' ', '_')}",
-                        "info": item,
-                    },
-                )
 
 
 class RpcRelaySwitch(ShellyRpcAttributeEntity, SwitchEntity):
