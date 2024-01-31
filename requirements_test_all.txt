@@ -212,7 +212,7 @@ aioeagle==1.1.0
 aioecowitt==2023.5.0
 
 # homeassistant.components.co2signal
-aioelectricitymaps==0.1.6
+aioelectricitymaps==0.2.0
 
 # homeassistant.components.emonitor
 aioemonitor==1.0.5
@@ -349,11 +349,14 @@ aioswitcher==3.4.1
 # homeassistant.components.syncthing
 aiosyncthing==0.5.1
 
+# homeassistant.components.tankerkoenig
+aiotankerkoenig==0.2.0
+
 # homeassistant.components.tractive
 aiotractive==0.5.6
 
 # homeassistant.components.unifi
-aiounifi==69
+aiounifi==70
 
 # homeassistant.components.vlc_telnet
 aiovlc==0.1.0
@@ -623,6 +626,9 @@ elkm1-lib==2.2.6
 # homeassistant.components.elmax
 elmax-api==0.0.4
 
+# homeassistant.components.elvia
+elvia==0.1.0
+
 # homeassistant.components.emulated_roku
 emulated-roku==0.2.1
 
@@ -777,6 +783,9 @@ govee-ble==0.31.0
 # homeassistant.components.govee_light_local
 govee-local-api==1.4.1
 
+# homeassistant.components.gpsd
+gps3==0.33.3
+
 # homeassistant.components.gree
 greeclimate==1.4.1
 
@@ -846,7 +855,7 @@ hole==0.8.0
 holidays==0.41
 
 # homeassistant.components.frontend
-home-assistant-frontend==20240112.0
+home-assistant-frontend==20240131.0
 
 # homeassistant.components.conversation
 home-assistant-intents==2024.1.29
@@ -1665,9 +1674,6 @@ pysuez==0.2.0
 # homeassistant.components.switchbee
 pyswitchbee==1.8.0
 
-# homeassistant.components.tankerkoenig
-pytankerkoenig==0.0.6
-
 # homeassistant.components.tautulli
 pytautulli==23.1.1
 
@@ -1760,6 +1766,7 @@ pytile==2023.04.0
 pytomorrowio==0.3.6
 
 # homeassistant.components.traccar
+# homeassistant.components.traccar_server
 pytraccar==2.0.0
 
 # homeassistant.components.tradfri
@@ -1860,6 +1867,9 @@ ring-doorbell[listen]==0.8.5
 
 # homeassistant.components.roku
 rokuecp==0.19.0
+
+# homeassistant.components.romy
+romy==0.0.7
 
 # homeassistant.components.roomba
 roombapy==1.6.10
@@ -2244,7 +2254,7 @@ zigpy-zigate==0.12.0
 zigpy-znp==0.12.1
 
 # homeassistant.components.zha
-zigpy==0.60.7
+zigpy==0.61.0
 
 # homeassistant.components.zwave_js
 zwave-js-server-python==0.55.3
