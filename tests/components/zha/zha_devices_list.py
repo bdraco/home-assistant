@@ -798,31 +798,6 @@ DEVICES = [
                 DEV_SIG_ENT_MAP_CLASS: "LQISensor",
                 DEV_SIG_ENT_MAP_ID: "sensor.heiman_smokesensor_em_lqi",
             },
-            ("select", "00:11:22:33:44:55:66:77-1-1282-WarningMode"): {
-                DEV_SIG_CLUSTER_HANDLERS: ["ias_wd"],
-                DEV_SIG_ENT_MAP_CLASS: "ZHADefaultToneSelectEntity",
-                DEV_SIG_ENT_MAP_ID: "select.heiman_smokesensor_em_default_siren_tone",
-            },
-            ("select", "00:11:22:33:44:55:66:77-1-1282-SirenLevel"): {
-                DEV_SIG_CLUSTER_HANDLERS: ["ias_wd"],
-                DEV_SIG_ENT_MAP_CLASS: "ZHADefaultSirenLevelSelectEntity",
-                DEV_SIG_ENT_MAP_ID: "select.heiman_smokesensor_em_default_siren_level",
-            },
-            ("select", "00:11:22:33:44:55:66:77-1-1282-StrobeLevel"): {
-                DEV_SIG_CLUSTER_HANDLERS: ["ias_wd"],
-                DEV_SIG_ENT_MAP_CLASS: "ZHADefaultStrobeLevelSelectEntity",
-                DEV_SIG_ENT_MAP_ID: "select.heiman_smokesensor_em_default_strobe_level",
-            },
-            ("select", "00:11:22:33:44:55:66:77-1-1282-Strobe"): {
-                DEV_SIG_CLUSTER_HANDLERS: ["ias_wd"],
-                DEV_SIG_ENT_MAP_CLASS: "ZHADefaultStrobeSelectEntity",
-                DEV_SIG_ENT_MAP_ID: "select.heiman_smokesensor_em_default_strobe",
-            },
-            ("siren", "00:11:22:33:44:55:66:77-1-1282"): {
-                DEV_SIG_CLUSTER_HANDLERS: ["ias_wd"],
-                DEV_SIG_ENT_MAP_CLASS: "ZHASiren",
-                DEV_SIG_ENT_MAP_ID: "siren.heiman_smokesensor_em_siren",
-            },
         },
     },
     {
@@ -4459,6 +4434,16 @@ DEVICES = [
                 DEV_SIG_ENT_MAP_CLASS: "SinopeHVACAction",
                 DEV_SIG_ENT_MAP_ID: "sensor.sinope_technologies_th1123zb_hvac_action",
             },
+            ("sensor", "00:11:22:33:44:55:66:77-1-513-pi_heating_demand"): {
+                DEV_SIG_CLUSTER_HANDLERS: ["thermostat"],
+                DEV_SIG_ENT_MAP_CLASS: "PiHeatingDemand",
+                DEV_SIG_ENT_MAP_ID: "sensor.sinope_technologies_th1123zb_pi_heating_demand",
+            },
+            ("sensor", "00:11:22:33:44:55:66:77-1-513-setpoint_change_source"): {
+                DEV_SIG_CLUSTER_HANDLERS: ["thermostat"],
+                DEV_SIG_ENT_MAP_CLASS: "SetpointChangeSource",
+                DEV_SIG_ENT_MAP_ID: "sensor.sinope_technologies_th1123zb_setpoint_change_source",
+            },
         },
     },
     {
@@ -4548,6 +4533,16 @@ DEVICES = [
                 DEV_SIG_CLUSTER_HANDLERS: ["thermostat"],
                 DEV_SIG_ENT_MAP_CLASS: "SinopeHVACAction",
                 DEV_SIG_ENT_MAP_ID: "sensor.sinope_technologies_th1124zb_hvac_action",
+            },
+            ("sensor", "00:11:22:33:44:55:66:77-1-513-pi_heating_demand"): {
+                DEV_SIG_CLUSTER_HANDLERS: ["thermostat"],
+                DEV_SIG_ENT_MAP_CLASS: "PiHeatingDemand",
+                DEV_SIG_ENT_MAP_ID: "sensor.sinope_technologies_th1124zb_pi_heating_demand",
+            },
+            ("sensor", "00:11:22:33:44:55:66:77-1-513-setpoint_change_source"): {
+                DEV_SIG_CLUSTER_HANDLERS: ["thermostat"],
+                DEV_SIG_ENT_MAP_CLASS: "SetpointChangeSource",
+                DEV_SIG_ENT_MAP_ID: "sensor.sinope_technologies_th1124zb_setpoint_change_source",
             },
         },
     },
@@ -4841,6 +4836,16 @@ DEVICES = [
                 DEV_SIG_CLUSTER_HANDLERS: ["thermostat"],
                 DEV_SIG_ENT_MAP_CLASS: "ThermostatHVACAction",
                 DEV_SIG_ENT_MAP_ID: "sensor.zen_within_zen_01_hvac_action",
+            },
+            ("sensor", "00:11:22:33:44:55:66:77-1-513-pi_heating_demand"): {
+                DEV_SIG_CLUSTER_HANDLERS: ["thermostat"],
+                DEV_SIG_ENT_MAP_CLASS: "PiHeatingDemand",
+                DEV_SIG_ENT_MAP_ID: "sensor.zen_within_zen_01_pi_heating_demand",
+            },
+            ("sensor", "00:11:22:33:44:55:66:77-1-513-setpoint_change_source"): {
+                DEV_SIG_CLUSTER_HANDLERS: ["thermostat"],
+                DEV_SIG_ENT_MAP_CLASS: "SetpointChangeSource",
+                DEV_SIG_ENT_MAP_ID: "sensor.zen_within_zen_01_setpoint_change_source",
             },
         },
     },
