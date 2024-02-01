@@ -88,7 +88,6 @@ async def test_block_device_no_roller_blocks(
     assert hass.states.get("cover.test_name") is None
 
 
-@pytest.mark.parametrize("cover", [True])
 async def test_rpc_device_services(
     hass: HomeAssistant, mock_rpc_device: Mock, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -139,21 +138,19 @@ async def test_rpc_device_services(
     assert hass.states.get("cover.test_cover_0").state == STATE_CLOSED
 
 
-@pytest.mark.parametrize("cover", [False])
 async def test_rpc_device_no_cover_keys(
     hass: HomeAssistant, mock_rpc_device: Mock, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test RPC device without cover keys."""
+    monkeypatch.delitem(mock_rpc_device.status, "cover:0")
     await init_integration(hass, 2)
     assert hass.states.get("cover.test_cover_0") is None
 
 
-@pytest.mark.parametrize("cover", [True])
 async def test_rpc_device_update(
     hass: HomeAssistant, mock_rpc_device: Mock, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test RPC device update."""
-    mutate_rpc_device_status(monkeypatch, mock_rpc_device, "cover:0", "state", "closed")
     await init_integration(hass, 2)
     assert hass.states.get("cover.test_cover_0").state == STATE_CLOSED
 
@@ -162,13 +159,9 @@ async def test_rpc_device_update(
     assert hass.states.get("cover.test_cover_0").state == STATE_OPEN
 
 
-@pytest.mark.parametrize("cover", [True])
 async def test_rpc_device_no_position_control(
     hass: HomeAssistant, mock_rpc_device: Mock, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test RPC device with no position control."""
-    mutate_rpc_device_status(
-        monkeypatch, mock_rpc_device, "cover:0", "pos_control", False
-    )
     await init_integration(hass, 2)
     assert hass.states.get("cover.test_cover_0").state == STATE_OPEN
