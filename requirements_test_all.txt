@@ -383,7 +383,7 @@ aioymaps==1.2.2
 airly==1.1.0
 
 # homeassistant.components.airthings_ble
-airthings-ble==0.6.0
+airthings-ble==0.6.1
 
 # homeassistant.components.airthings
 airthings-cloud==0.2.0
@@ -827,7 +827,7 @@ habitipy==0.2.0
 habluetooth==2.4.0
 
 # homeassistant.components.cloud
-hass-nabucasa==0.75.1
+hass-nabucasa==0.76.0
 
 # homeassistant.components.conversation
 hassil==1.6.0
@@ -1678,7 +1678,7 @@ pyswitchbee==1.8.0
 pytautulli==23.1.1
 
 # homeassistant.components.tedee
-pytedee-async==0.2.12
+pytedee-async==0.2.13
 
 # homeassistant.components.motionmount
 python-MotionMount==0.3.1
