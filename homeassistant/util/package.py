@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 from subprocess import PIPE, Popen
 import sys
+from urllib.parse import urlparse
 
 from packaging.requirements import InvalidRequirement, Requirement
 
@@ -40,9 +41,24 @@ def is_installed(requirement_str: str) -> bool:
     expected input is a pip compatible package specifier (requirement string)
     e.g. "package==1.0.0" or "package>=1.0.0,<2.0.0"
 
+    For backward compatibility, it also accepts a URL with a fragment
+    e.g. "git+https://github.com/pypa/pip#pip>=1"
+
     Returns True when the requirement is met.
     Returns False when the package is not installed or doesn't meet req.
     """
+    if "#" in requirement_str:
+        # This is a URL with a fragment
+        # example: git+https://github.com/pypa/pip#pip>=1
+
+        # fragment support was originally used to install zip files, and
+        # we no longer do this in Home Assistant. However, custom
+        # components started using it to install packages from git
+        # urls which would make it would be a breaking change to
+        # remove it.
+
+        requirement_str = urlparse(requirement_str).fragment
+
     try:
         req = Requirement(requirement_str)
     except InvalidRequirement:
