@@ -615,7 +615,7 @@ easyenergy==2.1.0
 electrickiwi-api==0.8.5
 
 # homeassistant.components.elgato
-elgato==5.1.1
+elgato==5.1.2
 
 # homeassistant.components.elkm1
 elkm1-lib==2.2.6
@@ -852,7 +852,7 @@ hole==0.8.0
 holidays==0.41
 
 # homeassistant.components.frontend
-home-assistant-frontend==20240131.0
+home-assistant-frontend==20240202.0
 
 # homeassistant.components.conversation
 home-assistant-intents==2024.2.1
