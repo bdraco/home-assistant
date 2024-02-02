@@ -300,7 +300,7 @@ aiopulse==0.4.4
 aiopurpleair==2022.12.1
 
 # homeassistant.components.hunterdouglas_powerview
-aiopvapi==2.0.4
+aiopvapi==3.0.1
 
 # homeassistant.components.pvpc_hourly_pricing
 aiopvpc==4.2.2
@@ -411,9 +411,6 @@ anthemav==1.4.1
 
 # homeassistant.components.weatherkit
 apple_weatherkit==1.1.2
-
-# homeassistant.components.apprise
-apprise==1.7.2
 
 # homeassistant.components.aprs
 aprslib==0.7.0
