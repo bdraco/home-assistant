@@ -495,31 +495,36 @@ def async_extract_referenced_entity_ids(
         return selected
 
     entities = ent_reg.entities
-    for area_id in selector.area_ids:
+    # Add indirectly referenced by area
+    selected.indirectly_referenced.update(
+        entry.entity_id
+        for area_id in selector.area_ids
         # The entity's area matches a targeted area
-        for entry in entities.get_entries_for_area_id(area_id):
-            # Do not add entities which are hidden or which are config
-            # or diagnostic entities.
-            if entry.entity_category is None and entry.hidden_by is None:
-                selected.indirectly_referenced.add(entry.entity_id)
-
-    for device_id in selected.referenced_devices:
-        for entry in entities.get_entries_for_device_id(device_id):
-            # Do not add entities which are hidden or which are config
-            # or diagnostic entities.
-            if (
-                entry.entity_category is None
-                and entry.hidden_by is None
-                and (
-                    # The entity's device matches a device referenced by an area and the entity
-                    # has no explicitly set area
-                    not entry.area_id
-                    # The entity's device matches a targeted device
-                    or device_id in selector.device_ids
-                )
-            ):
-                selected.indirectly_referenced.add(entry.entity_id)
-
+        for entry in entities.get_entries_for_area_id(area_id)
+        # Do not add entities which are hidden or which are config
+        # or diagnostic entities.
+        if entry.entity_category is None and entry.hidden_by is None
+    )
+    # Add indirectly referenced by device
+    selected.indirectly_referenced.update(
+        entry.entity_id
+        for device_id in selected.referenced_devices
+        for entry in entities.get_entries_for_device_id(device_id)
+        # Do not add entities which are hidden or which are config
+        # or diagnostic entities.
+        if (
+            entry.entity_category is None
+            and entry.hidden_by is None
+            and (
+                # The entity's device matches a device referenced
+                # by an area and the entity
+                # has no explicitly set area
+                not entry.area_id
+                # The entity's device matches a targeted device
+                or device_id in selector.device_ids
+            )
+        )
+    )
     return selected
 
 
