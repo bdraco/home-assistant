@@ -73,7 +73,6 @@ MOCK_BLOCKS = [
             "overpower": 0,
             "power": 53.4,
             "energy": 1234567.89,
-            "output": True,
         },
         channel="0",
         type="relay",
@@ -199,7 +198,7 @@ MOCK_STATUS_COAP = {
 
 
 MOCK_STATUS_RPC = {
-    "switch:0": {"id": 0, "output": True},
+    "switch:0": {"output": True},
     "input:0": {"id": 0, "state": None},
     "light:0": {"output": True, "brightness": 53.0},
     "cloud": {"connected": False},

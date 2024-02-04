@@ -148,8 +148,6 @@ class ShellyConfigFlow(ConfigFlow, domain=DOMAIN):
                     LOGGER.exception("Unexpected exception")
                     errors["base"] = "unknown"
                 else:
-                    if not device_info["model"]:
-                        device_info["model"] = "dev"
                     if device_info["model"]:
                         return self.async_create_entry(
                             title=device_info["title"],
@@ -186,8 +184,6 @@ class ShellyConfigFlow(ConfigFlow, domain=DOMAIN):
                 LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
-                if not device_info["model"]:
-                    device_info["model"] = "dev"
                 if device_info["model"]:
                     return self.async_create_entry(
                         title=device_info["title"],
@@ -287,8 +283,6 @@ class ShellyConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> FlowResult:
         """Handle discovery confirm."""
         errors: dict[str, str] = {}
-        if not self.device_info["model"]:
-            self.device_info["model"] = "dev"
 
         if not self.device_info["model"]:
             errors["base"] = "firmware_not_fully_provisioned"

@@ -210,15 +210,9 @@ async def test_sleeping_rpc_device_online_new_firmware(
     ],
 )
 async def test_entry_unload(
-    hass: HomeAssistant,
-    gen,
-    entity_id,
-    mock_block_device,
-    mock_rpc_device,
-    monkeypatch: pytest.MonkeyPatch,
+    hass: HomeAssistant, gen, entity_id, mock_block_device, mock_rpc_device
 ) -> None:
     """Test entry unload."""
-    monkeypatch.delitem(mock_rpc_device.status, "cover:0")
     entry = await init_integration(hass, gen)
 
     assert entry.state is ConfigEntryState.LOADED
@@ -260,7 +254,6 @@ async def test_entry_unload_not_connected(
     with patch(
         "homeassistant.components.shelly.coordinator.async_stop_scanner"
     ) as mock_stop_scanner:
-        monkeypatch.delitem(mock_rpc_device.status, "cover:0")
         entry = await init_integration(
             hass, 2, options={CONF_BLE_SCANNER_MODE: BLEScannerMode.ACTIVE}
         )
@@ -287,7 +280,6 @@ async def test_entry_unload_not_connected_but_we_think_we_are(
         "homeassistant.components.shelly.coordinator.async_stop_scanner",
         side_effect=DeviceConnectionError,
     ) as mock_stop_scanner:
-        monkeypatch.delitem(mock_rpc_device.status, "cover:0")
         entry = await init_integration(
             hass, 2, options={CONF_BLE_SCANNER_MODE: BLEScannerMode.ACTIVE}
         )

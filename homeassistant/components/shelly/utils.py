@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
 
 from aiohttp.web import Request, WebSocketResponse
 from aioshelly.block_device import COAP, Block, BlockDevice
@@ -335,7 +335,6 @@ def get_rpc_key_instances(keys_dict: dict[str, Any], key: str) -> list[str]:
     if key in keys_dict:
         return [key]
 
-    # Fix for some old firmware in cover mode
     if key == "switch" and "cover:0" in keys_dict:
         key = "cover"
 
@@ -354,33 +353,18 @@ def is_rpc_momentary_input(
     return cast(bool, config[key]["type"] == "button")
 
 
-def is_block_channel_type_light(settings: dict[str, Any], channel: str) -> bool:
+def is_block_channel_type_light(settings: dict[str, Any], channel: int) -> bool:
     """Return true if block channel appliance type is set to light."""
-    app_type = settings["relays"][int(channel)].get("appliance_type")
+    app_type = settings["relays"][channel].get("appliance_type")
     return app_type is not None and app_type.lower().startswith("light")
 
 
-def is_block_exclude_from_relay(settings: dict[str, Any], block: Block) -> bool:
-    """Return true if block should be excluded from switch platform."""
-
-    if settings.get("mode") == "roller":
-        return True
-
-    if TYPE_CHECKING:
-        assert block.channel is not None
-
-    return is_block_channel_type_light(settings, block.channel)
-
-
-def is_rpc_channel_type_light(
-    config: dict[str, Any], status: dict[str, Any], channel: str
-) -> bool:
+def is_rpc_channel_type_light(config: dict[str, Any], channel: int) -> bool:
     """Return true if rpc channel consumption type is set to light."""
     con_types = config["sys"].get("ui_data", {}).get("consumption_types")
-    ch = int(channel.split(":")[1])
-    if con_types is None or len(con_types) <= int(ch):
+    if con_types is None or len(con_types) <= channel:
         return False
-    return cast(str, con_types[ch]).lower().startswith("light")
+    return cast(str, con_types[channel]).lower().startswith("light")
 
 
 def get_rpc_input_triggers(device: RpcDevice) -> list[tuple[str, str]]:
