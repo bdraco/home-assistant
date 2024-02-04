@@ -191,6 +191,7 @@ async def test_rpc_device_unique_ids(
     hass: HomeAssistant, mock_rpc_device, monkeypatch
 ) -> None:
     """Test RPC device unique_ids."""
+    monkeypatch.delitem(mock_rpc_device.status, "cover:0")
     await init_integration(hass, 2)
 
     registry = er.async_get(hass)
