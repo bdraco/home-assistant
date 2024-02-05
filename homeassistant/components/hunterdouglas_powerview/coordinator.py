@@ -5,14 +5,12 @@ import asyncio
 from datetime import timedelta
 import logging
 
-from aiopvapi.helpers.aiorequest import PvApiMaintenance
-from aiopvapi.hub import Hub
 from aiopvapi.shades import Shades
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import HUB_EXCEPTIONS
+from .const import SHADE_DATA
 from .shade_data import PowerviewShadeData
 
 _LOGGER = logging.getLogger(__name__)
@@ -21,14 +19,18 @@ _LOGGER = logging.getLogger(__name__)
 class PowerviewShadeUpdateCoordinator(DataUpdateCoordinator[PowerviewShadeData]):
     """DataUpdateCoordinator to gather data from a powerview hub."""
 
-    def __init__(self, hass: HomeAssistant, shades: Shades, hub: Hub) -> None:
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        shades: Shades,
+        hub_address: str,
+    ) -> None:
         """Initialize DataUpdateCoordinator to gather data for specific Powerview Hub."""
         self.shades = shades
-        self.hub = hub
         super().__init__(
             hass,
             _LOGGER,
-            name=f"powerview hub {hub.hub_address}",
+            name=f"powerview hub {hub_address}",
             update_interval=timedelta(seconds=60),
         )
 
@@ -36,20 +38,17 @@ class PowerviewShadeUpdateCoordinator(DataUpdateCoordinator[PowerviewShadeData])
         """Fetch data from shade endpoint."""
 
         async with asyncio.timeout(10):
-            try:
-                shade_entries = await self.shades.get_shades()
-            except PvApiMaintenance as error:
-                # hub is undergoing maintenance, pause polling
-                raise UpdateFailed(error) from error
-            except HUB_EXCEPTIONS as error:
-                raise UpdateFailed(
-                    f"Powerview Hub {self.hub.hub_address} did not return any data: {error}"
-                ) from error
+            shade_entries = await self.shades.get_resources()
+
+        if isinstance(shade_entries, bool):
+            # hub returns boolean on a 204/423 empty response (maintenance)
+            # continual polling results in inevitable error
+            raise UpdateFailed("Powerview Hub is undergoing maintenance")
 
         if not shade_entries:
-            raise UpdateFailed("No new shade data was returned")
+            raise UpdateFailed("Failed to fetch new shade data")
 
         # only update if shade_entries is valid
-        self.data.store_group_data(shade_entries)
+        self.data.store_group_data(shade_entries[SHADE_DATA])
 
         return self.data
