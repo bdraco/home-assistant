@@ -334,7 +334,7 @@ async def test_wall_display_thermostat_mode(
     await init_integration(hass, 2, model=MODEL_WALL_DISPLAY)
 
     # the switch entity should not be created, only the climate entity
-    assert hass.states.get("switch.test_switch_0") is None
+    assert hass.states.async_entity_ids("switch") == []
     assert hass.states.get("climate.test_name")
 
 
@@ -344,7 +344,7 @@ async def test_wall_display_relay_mode(
     mock_rpc_device,
     monkeypatch,
 ) -> None:
-    """Test Wall Display in thermostat mode."""
+    """Test Wall Display in relay mode."""
     entity_id = register_entity(
         hass,
         CLIMATE_DOMAIN,
