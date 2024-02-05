@@ -1,5 +1,4 @@
 """Test the aiohttp client helper."""
-import asyncio
 import ssl
 from unittest.mock import Mock, patch
 
@@ -269,7 +268,7 @@ async def test_async_aiohttp_proxy_stream_timeout(
     aioclient_mock: AiohttpClientMocker, camera_client
 ) -> None:
     """Test that it fetches the given url."""
-    aioclient_mock.get("http://example.com/mjpeg_stream", exc=asyncio.TimeoutError())
+    aioclient_mock.get("http://example.com/mjpeg_stream", exc=TimeoutError())
 
     resp = await camera_client.get("/api/camera_proxy_stream/camera.mjpeg_camera")
     assert resp.status == 504
