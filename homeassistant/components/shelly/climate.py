@@ -125,13 +125,19 @@ def async_setup_rpc_entry(
 
     climate_ids = []
     for id_ in climate_key_ids:
-        climate_ids.append(id_)
+        if thermostat := coordinator.device.config.get(f"thermostat:{id_}"):
+            mac: str = coordinator.device.config["sys"]["device"]["mac"]
 
-        if coordinator.device.shelly.get("relay_in_thermostat", False):
-            # Wall Display relay is used as the thermostat actuator,
-            # we need to remove a switch entity
-            unique_id = f"{coordinator.mac}-switch:{id_}"
-            async_remove_shelly_entity(hass, "switch", unique_id)
+            if not thermostat["actuator"].startswith(
+                f"shelly://shellywalldisplay-{mac.lower()}"
+            ):
+                # Wall Display relay is used as the external switch actuator,
+                # we need to remove the climate entity
+                unique_id = f"{coordinator.mac}-thermostat:{id_}"
+                async_remove_shelly_entity(hass, "climate", unique_id)
+                continue
+
+        climate_ids.append(id_)
 
     if not climate_ids:
         return

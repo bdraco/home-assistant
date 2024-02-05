@@ -331,6 +331,12 @@ async def test_wall_display_thermostat_mode(
     mock_rpc_device,
 ) -> None:
     """Test Wall Display in thermostat mode."""
+    register_entity(
+        hass,
+        SWITCH_DOMAIN,
+        "test_switch_0",
+        "thermostat:0",
+    )
     await init_integration(hass, 2, model=MODEL_WALL_DISPLAY)
 
     # the switch entity should not be created, only the climate entity
@@ -352,9 +358,9 @@ async def test_wall_display_relay_mode(
         "thermostat:0",
     )
 
-    new_shelly = deepcopy(mock_rpc_device.shelly)
-    new_shelly["relay_in_thermostat"] = False
-    monkeypatch.setattr(mock_rpc_device, "shelly", new_shelly)
+    new_config = deepcopy(mock_rpc_device.config)
+    new_config["thermostat:0"]["actuator"] = "external_switch"
+    monkeypatch.setattr(mock_rpc_device, "config", new_config)
 
     await init_integration(hass, 2, model=MODEL_WALL_DISPLAY)
 

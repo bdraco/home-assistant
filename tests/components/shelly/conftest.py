@@ -159,7 +159,7 @@ MOCK_CONFIG = {
     },
     "sys": {
         "ui_data": {},
-        "device": {"name": "Test name"},
+        "device": {"name": "Test name", "mac": MOCK_MAC},
     },
     "wifi": {"sta": {"enable": True}},
 }
