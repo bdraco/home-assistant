@@ -1,9 +1,10 @@
 """Temperature helpers for Home Assistant."""
 from __future__ import annotations
 
+from functools import lru_cache
 from numbers import Number
 
-from homeassistant.const import PRECISION_HALVES, PRECISION_TENTHS
+from homeassistant.const import PRECISION_HALVES, PRECISION_TENTHS, UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.util.unit_conversion import TemperatureConverter
 
@@ -12,9 +13,19 @@ def display_temp(
     hass: HomeAssistant, temperature: float | None, unit: str, precision: float
 ) -> float | None:
     """Convert temperature into preferred units/precision for display."""
-    temperature_unit = unit
-    ha_unit = hass.config.units.temperature_unit
+    return _display_temp(
+        hass.config.units.temperature_unit, temperature, unit, precision
+    )
 
+
+@lru_cache
+def _display_temp(
+    ha_unit: UnitOfTemperature,
+    temperature: float | None,
+    temperature_unit: str,
+    precision: float,
+) -> float | None:
+    """Convert temperature into preferred units/precision for display."""
     if temperature is None:
         return temperature
 
