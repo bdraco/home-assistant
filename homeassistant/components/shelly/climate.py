@@ -43,7 +43,12 @@ from .const import (
 )
 from .coordinator import ShellyBlockCoordinator, ShellyRpcCoordinator, get_entry_data
 from .entity import ShellyRpcEntity
-from .utils import async_remove_shelly_entity, get_device_entry_gen, get_rpc_key_ids
+from .utils import (
+    async_remove_shelly_entity,
+    get_device_entry_gen,
+    get_rpc_key_ids,
+    is_rpc_thermostat_internal_actuator,
+)
 
 
 async def async_setup_entry(
@@ -125,13 +130,14 @@ def async_setup_rpc_entry(
 
     climate_ids = []
     for id_ in climate_key_ids:
-        climate_ids.append(id_)
+        if not is_rpc_thermostat_internal_actuator(coordinator.device.config, id_):
+            # Wall Display relay is used as the external switch actuator,
+            # we need to remove the climate entity
+            unique_id = f"{coordinator.mac}-thermostat:{id_}"
+            async_remove_shelly_entity(hass, "climate", unique_id)
+            continue
 
-        if coordinator.device.shelly.get("relay_in_thermostat", False):
-            # Wall Display relay is used as the thermostat actuator,
-            # we need to remove a switch entity
-            unique_id = f"{coordinator.mac}-switch:{id_}"
-            async_remove_shelly_entity(hass, "switch", unique_id)
+        climate_ids.append(id_)
 
     if not climate_ids:
         return

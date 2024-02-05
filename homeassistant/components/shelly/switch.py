@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Any, Final, cast
 
 from aioshelly.block_device import Block
-from aioshelly.const import MODEL_GAS, MODEL_WALL_DISPLAY, RPC_GENERATIONS
+from aioshelly.const import MODEL_GAS, RPC_GENERATIONS
 
 from homeassistant.components.automation import automations_with_entity
 from homeassistant.components.script import scripts_with_entity
@@ -31,10 +31,9 @@ from .entity import (
     async_setup_entry_rpc,
 )
 from .utils import (
-    async_remove_shelly_entity,
     get_device_entry_gen,
     is_block_exclude_from_relay,
-    is_rpc_channel_type_light,
+    is_rpc_exclude_from_relay,
 )
 
 
@@ -70,9 +69,7 @@ RPC_SWITCHES: Final = {
     "switch": RpcSwitchDescription(
         key="switch",
         sub_key="output",
-        removal_condition=lambda config, _, channel: is_rpc_channel_type_light(
-            config, int(channel.partition(":")[2])
-        ),
+        removal_condition=is_rpc_exclude_from_relay,
     )
 }
 
@@ -86,16 +83,6 @@ async def async_setup_entry(
     entry_data = get_entry_data(hass)[config_entry.entry_id]
 
     if get_device_entry_gen(config_entry) in RPC_GENERATIONS:
-        if (
-            (rpc_coordinator := entry_data.rpc)
-            and rpc_coordinator.model == MODEL_WALL_DISPLAY
-            and not rpc_coordinator.device.shelly.get("relay_in_thermostat", False)
-        ):
-            # Wall Display relay is not used as the thermostat actuator,
-            # we need to remove a climate entity
-            unique_id = f"{rpc_coordinator.mac}-thermostat:0"
-            async_remove_shelly_entity(hass, "climate", unique_id)
-
         return async_setup_entry_rpc(
             hass, config_entry, async_add_entities, RPC_SWITCHES, RpcRelaySwitch
         )
