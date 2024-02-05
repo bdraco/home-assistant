@@ -380,6 +380,24 @@ def is_rpc_channel_type_light(config: dict[str, Any], channel: int) -> bool:
     return cast(str, con_types[channel]).lower().startswith("light")
 
 
+def is_rpc_exclude_from_relay(
+    settings: dict[str, Any], status: dict[str, Any], channel: str
+) -> bool:
+    """Return true if rpc channel should be excludeed from switch platform."""
+    ch = int(channel.split(":")[1])
+    if thermostat := settings.get(f"thermostat:{ch}"):
+        # Wall Display relay is used as the thermostat actuator,
+        # we need to remove the switch entity
+        mac: str = settings["sys"]["device"]["mac"]
+
+        if thermostat["actuator"].startswith(
+            f"shelly://shellywalldisplay-{mac.lower()}"
+        ):
+            return True
+
+    return is_rpc_channel_type_light(settings, ch)
+
+
 def get_rpc_input_triggers(device: RpcDevice) -> list[tuple[str, str]]:
     """Return list of input triggers for RPC device."""
     triggers = []
