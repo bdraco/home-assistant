@@ -749,8 +749,6 @@ def async_remove_addons_from_dev_reg(
 class HassioDataUpdateCoordinator(DataUpdateCoordinator):  # pylint: disable=hass-enforce-coordinator-module
     """Class to retrieve Hass.io status."""
 
-    config_entry: ConfigEntry
-
     def __init__(
         self, hass: HomeAssistant, config_entry: ConfigEntry, dev_reg: dr.DeviceRegistry
     ) -> None:
@@ -1004,37 +1002,18 @@ class HassioDataUpdateCoordinator(DataUpdateCoordinator):  # pylint: disable=has
         raise_on_entry_error: bool = False,
     ) -> None:
         """Refresh data."""
-        if not scheduled:
+        if not scheduled and not raise_on_auth_failed:
             # Force refreshing updates for non-scheduled updates
-            # It `raise_on_auth_failed` is set, it means this is
-            # the first refresh. We background the update task in
-            # that case.
-            if raise_on_auth_failed:
-                self._background_refresh_updates_task = (
-                    self.config_entry.async_create_background_task(
-                        self.hass,
-                        self._async_refresh_updates(),
-                        "hassio_refresh_updates",
-                    )
-                )
-            elif (
-                self._background_refresh_updates_task
-                and not self._background_refresh_updates_task.done()
-            ):
-                _LOGGER.warning(
-                    "Background task for refreshing updates still running, skipping"
-                )
-            else:
-                self._background_refresh_updates_task = None
-                await self._async_refresh_updates()
+            # If `raise_on_auth_failed` is set, it means this is
+            # the first refresh and we do not want to delay
+            # startup or cause a timeout so we only refresh the
+            # updates if this is not a scheduled refresh and
+            # we are not doing the first refresh.
+            try:
+                await self.hassio.refresh_updates()
+            except HassioAPIError as err:
+                _LOGGER.warning("Error on Supervisor API: %s", err)
 
         await super()._async_refresh(
             log_failures, raise_on_auth_failed, scheduled, raise_on_entry_error
         )
-
-    async def _async_refresh_updates(self) -> None:
-        """Refresh updates."""
-        try:
-            await self.hassio.refresh_updates()
-        except HassioAPIError as err:
-            _LOGGER.warning("Error on Supervisor API: %s", err)
