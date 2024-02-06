@@ -155,19 +155,14 @@ class DlnaDmrEntity(MediaPlayerEntity):
         self.browse_unfiltered = browse_unfiltered
         self._device_lock = asyncio.Lock()
         self._background_setup_task: asyncio.Task[None] | None = None
+        self._updated_registry: bool = False
         # Device info will be updated when the device is connected
         self._attr_device_info = dr.DeviceInfo(
             connections={(dr.CONNECTION_UPNP, self.udn)},
-            default_name=name,
         )
 
     async def async_added_to_hass(self) -> None:
         """Handle addition."""
-        self._background_setup_task = self.hass.async_create_background_task(
-            self._async_setup(), f"dlna_dmr {self.name} setup"
-        )
-
-    async def _async_setup(self) -> None:
         # Update this entity when the associated config entry is modified
         if self.registry_entry and self.registry_entry.config_entry_id:
             config_entry = self.hass.config_entries.async_get_entry(
@@ -177,13 +172,6 @@ class DlnaDmrEntity(MediaPlayerEntity):
             self.async_on_remove(
                 config_entry.add_update_listener(self.async_config_update_listener)
             )
-
-        # Try to connect to the last known location, but don't worry if not available
-        if not self._device:
-            try:
-                await self._device_connect(self.location)
-            except UpnpError as err:
-                _LOGGER.debug("Couldn't connect immediately: %r", err)
 
         # Get SSDP notifications for only this device
         self.async_on_remove(
@@ -203,6 +191,18 @@ class DlnaDmrEntity(MediaPlayerEntity):
                 {"_udn": self.udn, "NTS": NotificationSubType.SSDP_BYEBYE},
             )
         )
+
+        if not self._device:
+            self._background_setup_task = self.hass.async_create_background_task(
+                self._async_setup(), f"dlna_dmr {self.name} setup"
+            )
+
+    async def _async_setup(self) -> None:
+        # Try to connect to the last known location, but don't worry if not available
+        try:
+            await self._device_connect(self.location)
+        except UpnpError as err:
+            _LOGGER.debug("Couldn't connect immediately: %r", err)
 
     async def async_will_remove_from_hass(self) -> None:
         """Handle removal."""
@@ -374,9 +374,10 @@ class DlnaDmrEntity(MediaPlayerEntity):
         if not self.registry_entry or not self.registry_entry.config_entry_id:
             return  # No config registry entry to link to
 
-        if self.registry_entry.device_id and not set_mac:
+        if self.registry_entry.device_id and not set_mac and self._updated_registry:
             return  # No new information
 
+        self._updated_registry = True
         connections = set()
         # Connections based on the root device's UDN, and the DMR embedded
         # device's UDN. They may be the same, if the DMR is the root device.
