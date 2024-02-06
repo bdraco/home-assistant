@@ -775,6 +775,7 @@ class HassioDataUpdateCoordinator(DataUpdateCoordinator):  # pylint: disable=has
         self._container_updates: defaultdict[str, dict[str, set[str]]] = defaultdict(
             lambda: defaultdict(set)
         )
+        self._background_refresh_updates_task: asyncio.Task | None = None
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Update data via library."""
@@ -1003,14 +1004,29 @@ class HassioDataUpdateCoordinator(DataUpdateCoordinator):  # pylint: disable=has
         raise_on_entry_error: bool = False,
     ) -> None:
         """Refresh data."""
-        if not scheduled and not raise_on_auth_failed:
+        if not scheduled:
             # Force refreshing updates for non-scheduled updates
             # It `raise_on_auth_failed` is set, it means this is
-            # the first refresh and we do not want to delay
-            # startup or cause a timeout so we only refresh the
-            # updates if this is not a scheduled refresh and
-            # we are not doing the first refresh.
-            await self._async_refresh_updates()
+            # the first refresh. We background the update task in
+            # that case.
+            if raise_on_auth_failed:
+                self._background_refresh_updates_task = (
+                    self.config_entry.async_create_background_task(
+                        self.hass,
+                        self._async_refresh_updates(),
+                        "hassio_refresh_updates",
+                    )
+                )
+            elif (
+                self._background_refresh_updates_task
+                and not self._background_refresh_updates_task.done()
+            ):
+                _LOGGER.warning(
+                    "Background task for refreshing updates still running, skipping"
+                )
+            else:
+                self._background_refresh_updates_task = None
+                await self._async_refresh_updates()
 
         await super()._async_refresh(
             log_failures, raise_on_auth_failed, scheduled, raise_on_entry_error
