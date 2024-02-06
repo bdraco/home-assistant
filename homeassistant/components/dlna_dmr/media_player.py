@@ -161,6 +161,7 @@ class DlnaDmrEntity(MediaPlayerEntity):
         self._background_setup_task = self.hass.async_create_background_task(
             self._async_setup(), f"dlna_dmr {self.name} setup"
         )
+        await super().async_added_to_hass()
 
     async def _async_setup(self) -> None:
         # Try to connect to the last known location, but don't worry if not available
@@ -208,6 +209,7 @@ class DlnaDmrEntity(MediaPlayerEntity):
             self._background_setup_task = None
 
         await self._device_disconnect()
+        await super().async_will_remove_from_hass()
 
     async def async_ssdp_callback(
         self, info: ssdp.SsdpServiceInfo, change: ssdp.SsdpChange
