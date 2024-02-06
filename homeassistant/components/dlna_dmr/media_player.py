@@ -163,6 +163,13 @@ class DlnaDmrEntity(MediaPlayerEntity):
         )
 
     async def _async_setup(self) -> None:
+        # Try to connect to the last known location, but don't worry if not available
+        if not self._device:
+            try:
+                await self._device_connect(self.location)
+            except UpnpError as err:
+                _LOGGER.debug("Couldn't connect immediately: %r", err)
+
         # Update this entity when the associated config entry is modified
         if self.registry_entry and self.registry_entry.config_entry_id:
             config_entry = self.hass.config_entries.async_get_entry(
@@ -172,13 +179,6 @@ class DlnaDmrEntity(MediaPlayerEntity):
             self.async_on_remove(
                 config_entry.add_update_listener(self.async_config_update_listener)
             )
-
-        # Try to connect to the last known location, but don't worry if not available
-        if not self._device:
-            try:
-                await self._device_connect(self.location)
-            except UpnpError as err:
-                _LOGGER.debug("Couldn't connect immediately: %r", err)
 
         # Get SSDP notifications for only this device
         self.async_on_remove(
