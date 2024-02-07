@@ -100,7 +100,7 @@ async def async_setup_entry(
         location=entry.data[CONF_URL],
         mac_address=entry.data.get(CONF_MAC),
         browse_unfiltered=entry.options.get(CONF_BROWSE_UNFILTERED, False),
-        config_entry_id=entry.entry_id,
+        config_entry=entry,
     )
 
     async_add_entities([entity])
@@ -146,7 +146,7 @@ class DlnaDmrEntity(MediaPlayerEntity):
         location: str,
         mac_address: str | None,
         browse_unfiltered: bool,
-        config_entry_id: str,
+        config_entry: config_entries.ConfigEntry,
     ) -> None:
         """Initialize DLNA DMR entity."""
         self.udn = udn
@@ -160,7 +160,7 @@ class DlnaDmrEntity(MediaPlayerEntity):
         self._device_lock = asyncio.Lock()
         self._background_setup_task: asyncio.Task[None] | None = None
         self._updated_registry: bool = False
-        self._config_entry_id = config_entry_id
+        self._config_entry = config_entry
 
     async def async_added_to_hass(self) -> None:
         """Handle addition."""
@@ -402,21 +402,18 @@ class DlnaDmrEntity(MediaPlayerEntity):
                 (dr.CONNECTION_NETWORK_MAC, self.mac_address)
             )
 
-        self._attr_device_info = dr.DeviceInfo(
+        device_info = dr.DeviceInfo(
             connections=connections,
             default_manufacturer=self._device.manufacturer,
             default_model=self._device.model_name,
             default_name=self._device.name,
         )
+        self._attr_device_info = device_info
 
         self._updated_registry = True
         # Create linked HA DeviceEntry now the information is known.
         device_entry = dr.async_get(self.hass).async_get_or_create(
-            config_entry_id=self._config_entry_id,
-            connections=connections,
-            default_manufacturer=self._device.manufacturer,
-            default_model=self._device.model_name,
-            default_name=self._device.name,
+            config_entry_id=self._config_entry.entry_id, **device_info
         )
 
         # Update entity registry to link to the device
@@ -425,6 +422,7 @@ class DlnaDmrEntity(MediaPlayerEntity):
             DOMAIN,
             self.unique_id,
             device_id=device_entry.id,
+            config_entry=self._config_entry,
         )
 
     async def _device_disconnect(self) -> None:
