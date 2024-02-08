@@ -512,7 +512,7 @@ class DHCPWatcher(WatcherBase):
             return
 
         try:
-            sock = self._get_nonblocking_listen_socket(FILTER)
+            sock = self._make_listen_socket(FILTER)
             fileno = sock.fileno()
         except (Scapy_Exception, OSError) as ex:
             if os.geteuid() == 0:
@@ -538,7 +538,7 @@ class DHCPWatcher(WatcherBase):
         self._sock = sock
         self._loop.add_reader(fileno, _on_data)
 
-    def _get_nonblocking_listen_socket(self, cap_filter: str) -> Any:
+    def _make_listen_socket(self, cap_filter: str) -> Any:
         """Get a nonblocking listen socket."""
         from scapy.data import ETH_P_ALL  # pylint: disable=import-outside-toplevel
         from scapy.interfaces import (  # pylint: disable=import-outside-toplevel
@@ -549,11 +549,11 @@ class DHCPWatcher(WatcherBase):
         sock = resolve_iface(iface).l2listen()(
             type=ETH_P_ALL, iface=iface, filter=cap_filter
         )
-        try:
+        if hasattr(sock, "set_nonblock"):
             # Not all classes have set_nonblock so we have to call fcntl directly
             # in the event its not implemented
-            sock.set_nonblock(True)
-        except AttributeError:
+            sock.set_nonblock()
+        else:
             import fcntl  # pylint: disable=import-outside-toplevel
 
             fcntl.fcntl(sock.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
