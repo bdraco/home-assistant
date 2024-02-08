@@ -480,6 +480,7 @@ class DHCPWatcher(WatcherBase):
                 return
 
             options_dict = _dhcp_options_as_dict(packet[DHCP].options)
+            _LOGGER.warning("dhcp: _async_handle_dhcp_packet: %s", options_dict)
             if options_dict.get(MESSAGE_TYPE) != DHCP_REQUEST:
                 # Not a DHCP request
                 return
