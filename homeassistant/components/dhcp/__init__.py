@@ -525,14 +525,20 @@ class DHCPWatcher(WatcherBase):
         sock = resolve_iface(iface).l2listen()(
             type=ETH_P_ALL, iface=iface, filter=FILTER
         )
-        sock.set_nonblock(True)
         fileno = sock.fileno()
-        # fcntl.fcntl(sock.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
+        try:
+            sock.set_nonblock(True)
+        except AttributeError:
+            import fcntl  # pylint: disable=import-outside-toplevel
+
+            fcntl.fcntl(fileno, fcntl.F_SETFL, os.O_NONBLOCK)
 
         def _on_data() -> None:
             _LOGGER.warning("dhcp: on_data")
             try:
                 data = sock.recv()
+            except (BlockingIOError, InterruptedError):
+                return
             except BaseException as ex:  # pylint: disable=broad-except
                 _LOGGER.exception("Exception while processing dhcp packet: %s", ex)
                 self._loop.remove_reader(fileno)
