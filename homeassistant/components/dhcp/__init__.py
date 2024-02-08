@@ -486,7 +486,6 @@ class DHCPWatcher(WatcherBase):
                 return
 
             options_dict = _dhcp_options_as_dict(packet[DHCP].options)
-            _LOGGER.warning("dhcp: _async_handle_dhcp_packet: %s", options_dict)
             if options_dict.get(MESSAGE_TYPE) != DHCP_REQUEST:
                 # Not a DHCP request
                 return
@@ -533,6 +532,8 @@ class DHCPWatcher(WatcherBase):
         )
         fileno = sock.fileno()
         try:
+            # Not all classes have set_nonblock so we have to call fcntl directly
+            # in the event its not implemented
             sock.set_nonblock(True)
         except AttributeError:
             import fcntl  # pylint: disable=import-outside-toplevel
@@ -540,7 +541,6 @@ class DHCPWatcher(WatcherBase):
             fcntl.fcntl(fileno, fcntl.F_SETFL, os.O_NONBLOCK)
 
         def _on_data() -> None:
-            _LOGGER.warning("dhcp: on_data")
             try:
                 data = sock.recv()
             except (BlockingIOError, InterruptedError):
@@ -550,7 +550,6 @@ class DHCPWatcher(WatcherBase):
                 self._async_stop()
 
             if data:
-                _LOGGER.warning("dhcp: on_data: %s", data)
                 _async_handle_dhcp_packet(data)
 
         self._sock = sock
