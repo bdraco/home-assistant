@@ -479,10 +479,13 @@ class DHCPWatcher(WatcherBase):
         @callback
         def _async_handle_dhcp_packet(packet: Packet) -> None:
             """Process a dhcp packet."""
-            if DHCP not in packet:
+            if not (dhcp_packet := packet.getlayer(DHCP)):
                 return
 
-            options_dict = _dhcp_options_as_dict(packet[DHCP].options)
+            if TYPE_CHECKING:
+                dhcp_packet = cast(DHCP, dhcp_packet)
+
+            options_dict = _dhcp_options_as_dict(dhcp_packet.options)
             if options_dict.get(MESSAGE_TYPE) != DHCP_REQUEST:
                 # Not a DHCP request
                 return
@@ -541,7 +544,10 @@ class DHCPWatcher(WatcherBase):
             _LOGGER.exception("Fatal error while processing dhcp packet: %s", ex)
             self._async_stop()
 
-        if data and self._async_handle_dhcp_packet:
+        if TYPE_CHECKING:
+            assert self._async_handle_dhcp_packet is not None
+
+        if data:
             self._async_handle_dhcp_packet(data)
 
     def _make_listen_socket(self, cap_filter: str) -> Any:
