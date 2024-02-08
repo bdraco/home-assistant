@@ -439,10 +439,16 @@ class DHCPWatcher(WatcherBase):
         self._sock: Any | None = None
 
     async def async_stop(self) -> None:
-        """Stop watching for new device trackers."""
+        """Stop watching for DHCP packets."""
+        self._async_stop()
+
+    @callback
+    def _async_stop(self) -> None:
+        """Stop watching for DHCP packets."""
         if self._sock:
             self._loop.remove_reader(self._sock.fileno())
             self._sock.close()
+            self._sock = None
 
     async def async_start(self) -> None:
         """Start watching for dhcp packets."""
@@ -540,10 +546,8 @@ class DHCPWatcher(WatcherBase):
             except (BlockingIOError, InterruptedError):
                 return
             except BaseException as ex:  # pylint: disable=broad-except
-                _LOGGER.exception("Exception while processing dhcp packet: %s", ex)
-                self._loop.remove_reader(fileno)
-                sock.close()
-                self._sock = None
+                _LOGGER.exception("Fatal error while processing dhcp packet: %s", ex)
+                self._async_stop()
 
             if data:
                 _LOGGER.warning("dhcp: on_data: %s", data)
