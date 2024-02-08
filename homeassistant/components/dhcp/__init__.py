@@ -437,6 +437,7 @@ class DHCPWatcher(WatcherBase):
         super().__init__(hass, address_data, integration_matchers)
         self._loop = asyncio.get_running_loop()
         self._sock: Any | None = None
+        self._async_handle_dhcp_packet: Callable[[Packet], None] | None = None
 
     async def async_stop(self) -> None:
         """Stop watching for DHCP packets."""
@@ -523,20 +524,25 @@ class DHCPWatcher(WatcherBase):
                 )
             return
 
-        def _on_data() -> None:
-            try:
-                data = sock.recv()
-            except (BlockingIOError, InterruptedError):
-                return
-            except BaseException as ex:  # pylint: disable=broad-except
-                _LOGGER.exception("Fatal error while processing dhcp packet: %s", ex)
-                self._async_stop()
-
-            if data:
-                _async_handle_dhcp_packet(data)
-
         self._sock = sock
-        self._loop.add_reader(fileno, _on_data)
+        self._async_handle_dhcp_packet = _async_handle_dhcp_packet
+        self._loop.add_reader(fileno, self._async_on_data)
+
+    def _async_on_data(self) -> None:
+        """Handle data from the socket."""
+        if not (sock := self._sock):
+            return
+
+        try:
+            data = sock.recv()
+        except (BlockingIOError, InterruptedError):
+            return
+        except BaseException as ex:  # pylint: disable=broad-except
+            _LOGGER.exception("Fatal error while processing dhcp packet: %s", ex)
+            self._async_stop()
+
+        if data and self._async_handle_dhcp_packet:
+            self._async_handle_dhcp_packet(data)
 
     def _make_listen_socket(self, cap_filter: str) -> Any:
         """Get a nonblocking listen socket."""
