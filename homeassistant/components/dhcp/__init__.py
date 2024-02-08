@@ -13,7 +13,6 @@ import itertools
 import logging
 import os
 import re
-import threading
 from typing import TYPE_CHECKING, Any, Final, cast
 
 from aiodiscover import DiscoverHosts
@@ -63,7 +62,6 @@ from .const import DOMAIN
 
 if TYPE_CHECKING:
     from scapy.packet import Packet
-    from scapy.sendrecv import AsyncSniffer
 
 CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
@@ -437,31 +435,29 @@ class DHCPWatcher(WatcherBase):
     ) -> None:
         """Initialize class."""
         super().__init__(hass, address_data, integration_matchers)
-        self._sniffer: AsyncSniffer | None = None
-        self._started = threading.Event()
+        self._loop = asyncio.get_running_loop()
+        self._sock: Any | None = None
 
     async def async_stop(self) -> None:
         """Stop watching for new device trackers."""
-        await self.hass.async_add_executor_job(self._stop)
-
-    def _stop(self) -> None:
-        """Stop the thread."""
-        if self._started.is_set():
-            assert self._sniffer is not None
-            self._sniffer.stop()
+        if self._sock:
+            self._loop.remove_reader(self._sock.fileno())
+            self._sock.close()
 
     async def async_start(self) -> None:
         """Start watching for dhcp packets."""
-        await self.hass.async_add_executor_job(self._start)
+        try:
+            await self._async_start()
+        except Exception as ex:  # pylint: disable=broad-except
+            _LOGGER.exception("Error setting up DHCP watcher: %s", ex)
 
-    def _start(self) -> None:
+    async def _async_start(self) -> None:
         """Start watching for dhcp packets."""
         # Local import because importing from scapy has side effects such as opening
         # sockets
+        import fcntl  # pylint: disable=import-outside-toplevel
+
         from scapy import arch  # pylint: disable=import-outside-toplevel # noqa: F401
-        from scapy.layers.dhcp import DHCP  # pylint: disable=import-outside-toplevel
-        from scapy.layers.inet import IP  # pylint: disable=import-outside-toplevel
-        from scapy.layers.l2 import Ether  # pylint: disable=import-outside-toplevel
 
         #
         # Importing scapy.sendrecv will cause a scapy resync which will
@@ -470,11 +466,16 @@ class DHCPWatcher(WatcherBase):
         # We avoid this circular import by importing arch above to ensure
         # the module is loaded and avoid the problem
         #
-        from scapy.sendrecv import (  # pylint: disable=import-outside-toplevel
-            AsyncSniffer,
+        from scapy.data import ETH_P_ALL  # pylint: disable=import-outside-toplevel
+        from scapy.interfaces import (  # pylint: disable=import-outside-toplevel
+            resolve_iface,
         )
+        from scapy.layers.dhcp import DHCP  # pylint: disable=import-outside-toplevel
+        from scapy.layers.inet import IP  # pylint: disable=import-outside-toplevel
+        from scapy.layers.l2 import Ether  # pylint: disable=import-outside-toplevel
 
-        def _handle_dhcp_packet(packet: Packet) -> None:
+        @callback
+        def _async_handle_dhcp_packet(packet: Packet) -> None:
             """Process a dhcp packet."""
             if DHCP not in packet:
                 return
@@ -495,7 +496,7 @@ class DHCPWatcher(WatcherBase):
             mac_address = _format_mac(cast(str, packet[Ether].src))
 
             if ip_address is not None and mac_address is not None:
-                self.process_client(ip_address, hostname, mac_address)
+                self.async_process_client(ip_address, hostname, mac_address)
 
         # disable scapy promiscuous mode as we do not need it
         conf.sniff_promisc = 0
@@ -520,16 +521,20 @@ class DHCPWatcher(WatcherBase):
             )
             return
 
-        self._sniffer = AsyncSniffer(
-            filter=FILTER,
-            started_callback=self._started.set,
-            prn=_handle_dhcp_packet,
-            store=0,
+        iface = conf.iface
+        sock = resolve_iface(iface).l2listen()(
+            type=ETH_P_ALL, iface=iface, filter=FILTER
         )
+        fcntl.fcntl(sock.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
 
-        self._sniffer.start()
-        if self._sniffer.thread:
-            self._sniffer.thread.name = self.__class__.__name__
+        def _on_data() -> None:
+            _LOGGER.warning("dhcp: on_data")
+            if data := sock.recv():
+                _LOGGER.warning("dhcp: on_data: %s", data)
+                _async_handle_dhcp_packet(data)
+
+        self._loop.add_reader(sock.fileno(), _on_data)
+        self._sock = sock
 
 
 def _dhcp_options_as_dict(
