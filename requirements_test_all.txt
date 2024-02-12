@@ -297,7 +297,7 @@ aiooncue==0.3.5
 aioopenexchangerates==0.4.0
 
 # homeassistant.components.pegel_online
-aiopegelonline==0.0.6
+aiopegelonline==0.0.8
 
 # homeassistant.components.acmeda
 aiopulse==0.4.4
@@ -2191,7 +2191,7 @@ xiaomi-ble==0.25.2
 xknx==2.12.0
 
 # homeassistant.components.knx
-xknxproject==3.5.0
+xknxproject==3.6.0
 
 # homeassistant.components.bluesound
 # homeassistant.components.fritz

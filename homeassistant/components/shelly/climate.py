@@ -162,7 +162,6 @@ class BlockSleepingClimate(
     """Representation of a Shelly climate device."""
 
     _attr_hvac_modes = [HVACMode.OFF, HVACMode.HEAT]
-    _attr_icon = "mdi:thermostat"
     _attr_max_temp = SHTRV_01_TEMPERATURE_SETTINGS["max"]
     _attr_min_temp = SHTRV_01_TEMPERATURE_SETTINGS["min"]
     _attr_supported_features = (
@@ -445,7 +444,6 @@ class BlockSleepingClimate(
 class RpcClimate(ShellyRpcEntity, ClimateEntity):
     """Entity that controls a thermostat on RPC based Shelly devices."""
 
-    _attr_icon = "mdi:thermostat"
     _attr_max_temp = RPC_THERMOSTAT_SETTINGS["max"]
     _attr_min_temp = RPC_THERMOSTAT_SETTINGS["min"]
     _attr_supported_features = (

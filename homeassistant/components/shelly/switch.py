@@ -104,6 +104,7 @@ class BlockValveSwitch(ShellyBlockAttributeEntity, SwitchEntity):
     """
 
     entity_description: BlockSwitchDescription
+    _attr_translation_key = "valve_switch"
 
     def __init__(
         self,
@@ -123,11 +124,6 @@ class BlockValveSwitch(ShellyBlockAttributeEntity, SwitchEntity):
             return self.control_result["state"] in GAS_VALVE_OPEN_STATES
 
         return self.attribute_value in GAS_VALVE_OPEN_STATES
-
-    @property
-    def icon(self) -> str:
-        """Return the icon."""
-        return "mdi:valve-open" if self.is_on else "mdi:valve-closed"
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Open valve."""
