@@ -1,6 +1,4 @@
 """Test configuration for Shelly."""
-from __future__ import annotations
-
 from unittest.mock import AsyncMock, Mock, PropertyMock, patch
 
 from aioshelly.block_device import BlockDevice, BlockUpdateType
@@ -91,7 +89,6 @@ MOCK_BLOCKS = [
             "overpower": 0,
             "power": 53.4,
             "energy": 1234567.89,
-            "output": True,
         },
         channel="0",
         type="relay",
@@ -168,6 +165,12 @@ MOCK_BLOCKS = [
 
 MOCK_CONFIG = {
     "input:0": {"id": 0, "name": "Test name input 0", "type": "button"},
+    "input:2": {
+        "id": 2,
+        "name": "Gas",
+        "type": "count",
+        "enable": True,
+    },
     "light:0": {"name": "test light_0"},
     "switch:0": {"name": "test switch_0"},
     "cover:0": {"name": "test cover_0"},
@@ -175,11 +178,10 @@ MOCK_CONFIG = {
         "id": 0,
         "enable": True,
         "type": "heating",
-        "actuator": f"shelly://shellywalldisplay-{MOCK_MAC.lower()}/c/switch:0",
     },
     "sys": {
         "ui_data": {},
-        "device": {"name": "Test name", "mac": MOCK_MAC},
+        "device": {"name": "Test name"},
     },
     "wifi": {"sta": {"enable": True}},
 }
@@ -222,6 +224,7 @@ MOCK_STATUS_COAP = {
 MOCK_STATUS_RPC = {
     "switch:0": {"output": True},
     "input:0": {"id": 0, "state": None, "xpercent": 8.9},
+    "input:2": {"id": 2, "counts": {"total": 56174, "xtotal": 561.74}},
     "light:0": {"output": True, "brightness": 53.0},
     "cloud": {"connected": False},
     "cover:0": {
