@@ -707,6 +707,11 @@ async def _async_resolve_domains_to_setup(
         requirements.async_load_installed_versions(hass, needed_requirements),
         "check installed requirements",
     )
+    hass.async_create_background_task(
+        translation.async_load_integrations(hass, {*BASE_PLATFORMS, *domains_to_setup}),
+        "load translations",
+    )
+
     return domains_to_setup, integration_cache
 
 
