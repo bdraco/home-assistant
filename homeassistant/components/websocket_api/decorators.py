@@ -32,7 +32,7 @@ def async_response(
     func: const.AsyncWebSocketCommandHandler,
 ) -> const.WebSocketCommandHandler:
     """Decorate an async function to handle WebSocket API messages."""
-    task_name = f"websocket_api.async:{func.__name__}"
+    task_name = f"websocket_api.async:{func.__module__}.{func.__name__}"
 
     @callback
     @wraps(func)
