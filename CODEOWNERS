@@ -103,6 +103,8 @@ build.json @home-assistant/supervisor
 /homeassistant/components/application_credentials/ @home-assistant/core
 /tests/components/application_credentials/ @home-assistant/core
 /homeassistant/components/apprise/ @caronc
+/homeassistant/components/aprilaire/ @chamberlain2007
+/tests/components/aprilaire/ @chamberlain2007
 /homeassistant/components/aprs/ @PhilRW
 /tests/components/aprs/ @PhilRW
 /homeassistant/components/aranet/ @aschmitz @thecode
