@@ -1,7 +1,7 @@
 """Commands part of Websocket API."""
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 import datetime as dt
 from functools import lru_cache, partial
 import json
@@ -328,15 +328,16 @@ def handle_get_states(
     states = _async_get_allowed_states(hass, connection)
 
     try:
-        serialized_states = [state.as_dict_json for state in states]
+        _send_handle_get_states_response(
+            connection, msg["id"], (state.as_dict_json for state in states)
+        )
     except (ValueError, TypeError):
         pass
     else:
-        _send_handle_get_states_response(connection, msg["id"], serialized_states)
         return
 
     # If we can't serialize, we'll filter out unserializable states
-    serialized_states = []
+    serialized_states: list[bytes] = []
     for state in states:
         try:
             serialized_states.append(state.as_dict_json)
@@ -352,11 +353,13 @@ def handle_get_states(
 
 
 def _send_handle_get_states_response(
-    connection: ActiveConnection, msg_id: int, serialized_states: list[bytes]
+    connection: ActiveConnection, msg_id: int, serialized_states: Iterable[bytes]
 ) -> None:
     """Send handle get states response."""
     connection.send_message(
-        construct_result_message(msg_id, b"[" + b",".join(serialized_states) + b"]")
+        construct_result_message(
+            msg_id, b"".join((b"[", b",".join(serialized_states), b"]"))
+        )
     )
 
 
@@ -413,25 +416,29 @@ def handle_subscribe_entities(
     )
     connection.send_result(msg["id"])
 
+    if not entity_ids:
+        serialized_states = (state.as_compressed_state_json for state in states)
+    else:
+        serialized_states = (
+            state.as_compressed_state_json
+            for state in states
+            if state.entity_id in entity_ids
+        )
+
     # JSON serialize here so we can recover if it blows up due to the
     # state machine containing unserializable data. This command is required
     # to succeed for the UI to show.
     try:
-        serialized_states = [
-            state.as_compressed_state_json
-            for state in states
-            if not entity_ids or state.entity_id in entity_ids
-        ]
+        _send_handle_entities_init_response(connection, msg["id"], serialized_states)
     except (ValueError, TypeError):
         pass
     else:
-        _send_handle_entities_init_response(connection, msg["id"], serialized_states)
         return
 
-    serialized_states = []
+    one_by_one_serialized_states: list[bytes] = []
     for state in states:
         try:
-            serialized_states.append(state.as_compressed_state_json)
+            one_by_one_serialized_states.append(state.as_compressed_state_json)
         except (ValueError, TypeError):
             connection.logger.error(
                 "Unable to serialize to JSON. Bad data found at %s",
@@ -440,11 +447,13 @@ def handle_subscribe_entities(
                 ),
             )
 
-    _send_handle_entities_init_response(connection, msg["id"], serialized_states)
+    _send_handle_entities_init_response(
+        connection, msg["id"], one_by_one_serialized_states
+    )
 
 
 def _send_handle_entities_init_response(
-    connection: ActiveConnection, msg_id: int, serialized_states: list[bytes]
+    connection: ActiveConnection, msg_id: int, serialized_states: Iterable[bytes]
 ) -> None:
     """Send handle entities init response."""
     connection.send_message(
