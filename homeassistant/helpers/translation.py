@@ -135,10 +135,10 @@ def _merge_resources(
 
 
 def build_resources(
-    translation_strings: dict[str, dict[str, str | dict[str, Any]]],
+    translation_strings: dict[str, dict[str, dict[str, Any] | str]],
     components: set[str],
     category: str,
-) -> dict[str, str | dict[str, Any]]:
+) -> dict[str, dict[str, Any] | str]:
     """Build the resources response for the given components."""
     # Build response
     return {
@@ -453,19 +453,24 @@ def async_setup(hass: HomeAssistant) -> None:
     Listeners load translations for every loaded component and after config change.
     """
     cache = _TranslationCache(hass)
-
+    current_language = hass.config.language
     hass.data[TRANSLATION_FLATTEN_CACHE] = cache
 
     @callback
     def _async_load_translations_filter(event: Event) -> bool:
         """Filter out unwanted events."""
-        return "language" in event.data
+        nonlocal current_language
+        if (
+            new_language := event.data.get("language")
+        ) and new_language != current_language:
+            current_language = new_language
+            return True
+        return False
 
     async def _async_load_translations(event: Event) -> None:
-        """Load translations for the current language."""
-        language = hass.config.language
-        _LOGGER.debug("Loading translations for language: %s", language)
-        await cache.async_load(language, hass.config.components)
+        new_language = event.data["language"]
+        _LOGGER.debug("Loading translations for language: %s", new_language)
+        await cache.async_load(new_language, hass.config.components)
 
     @callback
     def _async_load_translations_for_component_filter(event: Event) -> bool:

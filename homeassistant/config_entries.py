@@ -405,7 +405,7 @@ class ConfigEntry:
                 )
             report(
                 f'sets "{key}" directly to update a config entry. This is deprecated and will'
-                " stop working in Home Assistant 2024.10, it should be updated to use"
+                " stop working in Home Assistant 2024.9, it should be updated to use"
                 " async_update_entry instead",
                 error_if_core=False,
             )
@@ -565,16 +565,19 @@ class ConfigEntry:
             )
             result = False
 
+        #
+        # After successfully calling async_setup_entry, it is important that this function
+        # does not yield to the event loop by using `await` or `async with` or
+        # similar until after the state has been set by calling self._async_set_state.
+        #
+        # Otherwise we risk that any `call_soon`s
+        # created by an integration will be executed before the state is set.
+        #
+
         # Only store setup result as state if it was not forwarded.
         if not domain_is_integration:
             return
 
-        #
-        # It is important that this function does not yield to the
-        # event loop by using `await` or `async with` or similar until
-        # after the state has been set. Otherwise we risk that any `call_soon`s
-        # created by an integration will be executed before the state is set.
-        #
         if result:
             self._async_set_state(hass, ConfigEntryState.LOADED, None)
         else:
