@@ -155,19 +155,19 @@ class RequirementsManager:
             return integration
 
         cache = self.integrations_with_reqs
-        int_or_evt = cache.get(domain, UNDEFINED)
+        int_or_fut = cache.get(domain, UNDEFINED)
 
-        if isinstance(int_or_evt, asyncio.Future):
-            await int_or_evt
+        if isinstance(int_or_fut, asyncio.Future):
+            await int_or_fut
 
             # When we have waited and it's UNDEFINED, it doesn't exist
             # We don't cache that it doesn't exist, or else people can't fix it
             # and then restart, because their config will never be valid.
-            if (int_or_evt := cache.get(domain, UNDEFINED)) is UNDEFINED:
+            if (int_or_fut := cache.get(domain, UNDEFINED)) is UNDEFINED:
                 raise IntegrationNotFound(domain)
 
-        if int_or_evt is not UNDEFINED:
-            return cast(Integration, int_or_evt)
+        if int_or_fut is not UNDEFINED:
+            return cast(Integration, int_or_fut)
 
         event = cache[domain] = self.hass.loop.create_future()
 
@@ -199,8 +199,8 @@ class RequirementsManager:
             dep
             for dep in integration.dependencies + integration.after_dependencies
             if dep not in done
-            # If the dep is in the cache and its an Integration
-            # its already been checked for the requirements and we should
+            # If the dep is in the cache and it's an Integration
+            # it's already been checked for the requirements and we should
             # not check it again.
             and (
                 not (cached_integration := cache.get(dep))
@@ -212,8 +212,8 @@ class RequirementsManager:
             if (
                 check_domain not in done
                 and check_domain not in deps_to_check
-                # If the integration is in the cache and its an Integration
-                # its already been checked for the requirements and we should
+                # If the integration is in the cache and it's an Integration
+                # it's already been checked for the requirements and we should
                 # not check it again.
                 and (
                     not (cached_integration := cache.get(check_domain))
