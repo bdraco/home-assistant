@@ -736,12 +736,12 @@ async def _async_set_up_integrations(
     hass.data[DATA_SETUP_STARTED] = setup_started
     setup_time: dict[str, timedelta] = hass.data.setdefault(DATA_SETUP_TIME, {})
 
+    watcher = _WatchPendingSetups(hass, setup_started)
+    watcher.async_start()
+
     domains_to_setup, integration_cache = await _async_resolve_domains_to_setup(
         hass, config
     )
-
-    watcher = _WatchPendingSetups(hass, setup_started)
-    watcher.async_start()
 
     # Initialize recorder
     if "recorder" in domains_to_setup:
