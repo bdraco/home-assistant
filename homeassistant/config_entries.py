@@ -2266,7 +2266,8 @@ class EntityRegistryDisabledHandler:
             event_filter=_handle_entry_updated_filter,
         )
 
-    async def _handle_entry_updated(self, event: Event) -> None:
+    @callback
+    def _handle_entry_updated(self, event: Event) -> None:
         """Handle entity registry entry update."""
         if self.registry is None:
             self.registry = entity_registry.async_get(self.hass)
