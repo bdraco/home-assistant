@@ -214,7 +214,7 @@ async def _async_process_dependencies(
     return failed
 
 
-async def _async_setup_component(  # noqa: C901
+async def _async_setup_component(
     hass: core.HomeAssistant, domain: str, config: ConfigType
 ) -> bool:
     """Set up a component for Home Assistant.
@@ -313,13 +313,7 @@ async def _async_setup_component(  # noqa: C901
 
     start = timer()
     _LOGGER.info("Setting up %s", domain)
-    load_translations_task: asyncio.Task[None] | None = None
     integration_set = {domain}
-
-    if not translation.async_translations_loaded(hass, integration_set):
-        load_translations_task = asyncio.create_task(
-            translation.async_load_integrations(hass, integration_set)
-        )
 
     with async_start_setup(hass, integration_set):
         if hasattr(component, "PLATFORM_SCHEMA"):
@@ -371,8 +365,6 @@ async def _async_setup_component(  # noqa: C901
             end = timer()
             if warn_task:
                 warn_task.cancel()
-            if load_translations_task:
-                await load_translations_task
         _LOGGER.info("Setup of domain %s took %.1f seconds", domain, end - start)
 
         if result is False:
@@ -384,6 +376,9 @@ async def _async_setup_component(  # noqa: C901
                 "successful. Disabling component."
             )
             return False
+
+        if not translation.async_translations_loaded(hass, integration_set):
+            await translation.async_load_integrations(hass, integration_set)
 
         # Flush out async_setup calling create_task. Fragile but covered by test.
         await asyncio.sleep(0)
