@@ -485,6 +485,7 @@ async def async_load_integrations(hass: HomeAssistant, integrations: set[str]) -
     )
 
 
+@callback
 def async_translations_loaded(hass: HomeAssistant, components: set[str]) -> bool:
     """Return if the given components are loaded for the language."""
     return _async_get_translations_cache(hass).async_is_loaded(
