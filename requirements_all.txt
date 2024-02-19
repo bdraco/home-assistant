@@ -704,7 +704,7 @@ deebot-client==5.2.1
 defusedxml==0.7.1
 
 # homeassistant.components.deluge
-deluge-client==1.10.0
+deluge-client==1.10.2
 
 # homeassistant.components.lametric
 demetriek==0.4.0
@@ -2789,7 +2789,7 @@ uvcclient==0.11.0
 vacuum-map-parser-roborock==0.1.1
 
 # homeassistant.components.vallox
-vallox-websocket-api==4.0.3
+vallox-websocket-api==5.0.2
 
 # homeassistant.components.rdw
 vehicle==2.2.1
@@ -2928,7 +2928,7 @@ zeversolar==0.3.1
 zha-quirks==0.0.111
 
 # homeassistant.components.zhong_hong
-zhong-hong-hvac==1.0.9
+zhong-hong-hvac==1.0.12
 
 # homeassistant.components.ziggo_mediabox_xl
 ziggo-mediabox-xl==1.1.0
