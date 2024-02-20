@@ -542,7 +542,7 @@ class EntityPlatform:
                         exc_info=result,
                     )
                 else:
-                    _LOGGER.warning("Slow path to add entity: %s", result)
+                    _LOGGER.warning("slow path to add entity: %s", entities[idx])
 
     async def _async_add_entities(
         self,
