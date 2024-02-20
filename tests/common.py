@@ -197,23 +197,23 @@ def get_test_home_assistant() -> Generator[HomeAssistant, None, None]:
 class StoreWithoutWriteLoad(storage.Store):
     """Fake store that does not write or load. Used for testing."""
 
-    async def async_load(self) -> None:
-        """Load the data."""
-
-    def async_delay_save(self, *args: Any, **kwargs: Any) -> None:
-        """Save the data."""
-
     async def async_save(self, *args: Any, **kwargs: Any) -> None:
         """Save the data."""
+
+    async def _async_callback_final_write(self, _event: Event) -> None:
+        """Write callback."""
 
 
 @asynccontextmanager
 async def async_test_home_assistant(
     event_loop: asyncio.AbstractEventLoop | None = None,
     load_registries: bool = True,
+    storage_dir: str | None = None,
 ) -> AsyncGenerator[HomeAssistant, None]:
     """Return a Home Assistant object pointing at test config dir."""
     hass = HomeAssistant(get_test_config_dir())
+    if storage_dir:
+        hass.config.config_dir = storage_dir
     store = auth_store.AuthStore(hass)
     hass.auth = auth.AuthManager(hass, store, {}, {})
     ensure_auth_manager_loaded(hass.auth)
@@ -297,7 +297,9 @@ async def async_test_home_assistant(
         hass
     )
     if load_registries:
-        with patch("homeassistant.helpers.storage.Store", StoreWithoutWriteLoad), patch(
+        with patch.object(
+            StoreWithoutWriteLoad, "async_load", return_value=None
+        ), patch("homeassistant.helpers.storage.Store", StoreWithoutWriteLoad), patch(
             "homeassistant.helpers.restore_state.RestoreStateData.async_setup_dump",
             return_value=None,
         ), patch(
