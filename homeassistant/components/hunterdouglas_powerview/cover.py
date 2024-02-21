@@ -57,13 +57,24 @@ async def async_setup_entry(
     pv_entry: PowerviewEntryData = hass.data[DOMAIN][entry.entry_id]
     coordinator: PowerviewShadeUpdateCoordinator = pv_entry.coordinator
 
+    async def _async_refresh_after_import(self, *_: Any) -> None:
+        """Force position refresh shortly after adding.
+
+        Legacy shades can become out of sync with hub when moved
+        using physical remotes. This also allows reducing speed
+        of calls to older generation hubs in an effort to
+        prevent hub crashes.
+        """
+
+        for shade in pv_entry.shade_data.values():
+            with suppress(asyncio.TimeoutError):
+                # hold off to avoid spamming the hub
+                async with asyncio.timeout(10):
+                    _LOGGER.warning("Initial refresh of shade: %s", shade.name)
+                    await shade.refresh()
+
     entities: list[ShadeEntity] = []
     for shade in pv_entry.shade_data.values():
-        # The shade may be out of sync with the hub
-        # so we force a refresh when we add it if possible
-        with suppress(TimeoutError):
-            async with asyncio.timeout(1):
-                await shade.refresh()
         coordinator.data.update_shade_position(shade.id, shade.current_position)
         room_name = getattr(pv_entry.room_data.get(shade.room_id), ATTR_NAME, "")
         entities.extend(
@@ -73,6 +84,13 @@ async def async_setup_entry(
         )
 
     async_add_entities(entities)
+
+    # background the fetching of state for initial launch
+    entry.async_create_background_task(
+        hass,
+        _async_refresh_after_import(pv_entry),
+        "powerview.shade-refresh",
+    )
 
 
 class PowerViewShadeBase(ShadeEntity, CoverEntity):
@@ -306,7 +324,7 @@ class PowerViewShadeBase(ShadeEntity, CoverEntity):
             return
         # suppress timeouts caused by hub nightly reboot
         with suppress(asyncio.TimeoutError):
-            async with asyncio.timeout(5):
+            async with asyncio.timeout(10):
                 await self._shade.refresh()
         _LOGGER.debug("Process update %s: %s", self.name, self._shade.current_position)
         self._async_update_shade_data(self._shade.current_position)
