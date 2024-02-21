@@ -164,6 +164,12 @@ async def async_setup_component(
         if setup_done_future := setup_done_futures.pop(domain, None):
             futures.append(setup_done_future)
         for future in futures:
+            # If the setup call is cancelled it likely means
+            # Home Assistant is shutting down so the future might
+            # already be done which will cause this to raise
+            # an InvalidStateError which is appropriate because
+            # the component setup was cancelled and is in an
+            # indeterminate state.
             future.set_exception(err)
             with contextlib.suppress(BaseException):
                 # Clear the flag as its normal that nothing
