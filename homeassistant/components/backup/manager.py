@@ -36,7 +36,6 @@ class Backup:
     date: str
     path: Path
     size: float
-    protected: bool
 
     def as_dict(self) -> dict:
         """Return a dict representation of this backup."""
@@ -145,7 +144,6 @@ class BackupManager:
                             date=cast(str, data["date"]),
                             path=backup_path,
                             size=round(backup_path.stat().st_size / 1_048_576, 2),
-                            protected=cast(bool, data.get("protected", False)),
                         )
                         backups[backup.slug] = backup
             except (OSError, TarError, json.JSONDecodeError, KeyError) as err:
@@ -190,7 +188,7 @@ class BackupManager:
         LOGGER.debug("Removed backup located at %s", backup.path)
         self.backups.pop(slug)
 
-    async def generate_backup(self, *, password: str | None = None) -> Backup:
+    async def generate_backup(self) -> Backup:
         """Generate a backup."""
         if self.backing_up:
             raise HomeAssistantError("Backup already in progress")
@@ -211,15 +209,11 @@ class BackupManager:
                 "homeassistant": {"version": HAVERSION},
                 "compressed": True,
             }
-            if password is not None:
-                backup_data["protected"] = True
-
             tar_file_path = Path(self.backup_dir, f"{backup_data['slug']}.tar")
             size_in_bytes = await self.hass.async_add_executor_job(
                 self._mkdir_and_generate_backup_contents,
                 tar_file_path,
                 backup_data,
-                password,
             )
             backup = Backup(
                 slug=slug,
@@ -227,7 +221,6 @@ class BackupManager:
                 date=date_str,
                 path=tar_file_path,
                 size=round(size_in_bytes / 1_048_576, 2),
-                protected=password is not None,
             )
             if self.loaded_backups:
                 self.backups[slug] = backup
@@ -241,7 +234,6 @@ class BackupManager:
         self,
         tar_file_path: Path,
         backup_data: dict[str, Any],
-        password: str | None = None,
     ) -> int:
         """Generate backup contents and return the size."""
         if not self.backup_dir.exists():
@@ -259,9 +251,7 @@ class BackupManager:
             tar_info.mtime = int(time.time())
             outer_secure_tarfile_tarfile.addfile(tar_info, fileobj=fileobj)
             with outer_secure_tarfile.create_inner_tar(
-                "./homeassistant.tar.gz",
-                gzip=True,
-                key=_password_to_key(password=password),
+                "./homeassistant.tar.gz", gzip=True
             ) as core_tar:
                 atomic_contents_add(
                     tar_file=core_tar,
@@ -269,19 +259,10 @@ class BackupManager:
                     excludes=EXCLUDE_FROM_BACKUP,
                     arcname="data",
                 )
+
         return tar_file_path.stat().st_size
 
 
 def _generate_slug(date: str, name: str) -> str:
     """Generate a backup slug."""
     return hashlib.sha1(f"{date} - {name}".lower().encode()).hexdigest()[:8]
-
-
-def _password_to_key(password: str | None) -> bytes | None:
-    """Generate a AES Key from password."""
-    if password is None:
-        return None
-    key: bytes = password.encode()
-    for _ in range(100):
-        key = hashlib.sha256(key).digest()
-    return key[:16]
