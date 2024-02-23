@@ -318,7 +318,7 @@ def _add_reference(  # type: ignore[no-untyped-def]
         obj = NodeListClass(obj)
     if isinstance(obj, str):
         obj = NodeStrClass(obj)
-    try:  # noqa: SIM105  suppress is much slower
+    try:  # noqa: SIM105 suppress is much slower
         setattr(obj, "__config_file__", loader.get_name)
         setattr(obj, "__line__", node.start_mark.line + 1)
     except AttributeError:
@@ -471,12 +471,7 @@ def _handle_scalar_tag(
     loader: LoaderType, node: yaml.nodes.ScalarNode
 ) -> str | int | float | None:
     """Add line number and file name to Load YAML sequence."""
-    if type(node) is yaml.nodes.ScalarNode:
-        # Fast path for non-subclassed, non mapping nodes
-        obj = node.value
-    else:
-        obj = loader.construct_scalar(node)
-
+    obj = node.value
     if not isinstance(obj, str):
         return obj
 
