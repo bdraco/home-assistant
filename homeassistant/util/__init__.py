@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable, Coroutine, Iterable, KeysView, Mapping
 from datetime import datetime, timedelta
-from functools import wraps
+from functools import lru_cache, wraps
 import random
 import re
 import string
@@ -40,6 +40,7 @@ def raise_if_invalid_path(path: str) -> None:
         raise ValueError(f"{path} is not a safe path")
 
 
+@lru_cache
 def slugify(text: str | None, *, separator: str = "_") -> str:
     """Slugify a given text."""
     if text == "" or text is None:
