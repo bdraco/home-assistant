@@ -15,12 +15,6 @@ from typing import TYPE_CHECKING, Any, Final, Self, cast, final
 from typing_extensions import override
 
 from homeassistant.config_entries import ConfigEntry
-
-if TYPE_CHECKING:
-    from functools import cached_property
-else:
-    from homeassistant.backports.functools import cached_property
-# pylint: disable-next=hass-deprecated-import
 from homeassistant.const import (  # noqa: F401
     _DEPRECATED_DEVICE_CLASS_AQI,
     _DEPRECATED_DEVICE_CLASS_BATTERY,
