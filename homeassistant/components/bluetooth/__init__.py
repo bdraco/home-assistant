@@ -4,6 +4,7 @@ from __future__ import annotations
 import datetime
 import logging
 import platform
+import time
 from typing import TYPE_CHECKING
 
 from bleak_retry_connector import BleakSlotManager
@@ -202,10 +203,17 @@ async def _async_start_adapter_discovery(
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the bluetooth integration."""
+    bluetooth_start = time.monotonic()
     bluetooth_adapters = get_adapters()
     bluetooth_storage = BluetoothStorage(hass)
     slot_manager = BleakSlotManager()
+
     integration_matcher = IntegrationMatcher(await async_get_bluetooth(hass))
+    integration_matcher_finished = time.monotonic()
+    _LOGGER.warning(
+        "Integration matcher finished in %s seconds",
+        integration_matcher_finished - bluetooth_start,
+    )
 
     slot_manager_setup_task = hass.async_create_task(
         slot_manager.async_setup(), "slot_manager setup"
@@ -223,7 +231,18 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     set_manager(manager)
 
     await storage_setup_task
+    storage_finished = time.monotonic()
+    _LOGGER.warning(
+        "Storage setup finished in %s seconds",
+        storage_finished - integration_matcher_finished,
+    )
     await manager.async_setup()
+    manager_finished = time.monotonic()
+    _LOGGER.warning(
+        "Manager setup finished in %s seconds",
+        manager_finished - storage_finished,
+    )
+
     hass.data[DATA_MANAGER] = models.MANAGER = manager
 
     hass.async_create_background_task(
