@@ -143,13 +143,23 @@ class Store(Generic[_T]):
     async def _async_load(self) -> _T | None:
         """Load the data and ensure the task is removed."""
         if STORAGE_SEMAPHORE not in self.hass.data:
-            self.hass.data[STORAGE_SEMAPHORE] = asyncio.Semaphore(MAX_LOAD_CONCURRENTLY)
+            storage_semaphore = asyncio.Semaphore(MAX_LOAD_CONCURRENTLY)
+            self.hass.data[STORAGE_SEMAPHORE] = storage_semaphore
+        else:
+            storage_semaphore = self.hass.data[STORAGE_SEMAPHORE]
+
+        if storage_semaphore.locked():
+            _LOGGER.warning("Waiting for storage semaphore for %s", self.key)
+        else:
+            _LOGGER.warning("Loading data for %s", self.key)
 
         try:
-            async with self.hass.data[STORAGE_SEMAPHORE]:
+            async with storage_semaphore:
                 return await self._async_load_data()
         finally:
             self._load_task = None
+
+            _LOGGER.warning("Loaded data for %s", self.key)
 
     async def _async_load_data(self):
         """Load the data."""
