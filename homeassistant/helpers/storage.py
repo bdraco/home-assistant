@@ -9,6 +9,7 @@ import inspect
 from json import JSONDecodeError, JSONEncoder
 import logging
 import os
+import time
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from homeassistant.const import EVENT_HOMEASSISTANT_FINAL_WRITE
@@ -148,6 +149,7 @@ class Store(Generic[_T]):
         else:
             storage_semaphore = self.hass.data[STORAGE_SEMAPHORE]
 
+        start = time.monotonic()
         if storage_semaphore.locked():
             _LOGGER.warning("Waiting for storage semaphore for %s", self.key)
         else:
@@ -159,7 +161,9 @@ class Store(Generic[_T]):
         finally:
             self._load_task = None
 
-            _LOGGER.warning("Loaded data for %s", self.key)
+            _LOGGER.warning(
+                "Loaded data for %s in %s", self.key, time.monotonic() - start
+            )
 
     async def _async_load_data(self):
         """Load the data."""
