@@ -218,23 +218,49 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     slot_manager_setup_task = hass.async_create_task(
         slot_manager.async_setup(), "slot_manager setup"
     )
+    slot_manager_task_time = time.monotonic()
+    _LOGGER.warning(
+        "Slot manager task started in %s seconds",
+        slot_manager_task_time - integration_matcher_finished,
+    )
     processor_setup_task = hass.async_create_task(
         passive_update_processor.async_setup(hass), "passive_update_processor setup"
+    )
+    passive_processor_task_time = time.monotonic()
+    _LOGGER.warning(
+        "Passive processor task started in %s seconds",
+        passive_processor_task_time - slot_manager_task_time,
     )
     storage_setup_task = hass.async_create_task(
         bluetooth_storage.async_setup(), "bluetooth storage setup"
     )
+    storage_task_time = time.monotonic()
+    _LOGGER.warning(
+        "Storage task started in %s seconds",
+        storage_task_time - passive_processor_task_time,
+    )
     integration_matcher.async_setup()
+    integration_matcher_time = time.monotonic()
+    _LOGGER.warning(
+        "Integration matcher setup finished in %s seconds",
+        integration_matcher_time - storage_task_time,
+    )
     manager = HomeAssistantBluetoothManager(
         hass, integration_matcher, bluetooth_adapters, bluetooth_storage, slot_manager
     )
+    manager_create_time = time.monotonic()
+    _LOGGER.warning(
+        "Manager created in %s seconds",
+        manager_create_time - integration_matcher_time,
+    )
+
     set_manager(manager)
 
     await storage_setup_task
     storage_finished = time.monotonic()
     _LOGGER.warning(
         "Storage setup finished in %s seconds",
-        storage_finished - integration_matcher_finished,
+        storage_finished - manager_create_time,
     )
     await manager.async_setup()
     manager_finished = time.monotonic()
