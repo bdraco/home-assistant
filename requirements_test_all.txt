@@ -891,7 +891,7 @@ hyperion-py==0.7.5
 iaqualink==0.5.0
 
 # homeassistant.components.ibeacon
-ibeacon-ble==1.0.1
+ibeacon-ble==1.2.0
 
 # homeassistant.components.google
 # homeassistant.components.local_calendar
@@ -1168,7 +1168,7 @@ openerz-api==0.3.0
 openhomedevice==2.2.0
 
 # homeassistant.components.opower
-opower==0.3.0
+opower==0.3.1
 
 # homeassistant.components.oralb
 oralb-ble==0.17.6
@@ -1369,7 +1369,7 @@ pydeconz==114
 pydexcom==0.2.3
 
 # homeassistant.components.discovergy
-pydiscovergy==2.0.5
+pydiscovergy==3.0.0
 
 # homeassistant.components.hydrawise
 pydrawise==2024.2.0

@@ -1104,7 +1104,7 @@ iammeter==0.2.1
 iaqualink==0.5.0
 
 # homeassistant.components.ibeacon
-ibeacon-ble==1.0.1
+ibeacon-ble==1.2.0
 
 # homeassistant.components.watson_iot
 ibmiotf==0.3.4
@@ -1483,7 +1483,7 @@ openwrt-luci-rpc==1.1.16
 openwrt-ubus-rpc==0.0.2
 
 # homeassistant.components.opower
-opower==0.3.0
+opower==0.3.1
 
 # homeassistant.components.oralb
 oralb-ble==0.17.6
@@ -1770,7 +1770,7 @@ pydelijn==1.1.0
 pydexcom==0.2.3
 
 # homeassistant.components.discovergy
-pydiscovergy==2.0.5
+pydiscovergy==3.0.0
 
 # homeassistant.components.doods
 pydoods==1.0.2
