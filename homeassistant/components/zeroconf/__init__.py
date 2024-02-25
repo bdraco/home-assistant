@@ -182,7 +182,6 @@ def _async_zc_has_functional_dual_stack() -> bool:
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up Zeroconf and make Home Assistant discoverable."""
-    return True
     zc_args: dict = {"ip_version": IPVersion.V4Only}
 
     adapters = await network.async_get_adapters(hass)
@@ -613,7 +612,7 @@ def _compile_fnmatch(pattern: str) -> re.Pattern:
     return re.compile(translate(pattern))
 
 
-@lru_cache(maxsize=2048, typed=True)
+@lru_cache(maxsize=1024, typed=True)
 def _memorized_fnmatch(name: str, pattern: str) -> bool:
     """Memorized version of fnmatch that has a larger lru_cache.
 
