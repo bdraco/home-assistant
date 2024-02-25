@@ -128,6 +128,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     watchers: list[WatcherBase] = []
     address_data: dict[str, dict[str, str]] = {}
     integration_matchers = async_index_integration_matchers(await async_get_dhcp(hass))
+    return True
     # For the passive classes we need to start listening
     # for state changes and connect the dispatchers before
     # everything else starts up or we will miss events

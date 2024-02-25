@@ -238,7 +238,6 @@ def async_remote_ui_url(hass: HomeAssistant) -> str:
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Initialize the Home Assistant cloud."""
-    return True
     # Process configs
     if DOMAIN in config:
         kwargs = dict(config[DOMAIN])
