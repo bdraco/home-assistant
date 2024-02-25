@@ -13,7 +13,7 @@ import logging
 import re
 from typing import Any, Final
 
-import aiodhcpwatcher
+#import aiodhcpwatcher
 from aiodiscover import DiscoverHosts
 from aiodiscover.discovery import (
     HOSTNAME as DISCOVERY_HOSTNAME,
