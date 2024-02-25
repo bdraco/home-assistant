@@ -203,6 +203,7 @@ async def _async_start_adapter_discovery(
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the bluetooth integration."""
+    return True
     bluetooth_start = time.monotonic()
     bluetooth_adapters = get_adapters()
     bluetooth_storage = BluetoothStorage(hass)
