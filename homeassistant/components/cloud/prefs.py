@@ -8,6 +8,9 @@ import uuid
 from homeassistant.auth.const import GROUP_ID_ADMIN
 from homeassistant.auth.models import User
 from homeassistant.components import webhook
+from homeassistant.components.google_assistant.http import (
+    async_get_users as async_get_google_assistant_users,
+)
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.typing import UNDEFINED, UndefinedType
@@ -65,7 +68,7 @@ class CloudPreferencesStore(Store):
                 return False
 
             # If our user is in the Google store, we're connected
-            return False
+            return cur_username in await async_get_google_assistant_users(self.hass)
 
         if old_major_version == 1:
             if old_minor_version < 2:
