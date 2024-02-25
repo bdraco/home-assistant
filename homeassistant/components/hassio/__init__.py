@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 import logging
 import os
 import re
+import time
 from typing import Any, NamedTuple
 
 import voluptuous as vol
@@ -422,6 +423,7 @@ def get_supervisor_ip() -> str | None:
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa: C901
     """Set up the Hass.io component."""
     # Check local setup
+    setup_start = time.monotonic()
     for env in ("SUPERVISOR", "SUPERVISOR_TOKEN"):
         if os.environ.get(env):
             continue
@@ -440,10 +442,19 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
 
     if not await hassio.is_connected():
         _LOGGER.warning("Not connected with the supervisor / system too busy!")
+    after_is_connected = time.monotonic()
+    _LOGGER.warning(
+        "Connected with the supervisor in %s seconds", after_is_connected - setup_start
+    )
 
     store = Store[dict[str, str]](hass, STORAGE_VERSION, STORAGE_KEY)
     if (data := await store.async_load()) is None:
         data = {}
+
+    storage_load_time = time.monotonic()
+    _LOGGER.warning(
+        "Loaded storage in %s seconds", storage_load_time - after_is_connected
+    )
 
     refresh_token = None
     if "hassio_user" in data:
@@ -485,7 +496,17 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
         require_admin=True,
     )
 
+    after_register_panel = time.monotonic()
+    _LOGGER.warning(
+        "Registered panel in %s seconds", after_register_panel - storage_load_time
+    )
+
     await hassio.update_hass_api(config.get("http", {}), refresh_token)
+
+    after_update_api = time.monotonic()
+    _LOGGER.warning(
+        "Updated API in %s seconds", after_update_api - after_register_panel
+    )
 
     last_timezone = None
 
@@ -504,6 +525,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
     hass.bus.async_listen(EVENT_CORE_CONFIG_UPDATE, push_config)
 
     await push_config(None)
+    after_push_config = time.monotonic()
+    _LOGGER.warning("Pushed config in %s seconds", after_push_config - after_update_api)
 
     async def async_service_handler(service: ServiceCall) -> None:
         """Handle service calls for Hass.io."""
@@ -565,6 +588,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
 
     # Fetch data
     await update_info_data()
+    after_update_info_data = time.monotonic()
+    _LOGGER.warning(
+        "Fetched data in %s seconds", after_update_info_data - after_push_config
+    )
 
     async def _async_stop(hass: HomeAssistant, restart: bool) -> None:
         """Stop or restart home assistant."""
@@ -588,6 +615,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
 
     # Init add-on ingress panels
     await async_setup_addon_panel(hass, hassio)
+    after_addon_panel = time.monotonic()
+    _LOGGER.warning(
+        "Setup addon panel in %s seconds", after_addon_panel - after_update_info_data
+    )
 
     # Setup hardware integration for the detected board type
     @callback
@@ -616,6 +647,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
     )
 
     _async_setup_hardware_integration()
+    after_hardware_integration = time.monotonic()
+    _LOGGER.warning(
+        "Setup hardware integration in %s seconds",
+        after_hardware_integration - after_addon_panel,
+    )
 
     hass.async_create_task(
         hass.config_entries.flow.async_init(DOMAIN, context={"source": "system"})
