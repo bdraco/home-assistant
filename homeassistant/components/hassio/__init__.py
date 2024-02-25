@@ -440,16 +440,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
     websession = async_get_clientsession(hass)
     hass.data[DOMAIN] = hassio = HassIO(hass.loop, websession, host)
 
-
     before_connected = time.monotonic()
-    _LOGGER.warning(
-        "first supervisor in %s seconds", before_connected - setup_start
-    )
+    _LOGGER.warning("first supervisor in %s seconds", before_connected - setup_start)
     if not await hassio.is_connected():
         _LOGGER.warning("Not connected with the supervisor / system too busy!")
     after_is_connected = time.monotonic()
     _LOGGER.warning(
-        "Connected with the supervisor in %s seconds", after_is_connected - before_connected
+        "Connected with the supervisor in %s seconds",
+        after_is_connected - before_connected,
     )
 
     store = Store[dict[str, str]](hass, STORAGE_VERSION, STORAGE_KEY)

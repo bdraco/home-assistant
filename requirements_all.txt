@@ -315,7 +315,7 @@ aiomusiccast==0.14.8
 aionanoleaf==0.2.1
 
 # homeassistant.components.notion
-aionotion==2024.02.1
+aionotion==2024.02.2
 
 # homeassistant.components.oncue
 aiooncue==0.3.5
@@ -1995,7 +1995,7 @@ pynetio==0.1.9.1
 pynobo==1.6.0
 
 # homeassistant.components.nuki
-pynuki==1.6.2
+pynuki==1.6.3
 
 # homeassistant.components.nut
 pynut2==2.1.2
@@ -2236,7 +2236,7 @@ python-gitlab==1.6.0
 python-homeassistant-analytics==0.6.0
 
 # homeassistant.components.homewizard
-python-homewizard-energy==4.3.0
+python-homewizard-energy==4.3.1
 
 # homeassistant.components.hp_ilo
 python-hpilo==4.4.3
@@ -2917,7 +2917,7 @@ youtubeaio==1.1.5
 yt-dlp==2023.11.16
 
 # homeassistant.components.zamg
-zamg==0.3.5
+zamg==0.3.6
 
 # homeassistant.components.zengge
 zengge==0.2
