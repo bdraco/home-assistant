@@ -259,7 +259,7 @@ async def _async_load_imports_in_executor(
     hass: core.HomeAssistant, imports: list[str]
 ) -> None:
     """Load imports in executor that block the event loop for a long time."""
-    _LOGGER.debug("Loading %s in the executor", imports)
+    _LOGGER.warning("Loading %s in the executor", imports)
     await hass.async_add_executor_job(_load_imports, imports)
 
 
