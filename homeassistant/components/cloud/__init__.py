@@ -1,7 +1,5 @@
 """Component to integrate the Home Assistant cloud."""
 from __future__ import annotations
-raise ValueError("This file should not be imported")
-
 
 import asyncio
 from collections.abc import Awaitable, Callable
@@ -12,7 +10,6 @@ from typing import cast
 from hass_nabucasa import Cloud
 import voluptuous as vol
 
-from homeassistant.components import alexa, google_assistant
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     CONF_DESCRIPTION,
@@ -78,19 +75,27 @@ SIGNAL_CLOUD_CONNECTION_STATE: SignalType[CloudConnectionState] = SignalType(
 
 STARTUP_REPAIR_DELAY = 1  # 1 hour
 
+# ALEXA_CONF_DISPLAY_CATEGORIES defined here to avoid importing the whole
+# alexa component if its not actually used.
+ALEXA_CONF_DISPLAY_CATEGORIES = "display_categories"
+
 ALEXA_ENTITY_SCHEMA = vol.Schema(
     {
         vol.Optional(CONF_DESCRIPTION): cv.string,
-        vol.Optional(alexa.CONF_DISPLAY_CATEGORIES): cv.string,
+        vol.Optional(ALEXA_CONF_DISPLAY_CATEGORIES): cv.string,
         vol.Optional(CONF_NAME): cv.string,
     }
 )
+
+# GOOGLE_CONF_ROOM_HINT defined here to avoid importing the whole
+# google_assistant component if its not actually used.
+GOOGLE_CONF_ROOM_HINT = "room"
 
 GOOGLE_ENTITY_SCHEMA = vol.Schema(
     {
         vol.Optional(CONF_NAME): cv.string,
         vol.Optional(CONF_ALIASES): vol.All(cv.ensure_list, [cv.string]),
-        vol.Optional(google_assistant.CONF_ROOM_HINT): cv.string,
+        vol.Optional(GOOGLE_CONF_ROOM_HINT): cv.string,
     }
 )
 
