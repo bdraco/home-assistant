@@ -1,5 +1,7 @@
 """Component to integrate the Home Assistant cloud."""
 from __future__ import annotations
+raise ValueError("This file should not be imported")
+
 
 import asyncio
 from collections.abc import Awaitable, Callable
@@ -131,7 +133,6 @@ CONFIG_SCHEMA = vol.Schema(
     extra=vol.ALLOW_EXTRA,
 )
 
-raise ValueError("This file should not be imported")
 
 class CloudNotAvailable(HomeAssistantError):
     """Raised when an action requires the cloud but it's not available."""
