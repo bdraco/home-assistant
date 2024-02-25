@@ -19,6 +19,7 @@ from enum import Enum, StrEnum
 import functools
 import logging
 from random import randint
+import time
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Self, TypeVar, cast
 
@@ -2374,9 +2375,14 @@ async def _load_integration(
 
     # Make sure requirements and dependencies of component are resolved
     await async_process_deps_reqs(hass, hass_config, integration)
+    if debug := _LOGGER.isEnabledFor(logging.DEBUG):
+        start = time.perf_counter()
 
     try:
-        integration.get_platform("config_flow")
+        if integration.import_executor:
+            await hass.async_add_executor_job(integration.get_platform, "config_flow")
+        else:
+            integration.get_platform("config_flow")
     except ImportError as err:
         _LOGGER.error(
             "Error occurred loading flow for integration %s: %s",
@@ -2384,6 +2390,11 @@ async def _load_integration(
             err,
         )
         raise data_entry_flow.UnknownHandler from err
+
+    if debug:
+        _LOGGER.debug(
+            "Loaded flow for %s in %.2fs", domain, time.perf_counter() - start
+        )
 
 
 async def _async_get_flow_handler(
