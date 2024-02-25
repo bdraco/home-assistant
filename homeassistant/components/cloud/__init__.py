@@ -131,6 +131,7 @@ CONFIG_SCHEMA = vol.Schema(
     extra=vol.ALLOW_EXTRA,
 )
 
+raise ValueError("This file should not be imported")
 
 class CloudNotAvailable(HomeAssistantError):
     """Raised when an action requires the cloud but it's not available."""
