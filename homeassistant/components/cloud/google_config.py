@@ -5,9 +5,6 @@ import logging
 from typing import TYPE_CHECKING
 
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
-
-# from homeassistant.components.google_assistant import DOMAIN as GOOGLE_DOMAIN
-# from homeassistant.components.google_assistant.helpers import AbstractConfig
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.core import HomeAssistant, split_entity_id
 from homeassistant.exceptions import HomeAssistantError

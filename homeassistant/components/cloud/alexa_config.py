@@ -14,13 +14,6 @@ from hass_nabucasa import Cloud, cloud_api
 from yarl import URL
 
 from homeassistant.components import persistent_notification
-from homeassistant.components.alexa import (
-    DOMAIN as ALEXA_DOMAIN,
-    config as alexa_config,
-    entities as alexa_entities,
-    errors as alexa_errors,
-    state_report as alexa_state_report,
-)
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from homeassistant.components.homeassistant.exposed_entities import (
     async_expose_entity,
@@ -54,7 +47,7 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
-CLOUD_ALEXA = f"{CLOUD_DOMAIN}.{ALEXA_DOMAIN}"
+CLOUD_ALEXA = f"{CLOUD_DOMAIN}.alexa"
 
 # Time to wait when entity preferences have changed before syncing it to
 # the cloud.
