@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 from typing import cast
 
-from hass_nabucasa import Cloud
+#from hass_nabucasa import Cloud
 import voluptuous as vol
 
 from homeassistant.components import alexa, google_assistant
@@ -238,6 +238,7 @@ def async_remote_ui_url(hass: HomeAssistant) -> str:
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Initialize the Home Assistant cloud."""
+    return True
     # Process configs
     if DOMAIN in config:
         kwargs = dict(config[DOMAIN])
