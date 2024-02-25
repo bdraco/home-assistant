@@ -198,6 +198,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         UPNP_SERVER: server,
     }
 
+    return True
+
     await scanner.async_start()
     await server.async_start()
 
