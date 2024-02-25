@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime
 from http import HTTPStatus
 import logging
 from pathlib import Path
@@ -11,21 +10,14 @@ from typing import Any, Literal
 import aiohttp
 from hass_nabucasa.client import CloudClient as Interface, RemoteActivationNotAllowed
 
-from homeassistant.components import google_assistant, persistent_notification, webhook
-from homeassistant.components.alexa import (
-    errors as alexa_errors,
-    smart_home as alexa_smart_home,
-)
-from homeassistant.components.google_assistant import smart_home as ga
+from homeassistant.components import persistent_notification, webhook
 from homeassistant.const import __version__ as HA_VERSION
-from homeassistant.core import Context, HassJob, HomeAssistant, callback
+from homeassistant.core import Context, HomeAssistant, callback
 from homeassistant.helpers.aiohttp_client import SERVER_SOFTWARE
 from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue
 from homeassistant.util.aiohttp import MockRequest, serialize_response
 
-from . import alexa_config, google_config
 from .const import DISPATCHER_REMOTE_UPDATE, DOMAIN
 from .prefs import CloudPreferences
 
@@ -54,8 +46,8 @@ class CloudClient(Interface):
         self._websession = websession
         self.google_user_config = google_user_config
         self.alexa_user_config = alexa_user_config
-        self._alexa_config: alexa_config.CloudAlexaConfig | None = None
-        self._google_config: google_config.CloudGoogleConfig | None = None
+        self._alexa_config: None = None
+        self._google_config: None = None
         self._alexa_config_init_lock = asyncio.Lock()
         self._google_config_init_lock = asyncio.Lock()
         self._relayer_region: str | None = None
@@ -105,97 +97,9 @@ class CloudClient(Interface):
         """Return the connected relayer region."""
         return self._relayer_region
 
-    async def get_alexa_config(self) -> alexa_config.CloudAlexaConfig:
-        """Return Alexa config."""
-        if self._alexa_config is None:
-            async with self._alexa_config_init_lock:
-                if self._alexa_config is not None:
-                    # This is reachable if the config was set while we waited
-                    # for the lock
-                    return self._alexa_config  # type: ignore[unreachable]
-
-                cloud_user = await self._prefs.get_cloud_user()
-
-                alexa_conf = alexa_config.CloudAlexaConfig(
-                    self._hass,
-                    self.alexa_user_config,
-                    cloud_user,
-                    self._prefs,
-                    self.cloud,
-                )
-                await alexa_conf.async_initialize()
-                self._alexa_config = alexa_conf
-
-        return self._alexa_config
-
-    async def get_google_config(self) -> google_config.CloudGoogleConfig:
-        """Return Google config."""
-        if not self._google_config:
-            async with self._google_config_init_lock:
-                if self._google_config is not None:
-                    return self._google_config
-
-                cloud_user = await self._prefs.get_cloud_user()
-
-                google_conf = google_config.CloudGoogleConfig(
-                    self._hass,
-                    self.google_user_config,
-                    cloud_user,
-                    self._prefs,
-                    self.cloud,
-                )
-                await google_conf.async_initialize()
-                self._google_config = google_conf
-
-        return self._google_config
-
     async def cloud_connected(self) -> None:
         """When cloud is connected."""
         _LOGGER.debug("cloud_connected")
-        is_new_user = await self.prefs.async_set_username(self.cloud.username)
-
-        async def enable_alexa(_: Any) -> None:
-            """Enable Alexa."""
-            aconf = await self.get_alexa_config()
-            try:
-                await aconf.async_enable_proactive_mode()
-            except aiohttp.ClientError as err:  # If no internet available yet
-                if self._hass.is_running:
-                    logging.getLogger(__package__).warning(
-                        (
-                            "Unable to activate Alexa Report State: %s. Retrying in 30"
-                            " seconds"
-                        ),
-                        err,
-                    )
-                async_call_later(self._hass, 30, enable_alexa_job)
-            except (alexa_errors.NoTokenAvailable, alexa_errors.RequireRelink):
-                pass
-
-        enable_alexa_job = HassJob(enable_alexa, cancel_on_shutdown=True)
-
-        async def enable_google(_: datetime) -> None:
-            """Enable Google."""
-            gconf = await self.get_google_config()
-
-            gconf.async_enable_local_sdk()
-
-            if gconf.should_report_state:
-                gconf.async_enable_report_state()
-
-            if is_new_user:
-                await gconf.async_sync_entities(gconf.agent_user_id)
-
-        tasks = []
-
-        if self._prefs.alexa_enabled and self._prefs.alexa_report_state:
-            tasks.append(enable_alexa)
-
-        if self._prefs.google_enabled:
-            tasks.append(enable_google)
-
-        if tasks:
-            await asyncio.gather(*(task(None) for task in tasks))
 
     async def cloud_disconnected(self) -> None:
         """When cloud disconnected."""
@@ -212,14 +116,6 @@ class CloudClient(Interface):
     async def logout_cleanups(self) -> None:
         """Cleanup some stuff after logout."""
         await self.prefs.async_set_username(None)
-
-        if self._alexa_config:
-            self._alexa_config.async_deinitialize()
-        self._alexa_config = None
-
-        if self._google_config:
-            self._google_config.async_deinitialize()
-        self._google_config = None
 
     @callback
     def user_message(self, identifier: str, title: str, message: str) -> None:
