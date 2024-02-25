@@ -39,6 +39,8 @@ CONNECT_TIMEOUT = 10
 LISTEN_READY_TIMEOUT = 30
 
 
+raise ValueError("This file should not be imported")
+
 @callback
 @cache
 def get_matter_device_info(
