@@ -327,7 +327,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     cloud.iot.register_on_disconnect(_on_disconnect)
     cloud.register_on_initialized(_on_initialized)
 
-    # await cloud.initialize()
+    await cloud.initialize()
     http_api.async_setup(hass)
 
     account_link.async_setup(hass)
