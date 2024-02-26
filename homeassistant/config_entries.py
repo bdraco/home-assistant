@@ -894,6 +894,7 @@ class ConfigEntry:
             issue_domain=self.domain,
             severity=ir.IssueSeverity.ERROR,
             translation_key="config_entry_reauth",
+            translation_placeholders={"name": self.title},
         )
 
     @callback
@@ -935,7 +936,11 @@ class ConfigEntry:
 
     @callback
     def async_create_background_task(
-        self, hass: HomeAssistant, target: Coroutine[Any, Any, _R], name: str
+        self,
+        hass: HomeAssistant,
+        target: Coroutine[Any, Any, _R],
+        name: str,
+        eager_start: bool = False,
     ) -> asyncio.Task[_R]:
         """Create a background task tied to the config entry lifecycle.
 
@@ -943,7 +948,7 @@ class ConfigEntry:
 
         target: target to call.
         """
-        task = hass.async_create_background_task(target, name)
+        task = hass.async_create_background_task(target, name, eager_start)
         self._background_tasks.add(task)
         task.add_done_callback(self._background_tasks.remove)
         return task

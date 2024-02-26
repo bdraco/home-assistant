@@ -224,7 +224,7 @@ aioelectricitymaps==0.4.0
 aioemonitor==1.0.5
 
 # homeassistant.components.esphome
-aioesphomeapi==22.0.0
+aioesphomeapi==22.1.0
 
 # homeassistant.components.flo
 aioflo==2021.11.0
@@ -532,7 +532,7 @@ buienradar==1.0.5
 cached_ipaddress==0.3.0
 
 # homeassistant.components.caldav
-caldav==1.3.8
+caldav==1.3.9
 
 # homeassistant.components.coinbase
 coinbase==2.1.0
@@ -814,7 +814,7 @@ growattServer==1.3.0
 gspread==5.5.0
 
 # homeassistant.components.profiler
-guppy3==3.1.4
+guppy3==3.1.4.post1
 
 # homeassistant.components.iaqualink
 h2==4.1.0
@@ -905,7 +905,7 @@ ical==7.0.0
 icmplib==3.0
 
 # homeassistant.components.idasen_desk
-idasen-ha==2.5
+idasen-ha==2.5.1
 
 # homeassistant.components.network
 ifaddr==0.2.0
@@ -1079,7 +1079,7 @@ mutesync==0.0.1
 mypermobil==0.1.8
 
 # homeassistant.components.myuplink
-myuplink==0.2.1
+myuplink==0.5.0
 
 # homeassistant.components.keenetic_ndms2
 ndms2-client==0.1.2
@@ -1755,7 +1755,7 @@ python-qbittorrent==0.4.3
 python-rabbitair==0.0.8
 
 # homeassistant.components.roborock
-python-roborock==0.39.1
+python-roborock==0.39.2
 
 # homeassistant.components.smarttub
 python-smarttub==0.0.36
@@ -2051,7 +2051,7 @@ temescal==0.5
 temperusb==1.6.1
 
 # homeassistant.components.teslemetry
-tesla-fleet-api==0.2.3
+tesla-fleet-api==0.4.6
 
 # homeassistant.components.powerwall
 tesla-powerwall==0.5.1
@@ -2134,7 +2134,7 @@ uvcclient==0.11.0
 vacuum-map-parser-roborock==0.1.1
 
 # homeassistant.components.vallox
-vallox-websocket-api==5.0.2
+vallox-websocket-api==5.1.0
 
 # homeassistant.components.rdw
 vehicle==2.2.1
@@ -2172,6 +2172,9 @@ wallbox==0.6.0
 
 # homeassistant.components.folder_watcher
 watchdog==2.3.1
+
+# homeassistant.components.webmin
+webmin-xmlrpc==0.0.1
 
 # homeassistant.components.assist_pipeline
 webrtc-noise-gain==1.2.3
