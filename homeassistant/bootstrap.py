@@ -786,6 +786,10 @@ async def _async_set_up_integrations(
         hass, config
     )
 
+    # Initialize recorder
+    if "recorder" in domains_to_setup:
+        recorder.async_initialize_recorder(hass)
+
     pre_stage_domains: dict[str, set[str]] = {
         name: domains_to_setup & domain_group
         for name, domain_group in SETUP_ORDER.items()
@@ -829,10 +833,6 @@ async def _async_set_up_integrations(
         ),
         "preload slow imports",
     )
-
-    # Initialize recorder
-    if "recorder" in domains_to_setup:
-        recorder.async_initialize_recorder(hass)
 
     for name, domain_group in pre_stage_domains.items():
         if domain_group:
