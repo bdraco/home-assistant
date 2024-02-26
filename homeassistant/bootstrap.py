@@ -5,6 +5,7 @@ import asyncio
 from collections.abc import Coroutine
 import contextlib
 from datetime import timedelta
+import itertools
 import logging
 import logging.handlers
 from operator import itemgetter
@@ -48,6 +49,7 @@ from .setup import (
     DATA_SETUP_STARTED,
     DATA_SETUP_TIME,
     async_notify_setup_error,
+    async_process_deps_reqs,
     async_set_domains_to_be_loaded,
     async_setup_component,
 )
@@ -648,6 +650,36 @@ async def async_setup_multi_components(
             )
 
 
+async def _async_pre_import(
+    hass: core.HomeAssistant,
+    config: ConfigType,
+    integration_cache: dict[str, loader.Integration],
+    pre_stage_domains: dict[str, set[str]],
+    stage_1_domains: set[str],
+    stage_2_domains: set[str],
+) -> None:
+    """Pre-import components that are known to be slow to import."""
+
+    for domain in itertools.chain(
+        *pre_stage_domains.values(), stage_1_domains, stage_2_domains
+    ):
+        if (
+            domain in hass.config.components
+            or (integration := integration_cache.get(domain)) is None
+            or not integration.import_executor
+        ):
+            continue
+        await async_process_deps_reqs(hass, config, integration)
+        # If it finished loading while we were waiting for the lock
+        # we do not need to import it
+        if domain in hass.config.components:
+            continue
+        with contextlib.suppress(ImportError):
+            _LOGGER.warning("Pre-importing slow setup component %s", domain)
+            await hass.async_add_executor_job(integration.get_component)
+            _LOGGER.debug("Pre-imported slow setup component %s", domain)
+
+
 async def _async_resolve_domains_to_setup(
     hass: core.HomeAssistant, config: dict[str, Any]
 ) -> tuple[set[str], dict[str, loader.Integration]]:
@@ -736,7 +768,6 @@ async def _async_resolve_domains_to_setup(
         translation.async_load_integrations(hass, {*BASE_PLATFORMS, *domains_to_setup}),
         "load translations",
     )
-
     return domains_to_setup, integration_cache
 
 
@@ -755,14 +786,10 @@ async def _async_set_up_integrations(
         hass, config
     )
 
-    # Initialize recorder
-    if "recorder" in domains_to_setup:
-        recorder.async_initialize_recorder(hass)
-
-    for name, domain_group in SETUP_ORDER.items():
-        if to_setup := domains_to_setup & domain_group:
-            _LOGGER.info("Setting up %s: %s", name, to_setup)
-            await async_setup_multi_components(hass, to_setup, config)
+    pre_stage_domains: dict[str, set[str]] = {
+        name: domains_to_setup & domain_group
+        for name, domain_group in SETUP_ORDER.items()
+    }
 
     # calculate what components to setup in what stage
     stage_1_domains: set[str] = set()
@@ -794,6 +821,28 @@ async def _async_set_up_integrations(
         - DEBUGGER_INTEGRATIONS
         - stage_1_domains
     )
+
+    # Start pre-importing components that are known to be slow to import
+    hass.async_create_background_task(
+        _async_pre_import(
+            hass,
+            config,
+            integration_cache,
+            pre_stage_domains,
+            stage_1_domains,
+            stage_2_domains,
+        ),
+        "preload slow imports",
+    )
+
+    # Initialize recorder
+    if "recorder" in domains_to_setup:
+        recorder.async_initialize_recorder(hass)
+
+    for name, domain_group in pre_stage_domains.items():
+        if domain_group:
+            _LOGGER.info("Setting up %s: %s", name, domain_group)
+            await async_setup_multi_components(hass, domain_group, config)
 
     # Enables after dependencies when setting up stage 1 domains
     async_set_domains_to_be_loaded(hass, stage_1_domains)
