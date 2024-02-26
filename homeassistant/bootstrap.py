@@ -813,14 +813,9 @@ async def _async_set_up_integrations(
 
             deps_promotion.update(dep_itg.all_dependencies)
 
-    stage_2_domains = (
-        domains_to_setup
-        - LOGGING_INTEGRATIONS
-        - FRONTEND_INTEGRATIONS
-        - RECORDER_INTEGRATIONS
-        - DEBUGGER_INTEGRATIONS
-        - stage_1_domains
-    )
+    stage_2_domains = domains_to_setup - stage_1_domains
+    for domain_group in pre_stage_domains.values():
+        stage_2_domains -= domain_group
 
     # Start pre-importing components that are known to be slow to import
     hass.async_create_background_task(
