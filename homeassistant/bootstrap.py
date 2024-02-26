@@ -622,7 +622,9 @@ async def async_setup_multi_components(
     domains_not_yet_setup = domains - hass.config.components
     futures = {
         domain: hass.async_create_task(
-            async_setup_component(hass, domain, config), f"setup component {domain}"
+            async_setup_component(hass, domain, config),
+            f"setup component {domain}",
+            eager_start=True,
         )
         for domain in domains_not_yet_setup
     }
@@ -716,6 +718,7 @@ async def _async_resolve_domains_to_setup(
     hass.async_create_background_task(
         requirements.async_load_installed_versions(hass, needed_requirements),
         "check installed requirements",
+        eager_start=True,
     )
     # Start loading translations for all integrations we are going to set up
     # in the background so they are ready when we need them. This avoids a
@@ -730,6 +733,7 @@ async def _async_resolve_domains_to_setup(
     hass.async_create_background_task(
         translation.async_load_integrations(hass, {*BASE_PLATFORMS, *domains_to_setup}),
         "load translations",
+        eager_start=True,
     )
 
     return domains_to_setup, integration_cache
