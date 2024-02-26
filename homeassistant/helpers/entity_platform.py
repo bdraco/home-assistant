@@ -32,6 +32,7 @@ from homeassistant.core import (
 from homeassistant.exceptions import HomeAssistantError, PlatformNotReady
 from homeassistant.generated import languages
 from homeassistant.setup import async_start_setup
+from homeassistant.util.async_ import create_eager_task
 
 from . import (
     config_validation as cv,
@@ -521,9 +522,10 @@ class EntityPlatform:
         event loop and will finish faster if we run them concurrently.
         """
         results: list[BaseException | None] | None = None
+        tasks = [create_eager_task(coro) for coro in coros]
         try:
             async with self.hass.timeout.async_timeout(timeout, self.domain):
-                results = await asyncio.gather(*coros, return_exceptions=True)
+                results = await asyncio.gather(*tasks, return_exceptions=True)
         except TimeoutError:
             self.logger.warning(
                 "Timed out adding entities for domain %s with platform %s after %ds",
