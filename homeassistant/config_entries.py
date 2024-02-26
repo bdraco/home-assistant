@@ -474,7 +474,7 @@ class ConfigEntry:
 
         if domain_is_integration:
             try:
-                integration.get_platform("config_flow")
+                await integration.async_get_platform("config_flow")
             except ImportError as err:
                 _LOGGER.error(
                     (
@@ -2374,9 +2374,8 @@ async def _load_integration(
 
     # Make sure requirements and dependencies of component are resolved
     await async_process_deps_reqs(hass, hass_config, integration)
-
     try:
-        integration.get_platform("config_flow")
+        await integration.async_get_platform("config_flow")
     except ImportError as err:
         _LOGGER.error(
             "Error occurred loading flow for integration %s: %s",
