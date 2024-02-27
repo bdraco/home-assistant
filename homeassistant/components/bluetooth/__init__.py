@@ -216,7 +216,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     )
 
     slot_manager_setup_task = hass.async_create_task(
-        slot_manager.async_setup(), "slot_manager setup"
+        slot_manager.async_setup(), "slot_manager setup", eager_start=True
     )
     slot_manager_task_time = time.monotonic()
     _LOGGER.warning(
@@ -224,7 +224,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         slot_manager_task_time - integration_matcher_finished,
     )
     processor_setup_task = hass.async_create_task(
-        passive_update_processor.async_setup(hass), "passive_update_processor setup"
+        passive_update_processor.async_setup(hass),
+        "passive_update_processor setup",
+        eager_start=True,
     )
     passive_processor_task_time = time.monotonic()
     _LOGGER.warning(
@@ -232,7 +234,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         passive_processor_task_time - slot_manager_task_time,
     )
     storage_setup_task = hass.async_create_task(
-        bluetooth_storage.async_setup(), "bluetooth storage setup"
+        bluetooth_storage.async_setup(), "bluetooth storage setup", eager_start=True
     )
     storage_task_time = time.monotonic()
     _LOGGER.warning(
