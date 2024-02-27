@@ -150,7 +150,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the USB Discovery integration."""
     usb = await async_get_usb(hass)
     usb_discovery = USBDiscovery(hass, usb)
-    # await usb_discovery.async_setup()
+    await usb_discovery.async_setup()
     hass.data[DOMAIN] = usb_discovery
     websocket_api.async_register_command(hass, websocket_usb_scan)
 
