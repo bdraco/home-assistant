@@ -340,7 +340,7 @@ class EntityPlatform:
         )
         with async_start_setup(hass, [full_name]):
             try:
-                task = async_create_setup_task()
+                task = create_eager_task(async_create_setup_task())
 
                 async with hass.timeout.async_timeout(SLOW_SETUP_MAX_WAIT, self.domain):
                     await asyncio.shield(task)
