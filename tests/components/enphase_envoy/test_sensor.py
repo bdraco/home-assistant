@@ -1,4 +1,4 @@
-"""Test Enphase Envoy diagnostics."""
+"""Test Enphase Envoy sensors."""
 from unittest.mock import patch
 
 import pytest
@@ -37,7 +37,7 @@ async def test_sensor(
     snapshot: SnapshotAssertion,
     setup_enphase_envoy_sensor,
 ) -> None:
-    """Test Enphase_Envoy SENSOR entities."""
+    """Test enphase_envoy sensor entities."""
     entity_registry = er.async_get(hass)
     assert entity_registry
 
