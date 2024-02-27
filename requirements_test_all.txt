@@ -365,7 +365,7 @@ aiotankerkoenig==0.4.1
 aiotractive==0.5.6
 
 # homeassistant.components.unifi
-aiounifi==71
+aiounifi==72
 
 # homeassistant.components.vlc_telnet
 aiovlc==0.1.0
@@ -1390,7 +1390,7 @@ pyeconet==0.1.22
 pyefergy==22.1.1
 
 # homeassistant.components.enphase_envoy
-pyenphase==1.19.0
+pyenphase==1.19.1
 
 # homeassistant.components.everlights
 pyeverlights==0.1.0
