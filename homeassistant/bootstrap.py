@@ -20,7 +20,10 @@ import yarl
 from . import config as conf_util, config_entries, core, loader, requirements
 
 # Pre-import config and lovelace which have no requirements here to avoid
-# loading them at run time and blocking the event loop
+# loading them at run time and blocking the event loop. We do this ahead
+# of time so that we do not have to flag frontends deps with `import_executor`
+# as it would create a thundering heard of executor jobs trying to import
+# frontend deps at the same time.
 from .components import (
     api as api_pre_import,  # noqa: F401
     config as config_pre_import,  # noqa: F401
