@@ -652,15 +652,9 @@ async def _async_pre_import(
     config: ConfigType,
     integration_cache: dict[str, loader.Integration],
     pre_stage_domains: dict[str, set[str]],
-    stage_1_domains: set[str],
-    stage_2_domains: set[str],
 ) -> None:
     """Pre-import components that are known to be slow to import."""
-    return
-
-    for domain in itertools.chain(
-        *pre_stage_domains.values(), stage_1_domains, stage_2_domains
-    ):
+    for domain in itertools.chain(*pre_stage_domains.values()):
         if (
             domain in hass.config.components
             or (integration := integration_cache.get(domain)) is None
@@ -670,28 +664,15 @@ async def _async_pre_import(
         await async_process_deps_reqs(hass, config, integration)
         # If it finished loading while we were waiting for the lock
         # we do not need to import it
-        if domain in hass.config.components:
+        if (
+            domain in hass.config.components
+            or f"hass.components.{domain}" in sys.modules
+        ):
             continue
         with contextlib.suppress(ImportError):
             _LOGGER.warning("Pre-importing slow setup component %s", domain)
             await hass.async_add_executor_job(integration.get_component)
-            _LOGGER.debug("Pre-imported slow setup component %s", domain)
-
-
-def _pre_import_frontend() -> None:
-    """Pre-import frontend to reduce startup time."""
-    from .components import (  # noqa: C0415 # pylint: disable=import-outside-toplevel
-        frontend,
-    )
-
-    if TYPE_CHECKING:
-        # This only exists to prevent ruff from removing the import
-        assert frontend
-
-
-async def _async_pre_import_frontend(hass: core.HomeAssistant) -> None:
-    """Pre-import frontend to reduce startup time."""
-    await hass.async_add_executor_job(_pre_import_frontend)
+            _LOGGER.warning("Pre-imported slow setup component %s", domain)
 
 
 async def _async_resolve_domains_to_setup(
@@ -767,13 +748,6 @@ async def _async_resolve_domains_to_setup(
 
     _LOGGER.info("Domains to be set up: %s", domains_to_setup)
 
-    if "frontend" in domains_to_setup:
-        hass.async_create_background_task(
-            _async_pre_import_frontend(hass),
-            "Bootstrap pre-import frontend",
-            eager_start=True,
-        )
-
     # Optimistically check if requirements are already installed
     # ahead of setting up the integrations so we can prime the cache
     # We do not wait for this since its an optimization only
@@ -823,6 +797,16 @@ async def _async_set_up_integrations(
         name: domains_to_setup & domain_group
         for name, domain_group in SETUP_ORDER.items()
     }
+    # Start pre-importing components that are known to be slow to import
+    hass.async_create_background_task(
+        _async_pre_import(
+            hass,
+            config,
+            integration_cache,
+            pre_stage_domains,
+        ),
+        "preload slow imports",
+    )
 
     # calculate what components to setup in what stage
     stage_1_domains: set[str] = set()
@@ -849,19 +833,6 @@ async def _async_set_up_integrations(
     stage_2_domains = domains_to_setup - stage_1_domains
     for domain_group in pre_stage_domains.values():
         stage_2_domains -= domain_group
-
-    # Start pre-importing components that are known to be slow to import
-    hass.async_create_background_task(
-        _async_pre_import(
-            hass,
-            config,
-            integration_cache,
-            pre_stage_domains,
-            stage_1_domains,
-            stage_2_domains,
-        ),
-        "preload slow imports",
-    )
 
     for name, domain_group in pre_stage_domains.items():
         if domain_group:
