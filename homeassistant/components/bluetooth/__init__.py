@@ -241,6 +241,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         "Storage task started in %s seconds",
         storage_task_time - passive_processor_task_time,
     )
+    storage_setup_task = hass.async_create_task(
+        bluetooth_storage.async_setup(), "bluetooth storage setup", eager_start=True
+    )
     integration_matcher.async_setup()
     integration_matcher_time = time.monotonic()
     _LOGGER.warning(
