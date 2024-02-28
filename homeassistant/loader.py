@@ -901,8 +901,7 @@ class Integration:
             return platform
         if future := self._import_futures.get(full_name):
             return await future
-        if debug := _LOGGER.isEnabledFor(logging.DEBUG):
-            start = time.perf_counter()
+        start = time.perf_counter()
         import_future = self.hass.loop.create_future()
         self._import_futures[full_name] = import_future
         load_executor = (
@@ -930,13 +929,13 @@ class Integration:
         finally:
             self._import_futures.pop(full_name)
 
-        if debug:
-            _LOGGER.debug(
-                "Importing platform %s took %.2fs (loaded_executor=%s)",
-                full_name,
-                time.perf_counter() - start,
-                load_executor,
-            )
+        _LOGGER.log(
+            logging.ERROR if load_executor else logging.WARNING,
+            "Importing platform %s took %.2fs (loaded_executor=%s)",
+            full_name,
+            time.perf_counter() - start,
+            load_executor,
+        )
 
         return platform
 

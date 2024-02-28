@@ -656,6 +656,7 @@ async def _async_pre_import(
     stage_2_domains: set[str],
 ) -> None:
     """Pre-import components that are known to be slow to import."""
+    return
 
     for domain in itertools.chain(
         *pre_stage_domains.values(), stage_1_domains, stage_2_domains
