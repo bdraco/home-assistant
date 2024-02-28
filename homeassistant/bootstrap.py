@@ -22,6 +22,7 @@ from . import config as conf_util, config_entries, core, loader, requirements
 # Pre-import config and lovelace which have no requirements here to avoid
 # loading them at run time and blocking the event loop
 from .components import (
+    api as api_pre_import,  # noqa: F401
     config as config_pre_import,  # noqa: F401
     http,
     lovelace as lovelace_pre_import,  # noqa: F401
