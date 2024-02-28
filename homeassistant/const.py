@@ -34,6 +34,10 @@ PLATFORM_FORMAT: Final = "{platform}.{domain}"
 TARGET_MAX_ENTITIES: Final = 6144
 
 
+# hass.data key for logging information.
+DATA_LOGGING = "logging"
+
+
 class Platform(StrEnum):
     """Available entity platforms."""
 
