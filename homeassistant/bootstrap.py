@@ -34,8 +34,8 @@ from .components import (
     lovelace as lovelace_pre_import,  # noqa: F401
 )
 from .const import (
-    DATA_LOGGING,
     FORMAT_DATETIME,
+    KEY_DATA_LOGGING as DATA_LOGGING,
     REQUIRED_NEXT_PYTHON_HA_RELEASE,
     REQUIRED_NEXT_PYTHON_VER,
     SIGNAL_BOOTSTRAP_INTEGRATIONS,

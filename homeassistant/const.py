@@ -34,10 +34,6 @@ PLATFORM_FORMAT: Final = "{platform}.{domain}"
 TARGET_MAX_ENTITIES: Final = 6144
 
 
-# hass.data key for logging information.
-DATA_LOGGING = "logging"
-
-
 class Platform(StrEnum):
     """Available entity platforms."""
 
@@ -1611,6 +1607,11 @@ CAST_APP_ID_HOMEASSISTANT_LOVELACE: Final = "A078F6B0"
 HASSIO_USER_NAME = "Supervisor"
 
 SIGNAL_BOOTSTRAP_INTEGRATIONS = "bootstrap_integrations"
+
+
+# hass.data key for logging information.
+KEY_DATA_LOGGING = "logging"
+
 
 # Date/Time formats
 FORMAT_DATE: Final = "%Y-%m-%d"
