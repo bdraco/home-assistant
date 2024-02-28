@@ -19,7 +19,7 @@ import voluptuous as vol
 import yarl
 
 from . import config as conf_util, config_entries, core, loader, requirements
-from .components import http
+from .components import frontend, http
 from .const import (
     FORMAT_DATETIME,
     REQUIRED_NEXT_PYTHON_HA_RELEASE,
@@ -58,6 +58,10 @@ from .util.package import async_get_user_site, is_virtual_env
 
 if TYPE_CHECKING:
     from .runner import RuntimeConfig
+
+    # This only exists to prevent ruff from removing the import
+    assert frontend
+
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -678,22 +682,6 @@ async def _async_pre_import(
             _LOGGER.debug("Pre-imported slow setup component %s", domain)
 
 
-def _pre_import_frontend() -> None:
-    """Pre-import frontend to reduce startup time."""
-    from .components import (  # noqa: C0415 # pylint: disable=import-outside-toplevel
-        frontend,
-    )
-
-    if TYPE_CHECKING:
-        # This only exists to prevent ruff from removing the import
-        assert frontend
-
-
-async def _async_pre_import_frontend(hass: core.HomeAssistant) -> None:
-    """Pre-import frontend to reduce startup time."""
-    await hass.async_add_executor_job(_pre_import_frontend)
-
-
 async def _async_resolve_domains_to_setup(
     hass: core.HomeAssistant, config: dict[str, Any]
 ) -> tuple[set[str], dict[str, loader.Integration]]:
@@ -766,13 +754,6 @@ async def _async_resolve_domains_to_setup(
                 to_resolve.add(dep)
 
     _LOGGER.info("Domains to be set up: %s", domains_to_setup)
-
-    if "frontend" in domains_to_setup:
-        hass.async_create_background_task(
-            _async_pre_import_frontend(hass),
-            "Bootstrap pre-import frontend",
-            eager_start=True,
-        )
 
     # Optimistically check if requirements are already installed
     # ahead of setting up the integrations so we can prime the cache
