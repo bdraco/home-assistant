@@ -68,6 +68,7 @@ from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.network import get_url
 from homeassistant.helpers.template import Template
 from homeassistant.helpers.typing import ConfigType
+from homeassistant.loader import bind_hass
 
 from .const import (  # noqa: F401
     _DEPRECATED_STREAM_TYPE_HLS,
@@ -163,6 +164,7 @@ class Image:
     content: bytes = attr.ib()
 
 
+@bind_hass
 async def async_request_stream(hass: HomeAssistant, entity_id: str, fmt: str) -> str:
     """Request a stream for a camera entity."""
     camera = _get_camera_from_entity_id(hass, entity_id)
@@ -211,6 +213,7 @@ async def _async_get_image(
     raise HomeAssistantError("Unable to get image")
 
 
+@bind_hass
 async def async_get_image(
     hass: HomeAssistant,
     entity_id: str,
@@ -241,12 +244,14 @@ async def _async_get_stream_image(
     return None
 
 
+@bind_hass
 async def async_get_stream_source(hass: HomeAssistant, entity_id: str) -> str | None:
     """Fetch the stream source for a camera entity."""
     camera = _get_camera_from_entity_id(hass, entity_id)
     return await camera.stream_source()
 
 
+@bind_hass
 async def async_get_mjpeg_stream(
     hass: HomeAssistant, request: web.Request, entity_id: str
 ) -> web.StreamResponse | None:
