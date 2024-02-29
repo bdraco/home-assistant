@@ -512,7 +512,9 @@ class InfluxThread(threading.Thread):
     def __init__(self, hass, influx, event_to_json, max_tries):
         """Initialize the listener."""
         threading.Thread.__init__(self, name=DOMAIN)
-        self.queue = queue.SimpleQueue()
+        self.queue: queue.SimpleQueue[
+            threading.Event | tuple[float, Event] | None
+        ] = queue.SimpleQueue()
         self.influx = influx
         self.event_to_json = event_to_json
         self.max_tries = max_tries
@@ -548,9 +550,7 @@ class InfluxThread(threading.Thread):
 
                 if item is None:
                     self.shutdown = True
-                elif isinstance(item, threading.Event):
-                    item.set()
-                else:
+                elif type(item) is tuple:  # noqa: E721
                     timestamp, event = item
                     age = time.monotonic() - timestamp
 
@@ -559,6 +559,8 @@ class InfluxThread(threading.Thread):
                             json.append(event_json)
                     else:
                         dropped += 1
+                elif isinstance(item, threading.Event):
+                    item.set()
 
         if dropped:
             _LOGGER.warning(CATCHING_UP_MESSAGE, dropped)
@@ -600,7 +602,6 @@ class InfluxThread(threading.Thread):
 
         Currently only used for testing.
         """
-        for _ in range(self.max_tries + 1):
-            event = threading.Event()
-            self.queue.put(event)
-            event.wait()
+        event = threading.Event()
+        self.queue.put(event)
+        event.wait()
