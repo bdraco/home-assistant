@@ -276,7 +276,7 @@ aiohttp-zlib-ng==0.3.1
 aiohttp_cors==0.7.0
 
 # homeassistant.components.hue
-aiohue==4.7.0
+aiohue==4.7.1
 
 # homeassistant.components.imap
 aioimaplib==1.0.1
@@ -2254,7 +2254,7 @@ python-kasa[speedups]==0.6.2.1
 # python-lirc==1.2.3
 
 # homeassistant.components.matter
-python-matter-server==5.5.0
+python-matter-server==5.7.0
 
 # homeassistant.components.xiaomi_miio
 python-miio==0.5.12
