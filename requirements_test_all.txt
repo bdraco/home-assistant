@@ -170,7 +170,7 @@ aioairq==0.3.2
 aioairzone-cloud==0.3.8
 
 # homeassistant.components.airzone
-aioairzone==0.7.4
+aioairzone==0.7.5
 
 # homeassistant.components.ambient_station
 aioambient==2024.01.0
@@ -870,7 +870,7 @@ hole==0.8.0
 holidays==0.43
 
 # homeassistant.components.frontend
-home-assistant-frontend==20240228.0
+home-assistant-frontend==20240228.1
 
 # homeassistant.components.conversation
 home-assistant-intents==2024.2.28
