@@ -23,7 +23,7 @@ async def test_create_doorbell(
     with patch.object(
         doorbell_one, "async_get_doorbell_image", create=False, return_value="image"
     ):
-        await _create_august_with_devices(hass, [doorbell_one])
+        await _create_august_with_devices(hass, [doorbell_one], brand=Brand.AUGUST)
 
         camera_k98gidt45gul_name_camera = hass.states.get(
             "camera.k98gidt45gul_name_camera"
@@ -46,25 +46,16 @@ async def test_doorbell_refresh_content_token(
 ) -> None:
     """Test camera image content token expired."""
     doorbell_two = await _mock_doorbell_from_fixture(hass, "get_doorbell.json")
-
     with patch.object(
         doorbell_two,
         "async_get_doorbell_image",
         create=False,
-        side_effect=ContentTokenExpired,
+        side_effect=[ContentTokenExpired, "image"],
     ):
-        doorbell_two._data["brand"] = Brand.YALE_HOME
-
-        def _doorbell_return_token_expired():
-            if doorbell_two._data["contentToken"] is None:
-                raise ContentTokenExpired
-
         await _create_august_with_devices(
             hass,
             [doorbell_two],
-            api_call_side_effects={
-                "async_get_doorbell_image": _doorbell_return_token_expired
-            },
+            brand=Brand.YALE_HOME,
         )
         url = hass.states.get("camera.k98gidt45gul_name_camera").attributes[
             "entity_picture"
@@ -72,4 +63,6 @@ async def test_doorbell_refresh_content_token(
 
         client = await hass_client_no_auth()
         resp = await client.get(url)
-        assert resp.status == HTTPStatus.INTERNAL_SERVER_ERROR
+        assert resp.status == HTTPStatus.OK
+        body = await resp.text()
+        assert body == "image"
