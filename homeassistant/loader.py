@@ -983,6 +983,10 @@ class Integration:
         if the integration is already loaded and if the platform file
         exists before having to import it since with integration_platforms
         most of them do not exist.
+
+        By checking if the file exists ahead of time we avoid `stat`ing
+        every possible place the platform file could be in `sys.path`
+        and the `importlib` machinery that goes along with it.
         """
         if platform := self._get_platform_cached(f"{self.domain}.{platform_name}"):
             return platform
@@ -991,10 +995,6 @@ class Integration:
         if (component := cache.get(self.domain)) and (
             file := getattr(component, "__file__", None)
         ):
-            # If the component is already loaded, we know the path
-            # to the platform file and can check if it exists before
-            # having to import it since with integration_platforms
-            # most of them do not exist
             platform_file = pathlib.Path(file).parent.joinpath(f"{platform_name}.py")
             if not os.path.exists(platform_file):
                 full_name = f"{self.domain}.{platform_name}"
@@ -1021,15 +1021,15 @@ class Integration:
         """
         full_name = f"{self.domain}.{platform_name}"
         cache: dict[str, ModuleType] = self.hass.data[DATA_COMPONENTS]
-
         try:
             cache[full_name] = self._import_platform(platform_name)
         except ImportError as ex:
             if self.domain in cache:
                 # If the domain is loaded, cache that the platform
                 # does not exist so we do not try to load it again
-                missing_platforms_cache: dict[str, ImportError]
-                missing_platforms_cache = self.hass.data[DATA_MISSING_PLATFORMS]
+                missing_platforms_cache: dict[str, ImportError] = self.hass.data[
+                    DATA_MISSING_PLATFORMS
+                ]
                 missing_platforms_cache[full_name] = ex
             raise
         except RuntimeError as err:
