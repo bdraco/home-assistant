@@ -11,6 +11,7 @@ import os
 import platform
 import sys
 import threading
+import time
 from time import monotonic
 from typing import TYPE_CHECKING, Any
 
@@ -778,12 +779,22 @@ async def _async_set_up_integrations(
     hass: core.HomeAssistant, config: dict[str, Any]
 ) -> None:
     """Set up all the integrations."""
-    import cProfile
-    import time
 
-    pr = cProfile.Profile()
-    pr.enable()
-    # hass.loop.set_debug(True)
+    proc: asyncio.subprocess.Process | None = None
+    with contextlib.suppress(Exception):
+        proc = await asyncio.create_subprocess_exec(
+            "/config/py_spy-0.3.14.data/scripts/py-spy",
+            "record",
+            "--pid",
+            str(os.getpid()),
+            "--rate",
+            "1000",
+            "--duration",
+            "60",
+            "--output",
+            f"/config/www/bootstrap.{time.time()}.svg",
+        )
+
     setup_started: dict[str, float] = {}
     hass.data[DATA_SETUP_STARTED] = setup_started
     setup_time: dict[str, timedelta] = hass.data.setdefault(DATA_SETUP_TIME, {})
@@ -878,8 +889,6 @@ async def _async_set_up_integrations(
         dict(sorted(setup_time.items(), key=itemgetter(1))),
     )
 
-    pr.disable()
-    pr.create_stats()
-    file = f"bootstrap.{time.time()}.cprof"
-    pr.dump_stats(file)
-    _LOGGER.warning(file)
+    if proc:
+        with contextlib.suppress(Exception):
+            await proc.communicate()
