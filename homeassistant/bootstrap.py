@@ -34,12 +34,14 @@ from .components import (
     config as config_pre_import,  # noqa: F401
     device_automation as device_automation_pre_import,  # noqa: F401
     diagnostics as diagnostics_pre_import,  # noqa: F401
+    file_upload as file_upload_pre_import,  # noqa: F401
     http,
     lovelace as lovelace_pre_import,  # noqa: F401
     onboarding as onboarding_pre_import,  # noqa: F401
     repairs as repairs_pre_import,  # noqa: F401
     search as search_pre_import,  # noqa: F401
     system_log as system_log_pre_import,  # noqa: F401
+    websocket_api as websocket_api_pre_import,  # noqa: F401
 )
 from .const import (
     FORMAT_DATETIME,
