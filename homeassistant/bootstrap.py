@@ -778,7 +778,12 @@ async def _async_set_up_integrations(
     hass: core.HomeAssistant, config: dict[str, Any]
 ) -> None:
     """Set up all the integrations."""
-    hass.loop.set_debug(True)
+    import cProfile
+    import time
+
+    pr = cProfile.Profile()
+    pr.enable()
+    # hass.loop.set_debug(True)
     setup_started: dict[str, float] = {}
     hass.data[DATA_SETUP_STARTED] = setup_started
     setup_time: dict[str, timedelta] = hass.data.setdefault(DATA_SETUP_TIME, {})
@@ -872,3 +877,9 @@ async def _async_set_up_integrations(
         "Integration setup times: %s",
         dict(sorted(setup_time.items(), key=itemgetter(1))),
     )
+
+    pr.disable()
+    pr.create_stats()
+    file = f"bootstrap.{time.time()}.cprof"
+    pr.dump_stats(file)
+    _LOGGER.warning(file)
