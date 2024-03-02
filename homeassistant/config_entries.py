@@ -1678,6 +1678,8 @@ class ConfigEntries:
         if (entry := self.async_get_entry(entry_id)) is None:
             raise UnknownEntry
 
+        _LOGGER.error("Reloading %s (%s) config entry", entry.title, entry.domain)
+
         async with entry.reload_lock:
             unload_result = await self.async_unload(entry_id)
 
