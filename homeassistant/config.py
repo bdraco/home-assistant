@@ -1398,12 +1398,17 @@ def extract_platform_integrations(config: ConfigType, domains: set[str]) -> set[
             continue
         if domain not in domains:
             continue
+
+        if not isinstance(domain_config, list):
+            domain_config = [domain_config]
+
         for item in domain_config:
             try:
                 platform = item.get(CONF_PLATFORM)
             except AttributeError:
                 continue
-            platform_integrations.add(platform)
+            if platform:
+                platform_integrations.add(platform)
     return platform_integrations
 
 
