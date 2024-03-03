@@ -780,6 +780,7 @@ async def _async_resolve_domains_to_setup(
 
     return domains_to_setup, integration_cache
 
+RUN_PY_SPY = True
 
 async def _async_set_up_integrations(
     hass: core.HomeAssistant, config: dict[str, Any]
@@ -788,7 +789,7 @@ async def _async_set_up_integrations(
 
     proc: asyncio.subprocess.Process | None = None
     with contextlib.suppress(Exception):
-        if False:
+        if RUN_PY_SPY:
             proc = await asyncio.create_subprocess_exec(
                 "/config/py_spy-0.3.14.data/scripts/py-spy",
                 "record",
