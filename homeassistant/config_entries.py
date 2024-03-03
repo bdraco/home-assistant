@@ -1816,6 +1816,8 @@ class ConfigEntries:
         self, entry: ConfigEntry, platforms: Iterable[Platform | str]
     ) -> None:
         """Forward the setup of an entry to platforms."""
+        integration = await loader.async_get_integration(self.hass, entry.domain)
+        await integration.async_get_platforms(platforms)
         await asyncio.gather(
             *(
                 create_eager_task(

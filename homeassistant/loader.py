@@ -27,6 +27,7 @@ from awesomeversion import (
 import voluptuous as vol
 
 from . import generated
+from .const import Platform
 from .core import HomeAssistant, callback
 from .generated.application_credentials import APPLICATION_CREDENTIALS
 from .generated.bluetooth import BLUETOOTH
@@ -662,6 +663,12 @@ class Integration:
             self._all_dependencies = set()
 
         self._import_futures: dict[str, asyncio.Future[ModuleType]] = {}
+        cache: dict[str, ModuleType | ComponentProtocol] = hass.data[DATA_COMPONENTS]
+        self._cache = cache
+        missing_platforms_cache: dict[str, ImportError] = hass.data[
+            DATA_MISSING_PLATFORMS
+        ]
+        self._missing_platforms_cache = missing_platforms_cache
         _LOGGER.info("Loaded %s from %s", self.domain, pkg_path)
 
     @cached_property
@@ -886,12 +893,14 @@ class Integration:
         with a dict cache which is thread-safe since importlib has
         appropriate locks.
         """
-        cache: dict[str, ComponentProtocol] = self.hass.data[DATA_COMPONENTS]
-        if self.domain in cache:
-            return cache[self.domain]
+        cache = self._cache
+        domain = self.domain
+
+        if domain in cache:
+            return cache[domain]
 
         try:
-            cache[self.domain] = cast(
+            cache[domain] = cast(
                 ComponentProtocol, importlib.import_module(self.pkg_path)
             )
         except ImportError:
@@ -913,9 +922,11 @@ class Integration:
             with suppress(ImportError):
                 self.get_platform("config")
 
-        return cache[self.domain]
+        return cache[domain]
 
-    def _load_platforms(self, platform_names: list[str]) -> dict[str, ModuleType]:
+    def _load_platforms(
+        self, platform_names: Iterable[Platform | str]
+    ) -> dict[str, ModuleType]:
         """Load platforms for an integration."""
         return {
             platform_name: self._load_platform(platform_name)
@@ -928,7 +939,7 @@ class Integration:
         return platforms[platform_name]
 
     async def async_get_platforms(
-        self, platform_names: list[str]
+        self, platform_names: Iterable[Platform | str]
     ) -> dict[str, ModuleType]:
         """Return a platforms for an integration."""
         domain = self.domain
@@ -936,17 +947,16 @@ class Integration:
 
         load_executor_platforms: list[str] = []
         load_event_loop_platforms: list[str] = []
-
         in_progress_imports: dict[str, asyncio.Future[ModuleType]] = {}
         our_import_futures: list[tuple[str, asyncio.Future[ModuleType]]] = []
 
         for platform_name in platform_names:
             full_name = f"{domain}.{platform_name}"
-
             if platform := self._get_platform_cached(full_name):
                 platforms[platform_name] = platform
                 continue
 
+            # Another call to async_get_platforms is already importing this platform
             if future := self._import_futures.get(platform_name):
                 in_progress_imports[platform_name] = future
                 continue
@@ -963,6 +973,18 @@ class Integration:
             import_future = self.hass.loop.create_future()
             self._import_futures[platform_name] = import_future
             our_import_futures.append((platform_name, import_future))
+
+        if (
+            not load_executor_platforms
+            and not load_event_loop_platforms
+            and not in_progress_imports
+        ):
+            _LOGGER.error(
+                "SHORT circuiting async_get_platforms for %s - %s",
+                domain,
+                platform_names,
+            )
+            return platforms
 
         if load_executor_platforms or load_event_loop_platforms:
             if debug := _LOGGER.isEnabledFor(logging.DEBUG):
@@ -1017,20 +1039,20 @@ class Integration:
             for platform_name, future in in_progress_imports.items():
                 platforms[platform_name] = await future
 
+        _LOGGER.error(
+            "LONG circuiting async_get_platforms for %s - %s", domain, platform_names
+        )
+
         return platforms
 
     def _get_platform_cached(self, full_name: str) -> ModuleType | None:
         """Return a platform for an integration from cache."""
-        cache: dict[str, ModuleType] = self.hass.data[DATA_COMPONENTS]
-        if full_name in cache:
-            return cache[full_name]
-
-        missing_platforms_cache: dict[str, ImportError] = self.hass.data[
-            DATA_MISSING_PLATFORMS
-        ]
-        if full_name in missing_platforms_cache:
-            raise missing_platforms_cache[full_name]
-
+        if full_name in self._cache:
+            # the cache is either a ModuleType or a ComponentProtocol
+            # but we only care about the ModuleType here
+            return self._cache[full_name]  # type: ignore[return-value]
+        if full_name in self._missing_platforms_cache:
+            raise self._missing_platforms_cache[full_name]
         return None
 
     def get_platform(self, platform_name: str) -> ModuleType:
@@ -1050,14 +1072,11 @@ class Integration:
         has been called for the integration or the integration failed to load.
         """
         full_name = f"{self.domain}.{platform_name}"
-
-        cache: dict[str, ModuleType] = self.hass.data[DATA_COMPONENTS]
+        cache = self._cache
         if full_name in cache:
             return True
 
-        missing_platforms_cache: dict[str, ImportError]
-        missing_platforms_cache = self.hass.data[DATA_MISSING_PLATFORMS]
-        if full_name in missing_platforms_cache:
+        if full_name in self._missing_platforms_cache:
             return False
 
         if not (component := cache.get(self.domain)) or not (
@@ -1073,7 +1092,7 @@ class Integration:
             f"Platform {full_name} not found",
             name=f"{self.pkg_path}.{platform_name}",
         )
-        missing_platforms_cache[full_name] = exc
+        self._missing_platforms_cache[full_name] = exc
         return False
 
     def _load_platform(self, platform_name: str) -> ModuleType:
@@ -1094,10 +1113,7 @@ class Integration:
             if self.domain in cache:
                 # If the domain is loaded, cache that the platform
                 # does not exist so we do not try to load it again
-                missing_platforms_cache: dict[str, ImportError] = self.hass.data[
-                    DATA_MISSING_PLATFORMS
-                ]
-                missing_platforms_cache[full_name] = ex
+                self._missing_platforms_cache[full_name] = ex
             raise
         except RuntimeError as err:
             # _DeadlockError inherits from RuntimeError
