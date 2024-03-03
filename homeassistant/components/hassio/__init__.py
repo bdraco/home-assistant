@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 from contextlib import suppress
 from datetime import datetime
+import importlib
 import logging
 import os
 import re
@@ -43,7 +44,7 @@ from homeassistant.util.dt import now
 # config_flow, binary_sensor, sensor, and update are imported to ensure
 # other dependencies that wait for hassio are not waiting for hassio to
 # import its platforms
-from . import binary_sensor, config_flow, sensor, update  # noqa: F401
+from . import config_flow  # noqa: F401
 from .addon_manager import AddonError, AddonInfo, AddonManager, AddonState  # noqa: F401
 from .addon_panel import async_setup_addon_panel
 from .auth import async_setup_auth_view
@@ -120,6 +121,13 @@ _LOGGER = logging.getLogger(__name__)
 STORAGE_KEY = DOMAIN
 STORAGE_VERSION = 1
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR, Platform.UPDATE]
+
+# config_flow, binary_sensor, sensor, and update are imported to ensure
+# other dependencies that wait for hassio are not waiting for hassio to
+# import its platforms
+for platform in PLATFORMS:
+    importlib.import_module(f".{platform.name}", __package__)
+
 
 CONF_FRONTEND_REPO = "development_repo"
 
