@@ -948,7 +948,7 @@ class Integration:
         load_executor_platforms: list[str] = []
         load_event_loop_platforms: list[str] = []
         in_progress_imports: dict[str, asyncio.Future[ModuleType]] = {}
-        our_import_futures: list[tuple[str, asyncio.Future[ModuleType]]] = []
+        import_futures: list[tuple[str, asyncio.Future[ModuleType]]] = []
 
         for platform_name in platform_names:
             full_name = f"{domain}.{platform_name}"
@@ -972,19 +972,7 @@ class Integration:
 
             import_future = self.hass.loop.create_future()
             self._import_futures[platform_name] = import_future
-            our_import_futures.append((platform_name, import_future))
-
-        if (
-            not load_executor_platforms
-            and not load_event_loop_platforms
-            and not in_progress_imports
-        ):
-            _LOGGER.error(
-                "SHORT circuiting async_get_platforms for %s - %s",
-                domain,
-                platform_names,
-            )
-            return platforms
+            import_futures.append((platform_name, import_future))
 
         if load_executor_platforms or load_event_loop_platforms:
             if debug := _LOGGER.isEnabledFor(logging.DEBUG):
@@ -1012,11 +1000,11 @@ class Integration:
                 if load_event_loop_platforms:
                     platforms.update(self._load_platforms(platform_names))
 
-                for platform_name, import_future in our_import_futures:
+                for platform_name, import_future in import_futures:
                     import_future.set_result(platforms[platform_name])
 
             except BaseException as ex:
-                for _, import_future in our_import_futures:
+                for _, import_future in import_futures:
                     import_future.set_exception(ex)
                     with suppress(BaseException):
                         # Clear the exception retrieved flag on the future since
@@ -1026,7 +1014,7 @@ class Integration:
                 raise
 
             finally:
-                for platform_name, _ in our_import_futures:
+                for platform_name, _ in import_futures:
                     self._import_futures.pop(platform_name)
 
                 if debug:
@@ -1041,10 +1029,6 @@ class Integration:
         if in_progress_imports:
             for platform_name, future in in_progress_imports.items():
                 platforms[platform_name] = await future
-
-        _LOGGER.error(
-            "LONG circuiting async_get_platforms for %s - %s", domain, platform_names
-        )
 
         return platforms
 
