@@ -788,18 +788,19 @@ async def _async_set_up_integrations(
 
     proc: asyncio.subprocess.Process | None = None
     with contextlib.suppress(Exception):
-        proc = await asyncio.create_subprocess_exec(
-            "/config/py_spy-0.3.14.data/scripts/py-spy",
-            "record",
-            "--pid",
-            str(os.getpid()),
-            "--rate",
-            "1000",
-            "--duration",
-            "60",
-            "--output",
-            f"/config/www/bootstrap.{time.time()}.svg",
-        )
+        if False:
+            proc = await asyncio.create_subprocess_exec(
+                "/config/py_spy-0.3.14.data/scripts/py-spy",
+                "record",
+                "--pid",
+                str(os.getpid()),
+                "--rate",
+                "1000",
+                "--duration",
+                "60",
+                "--output",
+                f"/config/www/bootstrap.{time.time()}.svg",
+            )
 
     setup_started: dict[str, float] = {}
     hass.data[DATA_SETUP_STARTED] = setup_started
