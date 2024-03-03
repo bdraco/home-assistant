@@ -915,59 +915,109 @@ class Integration:
 
         return cache[self.domain]
 
+    def _load_platforms(self, platform_names: list[str]) -> dict[str, ModuleType]:
+        """Load platforms for an integration."""
+        return {
+            platform_name: self._load_platform(platform_name)
+            for platform_name in platform_names
+        }
+
     async def async_get_platform(self, platform_name: str) -> ModuleType:
         """Return a platform for an integration."""
+        platforms = await self.async_get_platforms([platform_name])
+        return platforms[platform_name]
+
+    async def async_get_platforms(
+        self, platform_names: list[str]
+    ) -> dict[str, ModuleType]:
+        """Return a platforms for an integration."""
         domain = self.domain
-        full_name = f"{self.domain}.{platform_name}"
-        if platform := self._get_platform_cached(full_name):
-            return platform
-        if future := self._import_futures.get(full_name):
-            return await future
-        start = time.perf_counter()
-        import_future = self.hass.loop.create_future()
-        self._import_futures[full_name] = import_future
-        load_executor = (
-            self.import_executor
-            and full_name not in self.hass.config.components
-            and f"{self.pkg_path}.{domain}.{platform_name}" not in sys.modules
-        )
-        try:
-            if load_executor:
-                try:
-                    platform = await self.hass.async_add_import_executor_job(
-                        self._load_platform, platform_name
-                    )
-                except ImportError as ex:
-                    _LOGGER.debug(
-                        "Failed to import %s in executor", domain, exc_info=ex
-                    )
-                    load_executor = False
-                    # If importing in the executor deadlocks because there is a circular
-                    # dependency, we fall back to the event loop.
-                    platform = self._load_platform(platform_name)
+        platforms: dict[str, ModuleType] = {}
+
+        load_executor_platforms: list[str] = []
+        load_event_loop_platforms: list[str] = []
+
+        in_progress_imports: dict[str, asyncio.Future[ModuleType]] = {}
+        our_import_futures: list[tuple[str, asyncio.Future[ModuleType]]] = []
+
+        for platform_name in platform_names:
+            full_name = f"{domain}.{platform_name}"
+
+            if platform := self._get_platform_cached(full_name):
+                platforms[platform_name] = platform
+                continue
+
+            if future := self._import_futures.get(platform_name):
+                in_progress_imports[platform_name] = future
+                continue
+
+            if (
+                self.import_executor
+                and full_name not in self.hass.config.components
+                and f"{self.pkg_path}.{domain}.{platform_name}" not in sys.modules
+            ):
+                load_executor_platforms.append(platform_name)
             else:
-                platform = self._load_platform(platform_name)
-            import_future.set_result(platform)
-        except BaseException as ex:
-            import_future.set_exception(ex)
-            with suppress(BaseException):
-                # Clear the exception retrieved flag on the future since
-                # it will never be retrieved unless there
-                # are concurrent calls to async_get_platform
-                import_future.result()
-            raise
-        finally:
-            self._import_futures.pop(full_name)
+                load_event_loop_platforms.append(platform_name)
 
-        _LOGGER.log(
-            logging.ERROR if load_executor else logging.WARNING,
-            "Importing platform %s took %.2fs (loaded_executor=%s)",
-            full_name,
-            time.perf_counter() - start,
-            load_executor,
-        )
+            import_future = self.hass.loop.create_future()
+            self._import_futures[platform_name] = import_future
+            our_import_futures.append((platform_name, import_future))
 
-        return platform
+        if load_executor_platforms or load_event_loop_platforms:
+            if debug := _LOGGER.isEnabledFor(logging.DEBUG):
+                start = time.perf_counter()
+
+            try:
+                if load_executor_platforms:
+                    try:
+                        platforms.update(
+                            await self.hass.async_add_import_executor_job(
+                                self._load_platforms, platform_names
+                            )
+                        )
+                    except ImportError as ex:
+                        _LOGGER.debug(
+                            "Failed to import %s in executor", domain, exc_info=ex
+                        )
+                        # If importing in the executor deadlocks because there is a circular
+                        # dependency, we fall back to the event loop.
+                        load_event_loop_platforms.extend(load_executor_platforms)
+
+                if load_event_loop_platforms:
+                    platforms.update(self._load_platforms(platform_names))
+
+                for platform_name, import_future in our_import_futures:
+                    import_future.set_result(platforms[platform_name])
+
+            except BaseException as ex:
+                for _, import_future in our_import_futures:
+                    import_future.set_exception(ex)
+                    with suppress(BaseException):
+                        # Clear the exception retrieved flag on the future since
+                        # it will never be retrieved unless there
+                        # are concurrent calls to async_get_platform
+                        import_future.result()
+                raise
+
+            finally:
+                for platform_name, _ in our_import_futures:
+                    self._import_futures.pop(platform_name)
+
+                if debug:
+                    _LOGGER.debug(
+                        "Importing platforms for %s executor=%s loop=%s took %.2fs",
+                        domain,
+                        load_executor_platforms,
+                        load_event_loop_platforms,
+                        time.perf_counter() - start,
+                    )
+
+        if in_progress_imports:
+            for platform_name, future in in_progress_imports.items():
+                platforms[platform_name] = await future
+
+        return platforms
 
     def _get_platform_cached(self, full_name: str) -> ModuleType | None:
         """Return a platform for an integration from cache."""
