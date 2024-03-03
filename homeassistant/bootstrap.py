@@ -780,7 +780,9 @@ async def _async_resolve_domains_to_setup(
 
     return domains_to_setup, integration_cache
 
-RUN_PY_SPY = True
+
+RUN_PY_SPY = False
+
 
 async def _async_set_up_integrations(
     hass: core.HomeAssistant, config: dict[str, Any]
