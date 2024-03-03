@@ -1000,7 +1000,10 @@ class Integration:
                         )
                     except ImportError as ex:
                         _LOGGER.debug(
-                            "Failed to import %s in executor", domain, exc_info=ex
+                            "Failed to import %s platforms %s in executor",
+                            domain,
+                            load_executor_platforms,
+                            exc_info=ex,
                         )
                         # If importing in the executor deadlocks because there is a circular
                         # dependency, we fall back to the event loop.
