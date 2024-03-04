@@ -7,7 +7,6 @@ from datetime import datetime
 import logging
 import os
 import re
-import time
 from typing import Any, NamedTuple
 
 import voluptuous as vol
@@ -309,23 +308,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
     websession = async_get_clientsession(hass)
     hass.data[DOMAIN] = hassio = HassIO(hass.loop, websession, host)
 
-    before_connected = time.monotonic()
     if not await hassio.is_connected():
         _LOGGER.warning("Not connected with the supervisor / system too busy!")
-    after_is_connected = time.monotonic()
-    _LOGGER.warning(
-        "Connected with the supervisor in %s seconds",
-        after_is_connected - before_connected,
-    )
 
     store = Store[dict[str, str]](hass, STORAGE_VERSION, STORAGE_KEY)
     if (data := await store.async_load()) is None:
         data = {}
-
-    storage_load_time = time.monotonic()
-    _LOGGER.warning(
-        "Loaded storage in %s seconds", storage_load_time - after_is_connected
-    )
 
     refresh_token = None
     if "hassio_user" in data:
