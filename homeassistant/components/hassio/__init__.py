@@ -7,6 +7,7 @@ from datetime import datetime
 import logging
 import os
 import re
+import sys
 import time
 from typing import Any, NamedTuple
 
@@ -116,6 +117,7 @@ from .websocket_api import async_load_websocket_api
 
 _LOGGER = logging.getLogger(__name__)
 
+_LOGGER.warning("hassio sys.modules: %s", sys.modules)
 
 STORAGE_KEY = DOMAIN
 STORAGE_VERSION = 1
