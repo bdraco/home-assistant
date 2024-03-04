@@ -40,9 +40,9 @@ from homeassistant.loader import bind_hass
 from homeassistant.util.async_ import create_eager_task
 from homeassistant.util.dt import now
 
-# config_flow, binary_sensor, sensor, and update are imported to ensure
-# other dependencies that wait for hassio are not waiting for hassio to
-# import its platforms
+# config_flow, and entity platforms are imported to ensure
+# other dependencies that wait for hassio are not waiting
+# for hassio to import its platforms
 from . import binary_sensor, config_flow, sensor, update  # noqa: F401
 from .addon_manager import AddonError, AddonInfo, AddonManager, AddonState  # noqa: F401
 from .addon_panel import async_setup_addon_panel
@@ -119,6 +119,9 @@ _LOGGER = logging.getLogger(__name__)
 
 STORAGE_KEY = DOMAIN
 STORAGE_VERSION = 1
+# If new platforms are added, be sure to import them above
+# so we do not make other components that depend on hassio
+# wait for the import of the platforms
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR, Platform.UPDATE]
 
 CONF_FRONTEND_REPO = "development_repo"
