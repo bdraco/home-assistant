@@ -293,7 +293,6 @@ def get_supervisor_ip() -> str | None:
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa: C901
     """Set up the Hass.io component."""
     # Check local setup
-    setup_start = time.monotonic()
     for env in ("SUPERVISOR", "SUPERVISOR_TOKEN"):
         if os.environ.get(env):
             continue
@@ -311,7 +310,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
     hass.data[DOMAIN] = hassio = HassIO(hass.loop, websession, host)
 
     before_connected = time.monotonic()
-    _LOGGER.warning("first supervisor in %s seconds", before_connected - setup_start)
     if not await hassio.is_connected():
         _LOGGER.warning("Not connected with the supervisor / system too busy!")
     after_is_connected = time.monotonic()
@@ -369,17 +367,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
         require_admin=True,
     )
 
-    after_register_panel = time.monotonic()
-    _LOGGER.warning(
-        "Registered panel in %s seconds", after_register_panel - storage_load_time
-    )
-
     await hassio.update_hass_api(config.get("http", {}), refresh_token)
-
-    after_update_api = time.monotonic()
-    _LOGGER.warning(
-        "Updated API in %s seconds", after_update_api - after_register_panel
-    )
 
     last_timezone = None
 
@@ -397,7 +385,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
 
     hass.bus.async_listen(EVENT_CORE_CONFIG_UPDATE, push_config)
 
-    after_push_config = time.monotonic()
     push_config_task = hass.async_create_task(push_config(None), eager_start=True)
     # Start listening for problems with supervisor and making issues
     hass.data[DATA_KEY_SUPERVISOR_ISSUES] = issues = SupervisorIssues(hass, hassio)
@@ -462,10 +449,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
         )
 
     # Fetch data
-    after_update_info_data = time.monotonic()
-    _LOGGER.warning(
-        "Fetched data in %s seconds", after_update_info_data - after_push_config
-    )
     update_info_task = hass.async_create_task(update_info_data(), eager_start=True)
 
     async def _async_stop(hass: HomeAssistant, restart: bool) -> None:
