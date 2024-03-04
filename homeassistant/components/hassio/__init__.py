@@ -126,7 +126,7 @@ PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR, Platform.UPDATE]
 # other dependencies that wait for hassio are not waiting for hassio to
 # import its platforms
 for platform in PLATFORMS:
-    importlib.import_module(f".{platform.value}", __package__)
+    importlib.import_module(f".{platform.name}", __package__)
 
 
 CONF_FRONTEND_REPO = "development_repo"
