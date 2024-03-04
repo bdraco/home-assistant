@@ -782,8 +782,7 @@ class Integration:
     def import_executor(self) -> bool:
         """Import integration in the executor."""
         # If the integration does not explicitly set import_executor, we default to
-        # True if it's a built-in integration and False if it's a custom integration.
-        # In the future, we want to default to True for all integrations.
+        # True.
         return self.manifest.get("import_executor", True)
 
     @property
