@@ -399,6 +399,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
 
     after_push_config = time.monotonic()
     push_config_task = hass.async_create_task(push_config(None), eager_start=True)
+    # Start listening for problems with supervisor and making issues
+    hass.data[DATA_KEY_SUPERVISOR_ISSUES] = issues = SupervisorIssues(hass, hassio)
+    issues_task = hass.async_create_task(issues.setup(), eager_start=True)
 
     async def async_service_handler(service: ServiceCall) -> None:
         """Handle service calls for Hass.io."""
@@ -459,12 +462,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
         )
 
     # Fetch data
-    await update_info_data()
     after_update_info_data = time.monotonic()
     _LOGGER.warning(
         "Fetched data in %s seconds", after_update_info_data - after_push_config
     )
-    await push_config_task
+    update_info_task = hass.async_create_task(update_info_data(), eager_start=True)
 
     async def _async_stop(hass: HomeAssistant, restart: bool) -> None:
         """Stop or restart home assistant."""
@@ -487,10 +489,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
     async_setup_ingress_view(hass, host)
 
     # Init add-on ingress panels
-    await async_setup_addon_panel(hass, hassio)
-    after_addon_panel = time.monotonic()
-    _LOGGER.warning(
-        "Setup addon panel in %s seconds", after_addon_panel - after_update_info_data
+    panels_task = hass.async_create_task(
+        async_setup_addon_panel(hass, hassio), eager_start=True
     )
 
     # Setup hardware integration for the detected board type
@@ -512,7 +512,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
         hass.async_create_task(
             hass.config_entries.flow.async_init(
                 hw_integration, context={"source": "system"}
-            )
+            ),
+            eager_start=True,
         )
 
     async_setup_hardware_integration_job = HassJob(
@@ -520,21 +521,16 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
     )
 
     _async_setup_hardware_integration()
-    after_hardware_integration = time.monotonic()
-    _LOGGER.warning(
-        "Setup hardware integration in %s seconds",
-        after_hardware_integration - after_addon_panel,
-    )
 
     hass.async_create_task(
         hass.config_entries.flow.async_init(DOMAIN, context={"source": "system"}),
         eager_start=True,
     )
 
-    # Start listening for problems with supervisor and making issues
-    hass.data[DATA_KEY_SUPERVISOR_ISSUES] = issues = SupervisorIssues(hass, hassio)
-    await issues.setup()
-
+    await panels_task
+    await update_info_task
+    await push_config_task
+    await issues_task
     return True
 
 
