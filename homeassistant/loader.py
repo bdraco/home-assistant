@@ -1010,12 +1010,6 @@ class Integration:
         if load_executor_platforms or load_event_loop_platforms:
             if debug := _LOGGER.isEnabledFor(logging.DEBUG):
                 start = time.perf_counter()
-                _LOGGER.debug(
-                    "Starting import of platforms for %s executor=%s loop=%s",
-                    domain,
-                    load_executor_platforms,
-                    load_event_loop_platforms,
-                )
 
             try:
                 if load_executor_platforms:

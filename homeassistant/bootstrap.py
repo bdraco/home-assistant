@@ -38,8 +38,8 @@ from .components import (
     file_upload as file_upload_pre_import,  # noqa: F401
     group as group_pre_import,  # noqa: F401
     hardware as hardware_import,  # noqa: F401 - not named pre_import since it has requirements
-    history as history_pre_import,  # noqa: F401
-    http,  # not named pre_import since it has requirements
+    history as history_pre_import,  # noqa: F401  # noqa: F401
+    http,  # not named pre_import since it has requirements  # not named pre_import since it has requirements
     logbook as logbook_pre_import,  # noqa: F401
     lovelace as lovelace_pre_import,  # noqa: F401
     onboarding as onboarding_pre_import,  # noqa: F401
