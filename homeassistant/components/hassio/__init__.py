@@ -493,6 +493,15 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
         async_setup_addon_panel(hass, hassio), eager_start=True
     )
 
+    # Make sure to await the update_info task before
+    # _async_setup_hardware_integration is called
+    # so the hardware integration can be set up
+    # and does not fallback to calling later
+    await panels_task
+    await update_info_task
+    await push_config_task
+    await issues_task
+
     # Setup hardware integration for the detected board type
     @callback
     def _async_setup_hardware_integration(_: datetime | None = None) -> None:
@@ -527,10 +536,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # noqa:
         eager_start=True,
     )
 
-    await panels_task
-    await update_info_task
-    await push_config_task
-    await issues_task
     return True
 
 
