@@ -1,5 +1,5 @@
 """Test the Network Configuration."""
-from ipaddress import IPv4Address, IPv6Address
+from ipaddress import IPv4Address
 from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 
@@ -15,7 +15,6 @@ from homeassistant.components.network.const import (
     STORAGE_KEY,
     STORAGE_VERSION,
 )
-from homeassistant.components.network.models import Gateway
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.setup import async_setup_component
@@ -715,29 +714,6 @@ async def test_async_get_source_ip_no_ip_loopback(
         assert await network.async_get_source_ip(hass) == "127.0.0.1"
 
 
-async def test_async_ip_on_same_subnet(hass, hass_storage):
-    """Test checking if an ip address is on the same subnet as a configured adapter."""
-    hass_storage[STORAGE_KEY] = {
-        "version": STORAGE_VERSION,
-        "key": STORAGE_KEY,
-        "data": {ATTR_CONFIGURED_ADAPTERS: ["eth0", "eth1", "vtun0"]},
-    }
-    with patch(
-        "homeassistant.components.network.util.socket.socket",
-        return_value=_mock_socket([_LOOPBACK_IPADDR]),
-    ), patch(
-        "homeassistant.components.network.util.ifaddr.get_adapters",
-        return_value=_generate_mock_adapters(),
-    ):
-        assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-        await hass.async_block_till_done()
-    assert await network.async_ip_on_same_subnet(hass, "192.168.1.6") is True
-    assert await network.async_ip_on_same_subnet(hass, "192.168.2.6") is False
-    assert await network.async_ip_on_same_subnet(hass, "169.254.3.3") is True
-    assert await network.async_ip_on_same_subnet(hass, "2001:db8::") is True
-    assert await network.async_ip_on_same_subnet(hass, "1001:db8::") is False
-
-
 _ADAPTERS_WITH_MANUAL_CONFIG = [
     {
         "auto": True,
@@ -853,177 +829,3 @@ async def test_async_get_announce_addresses_no_source_ip(hass: HomeAssistant) ->
         "172.16.1.5",
         "fe80::dead:beef:dead:beef",
     ]
-
-
-async def test_async_get_gateways_macos(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
-) -> None:
-    """Test getting gateways with macos."""
-    with patch(
-        "homeassistant.components.network.util.socket.socket",
-        return_value=_mock_socket([_LOOPBACK_IPADDR]),
-    ), patch(
-        "homeassistant.components.network.util.ifaddr.get_adapters",
-        return_value=_generate_mock_adapters(),
-    ), patch(
-        "homeassistant.components.network.util.netifaces.gateways",
-        return_value={
-            "default": {2: ("192.168.42.1", "en15")},
-            2: [("192.168.42.1", "en15", True), ("192.168.42.1", "en0", False)],
-            30: [
-                ("fe80::%utun0", "utun0", False),
-                ("fe80::%utun1", "utun1", False),
-                ("fe80::%utun2", "utun2", False),
-                ("fe80::%utun3", "utun3", False),
-                ("fe80::%utun4", "utun4", False),
-                ("fe80::%utun5", "utun5", False),
-                ("fe80::%utun6", "utun6", False),
-                ("fe80::%utun7", "utun7", False),
-            ],
-        },
-    ):
-        assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-        await hass.async_block_till_done()
-
-    assert await network.async_get_gateways(hass) == [
-        Gateway(
-            index=2, address=IPv4Address("192.168.42.1"), interface="en15", default=True
-        ),
-        Gateway(
-            index=2, address=IPv4Address("192.168.42.1"), interface="en0", default=False
-        ),
-        Gateway(
-            index=30,
-            address=IPv6Address("fe80::%utun0"),
-            interface="utun0",
-            default=False,
-        ),
-        Gateway(
-            index=30,
-            address=IPv6Address("fe80::%utun1"),
-            interface="utun1",
-            default=False,
-        ),
-        Gateway(
-            index=30,
-            address=IPv6Address("fe80::%utun2"),
-            interface="utun2",
-            default=False,
-        ),
-        Gateway(
-            index=30,
-            address=IPv6Address("fe80::%utun3"),
-            interface="utun3",
-            default=False,
-        ),
-        Gateway(
-            index=30,
-            address=IPv6Address("fe80::%utun4"),
-            interface="utun4",
-            default=False,
-        ),
-        Gateway(
-            index=30,
-            address=IPv6Address("fe80::%utun5"),
-            interface="utun5",
-            default=False,
-        ),
-        Gateway(
-            index=30,
-            address=IPv6Address("fe80::%utun6"),
-            interface="utun6",
-            default=False,
-        ),
-        Gateway(
-            index=30,
-            address=IPv6Address("fe80::%utun7"),
-            interface="utun7",
-            default=False,
-        ),
-    ]
-
-    assert await network.async_get_gateway_addresses(hass) == {
-        IPv4Address("192.168.42.1"),
-        IPv6Address("fe80::%utun7"),
-        IPv6Address("fe80::%utun5"),
-        IPv6Address("fe80::%utun0"),
-        IPv6Address("fe80::%utun3"),
-        IPv6Address("fe80::%utun1"),
-        IPv6Address("fe80::%utun6"),
-        IPv6Address("fe80::%utun2"),
-        IPv6Address("fe80::%utun4"),
-    }
-
-
-async def test_async_get_gateways_linux(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
-) -> None:
-    """Test getting gateways with linux."""
-    with patch(
-        "homeassistant.components.network.util.socket.socket",
-        return_value=_mock_socket([_LOOPBACK_IPADDR]),
-    ), patch(
-        "homeassistant.components.network.util.ifaddr.get_adapters",
-        return_value=_generate_mock_adapters(),
-    ), patch(
-        "homeassistant.components.network.util.netifaces.gateways",
-        return_value={
-            "default": {2: ("192.168.42.1", "enp89s0")},
-            2: [("192.168.42.1", "enp89s0", True)],
-        },
-    ):
-        assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-        await hass.async_block_till_done()
-
-    assert await network.async_get_gateways(hass) == [
-        Gateway(
-            index=2,
-            address=IPv4Address("192.168.42.1"),
-            interface="enp89s0",
-            default=True,
-        )
-    ]
-    assert await network.async_get_gateway_addresses(hass) == {
-        IPv4Address("192.168.42.1")
-    }
-
-
-async def test_async_get_gateways_linux_with_invalid_ip(
-    hass: HomeAssistant, hass_storage: dict[str, Any]
-) -> None:
-    """Test getting gateways with linux."""
-    with patch(
-        "homeassistant.components.network.util.socket.socket",
-        return_value=_mock_socket([_LOOPBACK_IPADDR]),
-    ), patch(
-        "homeassistant.components.network.util.ifaddr.get_adapters",
-        return_value=_generate_mock_adapters(),
-    ), patch(
-        "homeassistant.components.network.util.netifaces.gateways",
-        return_value={
-            "default": {2: ("192.168.42.1", "enp89s0")},
-            2: [("192.168.42.1", "enp89s0", True), ("192.168.41.1", "enp88s0")],
-            30: [("0", "fe", False)],
-        },
-    ):
-        assert await async_setup_component(hass, DOMAIN, {DOMAIN: {}})
-        await hass.async_block_till_done()
-
-    assert await network.async_get_gateways(hass) == [
-        Gateway(
-            index=2,
-            address=IPv4Address("192.168.42.1"),
-            interface="enp89s0",
-            default=True,
-        ),
-        Gateway(
-            index=2,
-            address=IPv4Address("192.168.41.1"),
-            interface="enp88s0",
-            default=False,
-        ),
-    ]
-    assert await network.async_get_gateway_addresses(hass) == {
-        IPv4Address("192.168.41.1"),
-        IPv4Address("192.168.42.1"),
-    }

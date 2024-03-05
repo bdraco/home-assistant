@@ -1,7 +1,6 @@
 """Network helper class for the network integration."""
 from __future__ import annotations
 
-from ipaddress import IPv4Address, IPv6Address
 import logging
 from typing import Any
 
@@ -16,13 +15,8 @@ from .const import (
     STORAGE_KEY,
     STORAGE_VERSION,
 )
-from .models import Adapter, Gateway
-from .util import (
-    async_load_adapters,
-    async_load_gateways,
-    enable_adapters,
-    enable_auto_detected_adapters,
-)
+from .models import Adapter
+from .util import async_load_adapters, enable_adapters, enable_auto_detected_adapters
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -48,8 +42,6 @@ class Network:
         )
         self._data: dict[str, list[str]] = {}
         self.adapters: list[Adapter] = []
-        self.gateways: list[Gateway] = []
-        self.gateway_addresses: set[IPv4Address | IPv6Address] = set()
 
     @property
     def configured_adapters(self) -> list[str]:
@@ -60,8 +52,6 @@ class Network:
         """Set up the network config."""
         await self.async_load()
         self.adapters = await async_load_adapters()
-        self.gateways = await async_load_gateways()
-        self.gateway_addresses = {gateway.address for gateway in self.gateways}
 
     @callback
     def async_configure(self) -> None:
