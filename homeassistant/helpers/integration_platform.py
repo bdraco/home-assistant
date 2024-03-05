@@ -104,8 +104,8 @@ async def _async_process_integration_platforms_for_component(
     # Now we know which platforms to load, let's load them.
     try:
         platforms = await integration.async_get_platforms(platforms_that_exist)
-    except Exception:  # pylint: disable=broad-except
-        _LOGGER.exception(
+    except ImportError:
+        _LOGGER.debug(
             "Unexpected error importing integration platforms for %s",
             integration.domain,
         )
@@ -174,7 +174,6 @@ async def async_process_integration_platforms(
     else:
         integration_platforms = hass.data[DATA_INTEGRATION_PLATFORMS]
 
-    async_register_preload_platform(hass, platform_name)
     top_level_components = {comp for comp in hass.config.components if "." not in comp}
     process_job = HassJob(
         catch_log_exception(
@@ -195,18 +194,11 @@ async def async_process_integration_platforms(
         return
 
     integrations = await async_get_integrations(hass, top_level_components)
-    loaded_integrations: list[Integration] = []
-    for domain, integration in integrations.items():
-        if isinstance(integration, Exception):
-            _LOGGER.exception(
-                "Error importing integration %s for %s",
-                domain,
-                platform_name,
-                exc_info=integration,
-            )
-            continue
-        loaded_integrations.append(integration)
-
+    loaded_integrations: list[Integration] = [
+        integration
+        for integration in integrations.values()
+        if not isinstance(integration, Exception)
+    ]
     if not loaded_integrations:
         return
 
@@ -220,8 +212,8 @@ async def async_process_integration_platforms(
             continue
         try:
             platform = await integration.async_get_platform(platform_name)
-        except Exception:  # pylint: disable=broad-except
-            _LOGGER.exception(
+        except ImportError:
+            _LOGGER.debug(
                 "Unexpected error importing %s for %s",
                 platform_name,
                 integration.domain,
