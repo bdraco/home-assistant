@@ -204,7 +204,6 @@ async def async_process_integration_platforms(
     # This uses the import executor in a loop. If there are a lot
     # of integration with the integration platform to process,
     # this could be a bottleneck.
-    futures: list[asyncio.Future[None]] = []
     for integration in loaded_integrations:
         if not integration.platforms_exists((platform_name,)):
             continue
@@ -218,10 +217,4 @@ async def async_process_integration_platforms(
             )
             continue
 
-        if future := hass.async_run_hass_job(
-            process_job, hass, integration.domain, platform
-        ):
-            futures.append(future)
-
-    if futures:
-        await asyncio.gather(*futures)
+        hass.async_run_hass_job(process_job, hass, integration.domain, platform)
