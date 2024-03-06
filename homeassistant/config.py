@@ -1485,6 +1485,7 @@ async def async_process_component_config(  # noqa: C901
     if config_validator is not None and hasattr(
         config_validator, "async_validate_config"
     ):
+        _LOGGER.warning("Validating config for %s using custom validator", domain)
         try:
             return IntegrationConfigInfo(
                 await config_validator.async_validate_config(hass, config), []
