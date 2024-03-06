@@ -194,6 +194,21 @@ async def async_process_integration_platforms(
     if not top_level_components:
         return
 
+    hass.async_create_task(
+        _async_process_integration_platforms(
+            hass, platform_name, top_level_components.copy(), process_job
+        ),
+        eager_start=True,
+    )
+
+
+async def _async_process_integration_platforms(
+    hass: HomeAssistant,
+    platform_name: str,
+    top_level_components: set[str],
+    process_job: HassJob,
+) -> None:
+    """Process integration platforms for a component."""
     integrations = await async_get_integrations(hass, top_level_components)
     loaded_integrations: list[Integration] = [
         integration
@@ -204,6 +219,7 @@ async def async_process_integration_platforms(
     # This uses the import executor in a loop. If there are a lot
     # of integration with the integration platform to process,
     # this could be a bottleneck.
+    futures: list[asyncio.Future[None]] = []
     for integration in loaded_integrations:
         if not integration.platforms_exists((platform_name,)):
             continue
@@ -217,4 +233,10 @@ async def async_process_integration_platforms(
             )
             continue
 
-        hass.async_run_hass_job(process_job, hass, integration.domain, platform)
+        if future := hass.async_run_hass_job(
+            process_job, hass, integration.domain, platform
+        ):
+            futures.append(future)
+
+    if futures:
+        await asyncio.gather(*futures)
