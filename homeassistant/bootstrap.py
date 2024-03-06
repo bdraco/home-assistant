@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 from datetime import timedelta
+from itertools import chain
 import logging
 import logging.handlers
 from operator import itemgetter
