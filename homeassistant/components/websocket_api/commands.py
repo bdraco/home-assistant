@@ -324,8 +324,6 @@ def handle_get_states(
     hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Handle get states command."""
-    raise ValueError("States disabled")
-
     states = _async_get_allowed_states(hass, connection)
 
     try:

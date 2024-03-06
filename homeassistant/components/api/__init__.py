@@ -212,7 +212,6 @@ class APIStatesView(HomeAssistantView):
         """Get current states."""
         user: User = request[KEY_HASS_USER]
         hass: HomeAssistant = request.app[KEY_HASS]
-        raise ValueError("States disabled")
         if user.is_admin:
             states = (state.as_dict_json for state in hass.states.async_all())
         else:
@@ -242,8 +241,6 @@ class APIEntityStateView(HomeAssistantView):
         """Retrieve state of entity."""
         user: User = request[KEY_HASS_USER]
         hass: HomeAssistant = request.app[KEY_HASS]
-        raise ValueError("States disabled")
-
         if not user.permissions.check_entity(entity_id, POLICY_READ):
             raise Unauthorized(entity_id=entity_id)
 
