@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import cProfile
 from datetime import timedelta
 from itertools import chain
 import logging
@@ -802,6 +803,7 @@ async def _async_resolve_domains_to_setup(
 
 
 RUN_PY_SPY = False
+RUN_PROFILE = True
 
 
 async def _async_set_up_integrations(
@@ -824,6 +826,10 @@ async def _async_set_up_integrations(
                 "--output",
                 f"/config/www/bootstrap.{time.time()}.svg",
             )
+
+    if RUN_PROFILE:
+        pr = cProfile.Profile()
+        pr.enable()
 
     setup_started: dict[str, float] = {}
     hass.data[DATA_SETUP_STARTED] = setup_started
@@ -918,6 +924,13 @@ async def _async_set_up_integrations(
         "Integration setup times: %s",
         dict(sorted(setup_time.items(), key=itemgetter(1))),
     )
+
+    if RUN_PROFILE:
+        pr.disable()
+        pr.create_stats()
+        file = f"bootstrap.{time.time()}.cprof"
+        pr.dump_stats(file)
+        _LOGGER.warning(file)
 
     if proc:
         with contextlib.suppress(Exception):
