@@ -149,6 +149,7 @@ DEFAULT_INTEGRATIONS = {
     # These integrations are set up unless recovery mode is activated.
     #
     # Integrations providing core functionality:
+    "analytics",  # Needed for onboarding
     "application_credentials",
     "backup",
     "frontend",
