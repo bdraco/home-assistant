@@ -10,11 +10,16 @@ import linecache
 import logging
 import sys
 from types import FrameType
-from typing import Any, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from homeassistant.core import HomeAssistant, async_get_hass
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.loader import async_suggest_report_issue
+
+if TYPE_CHECKING:
+    from functools import cached_property
+else:
+    from homeassistant.backports.functools import cached_property
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,10 +34,25 @@ class IntegrationFrame:
     """Integration frame container."""
 
     custom_integration: bool
-    frame: FrameType
     integration: str
     module: str | None
     relative_filename: str
+    _frame: FrameType
+
+    @cached_property
+    def line_number(self) -> int:
+        """Return the line number of the frame."""
+        return self._frame.f_lineno
+
+    @cached_property
+    def filename(self) -> str:
+        """Return the filename of the frame."""
+        return self._frame.f_code.co_filename
+
+    @cached_property
+    def line(self) -> str:
+        """Return the line of the frame."""
+        return (linecache.getline(self.filename, self.line_number) or "?").strip()
 
 
 def get_integration_logger(fallback_name: str) -> logging.Logger:
@@ -101,10 +121,10 @@ def get_integration_frame(exclude_integrations: set | None = None) -> Integratio
 
     return IntegrationFrame(
         custom_integration=path == "custom_components/",
-        frame=found_frame,
         integration=integration,
         module=found_module,
         relative_filename=found_frame.f_code.co_filename[index:],
+        _frame=found_frame,
     )
 
 
@@ -148,9 +168,8 @@ def _report_integration(
 
     Async friendly.
     """
-    found_frame = integration_frame.frame
     # Keep track of integrations already reported to prevent flooding
-    key = f"{found_frame.f_code.co_filename}:{found_frame.f_lineno}"
+    key = f"{integration_frame.filename}:{integration_frame.line_number}"
     if key in _REPORTED_INTEGRATIONS:
         return
     _REPORTED_INTEGRATIONS.add(key)
@@ -171,11 +190,8 @@ def _report_integration(
         integration_frame.integration,
         what,
         integration_frame.relative_filename,
-        found_frame.f_lineno,
-        (
-            linecache.getline(found_frame.f_code.co_filename, found_frame.f_lineno)
-            or "?"
-        ).strip(),
+        integration_frame.line_number,
+        integration_frame.line,
         report_issue,
     )
 
