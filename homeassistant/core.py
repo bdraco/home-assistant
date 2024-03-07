@@ -23,7 +23,6 @@ import datetime
 import enum
 import functools
 import inspect
-from itertools import chain
 import logging
 import os
 import pathlib
@@ -642,6 +641,56 @@ class HomeAssistant:
 
         return task
 
+    @overload
+    @callback
+    def async_run_periodic_hass_job(
+        self, hassjob: HassJob[..., Coroutine[Any, Any, _R]], *args: Any
+    ) -> asyncio.Future[_R] | None:
+        ...
+
+    @overload
+    @callback
+    def async_run_periodic_hass_job(
+        self, hassjob: HassJob[..., Coroutine[Any, Any, _R] | _R], *args: Any
+    ) -> asyncio.Future[_R] | None:
+        ...
+
+    @callback
+    def async_run_periodic_hass_job(
+        self, hassjob: HassJob[..., Coroutine[Any, Any, _R] | _R], *args: Any
+    ) -> asyncio.Future[_R] | None:
+        """Add a periodic HassJob from within the event loop.
+
+        This method must be run in the event loop.
+        hassjob: HassJob to call.
+        args: parameters for method to call.
+        """
+        task: asyncio.Future[_R]
+        # This code path is performance sensitive and uses
+        # if TYPE_CHECKING to avoid the overhead of constructing
+        # the type used for the cast. For history see:
+        # https://github.com/home-assistant/core/pull/71960
+        if hassjob.job_type is HassJobType.Coroutinefunction:
+            if TYPE_CHECKING:
+                hassjob.target = cast(
+                    Callable[..., Coroutine[Any, Any, _R]], hassjob.target
+                )
+            task = create_eager_task(hassjob.target(*args), name=hassjob.name)
+        elif hassjob.job_type is HassJobType.Callback:
+            if TYPE_CHECKING:
+                hassjob.target = cast(Callable[..., _R], hassjob.target)
+            hassjob.target(*args)
+            return None
+        else:
+            if TYPE_CHECKING:
+                hassjob.target = cast(Callable[..., _R], hassjob.target)
+            task = self.loop.run_in_executor(None, hassjob.target, *args)
+
+        self._periodic_tasks.add(task)
+        task.add_done_callback(self._periodic_tasks.remove)
+
+        return task
+
     def create_task(
         self, target: Coroutine[Any, Any, Any], name: str | None = None
     ) -> None:
@@ -865,13 +914,13 @@ class HomeAssistant:
         await asyncio.sleep(0)
         start_time: float | None = None
         current_task = asyncio.current_task()
-        to_wait: Iterable[asyncio.Future[Any]] = self._tasks
-        if wait_periodic_tasks:
-            to_wait = chain(self._tasks, self._periodic_tasks)
-
         while tasks := [
             task
-            for task in to_wait
+            for task in (
+                self._tasks | self._periodic_tasks
+                if wait_periodic_tasks
+                else self._tasks
+            )
             if task is not current_task and not cancelling(task)
         ]:
             await self._await_and_log_pending(tasks)
@@ -1002,7 +1051,7 @@ class HomeAssistant:
         self._tasks = set()
 
         # Cancel all background tasks
-        for task in chain(self._background_tasks, self._periodic_tasks):
+        for task in self._background_tasks | self._periodic_tasks:
             self._tasks.add(task)
             task.add_done_callback(self._tasks.remove)
             task.cancel("Home Assistant is stopping")
