@@ -2024,9 +2024,10 @@ class Service:
         service: str,
         context: Context | None = None,
         supports_response: SupportsResponse = SupportsResponse.NONE,
+        job_type: HassJobType | None = None,
     ) -> None:
         """Initialize a service."""
-        self.job = HassJob(func, f"service {domain}.{service}")
+        self.job = HassJob(func, f"service {domain}.{service}", job_type=job_type)
         self.schema = schema
         self.supports_response = supports_response
 
@@ -2168,6 +2169,7 @@ class ServiceRegistry:
         ],
         schema: vol.Schema | None = None,
         supports_response: SupportsResponse = SupportsResponse.NONE,
+        job_type: HassJobType | None = None,
     ) -> None:
         """Register a service.
 
@@ -2178,7 +2180,12 @@ class ServiceRegistry:
         domain = domain.lower()
         service = service.lower()
         service_obj = Service(
-            service_func, schema, domain, service, supports_response=supports_response
+            service_func,
+            schema,
+            domain,
+            service,
+            supports_response=supports_response,
+            job_type=job_type,
         )
 
         if domain in self._services:
