@@ -803,7 +803,7 @@ async def _async_resolve_domains_to_setup(
 
 
 RUN_PY_SPY = False
-RUN_PROFILE = True
+RUN_PROFILE = False
 
 
 async def _async_set_up_integrations(
