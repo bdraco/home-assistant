@@ -844,17 +844,6 @@ class HomeAssistant:
                 hassjob.target = cast(Callable[..., _R], hassjob.target)
             hassjob.target(*args)
             return None
-        if hassjob.job_type is HassJobType.Coroutinefunction:
-            if TYPE_CHECKING:
-                hassjob.target = cast(
-                    Callable[..., Coroutine[Any, Any, _R]], hassjob.target
-                )
-            task = create_eager_task(
-                hassjob.target(*args), name=hassjob.name, loop=self.loop
-            )
-            self._tasks.add(task)
-            task.add_done_callback(self._tasks.remove)
-            return task
         return self.async_add_hass_job(hassjob, *args)
 
     @overload
@@ -892,7 +881,7 @@ class HomeAssistant:
         args: parameters for method to call.
         """
         if asyncio.iscoroutine(target):
-            return self.async_create_task(target, eager_start=True)
+            return self.async_create_task(target)
 
         # This code path is performance sensitive and uses
         # if TYPE_CHECKING to avoid the overhead of constructing
