@@ -26,7 +26,6 @@ class HomeKitEntity(Entity):
     """Representation of a Home Assistant HomeKit device."""
 
     _attr_should_poll = False
-    accessory_info: Service
     pollable_characteristics: list[tuple[int, int]]
     watchable_characteristics: list[tuple[int, int]]
     all_characteristics: set[tuple[int, int]]
