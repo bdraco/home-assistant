@@ -465,10 +465,11 @@ class Scanner:
         _, info_desc = self._description_cache.peek_description_dict(location)
         if info_desc is None:
             # Fetch info desc in separate task and process from there.
-            self.hass.async_create_task(
+            self.hass.async_create_background_task(
                 self._ssdp_listener_process_callback_with_lookup(
                     ssdp_device, dst, source
                 ),
+                name=f"ssdp_info_desc_lookup_{location}",
                 eager_start=True,
             )
             return
