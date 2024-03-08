@@ -80,9 +80,6 @@ PyQRCode==1.2.1
 # homeassistant.components.rmvtransport
 PyRMVtransport==0.3.3
 
-# homeassistant.components.telegram_bot
-PySocks==1.7.1
-
 # homeassistant.components.switchbot
 PySwitchbot==0.45.0
 
@@ -451,7 +448,7 @@ auroranoaa==0.0.3
 aurorapy==0.2.7
 
 # homeassistant.components.axis
-axis==50
+axis==52
 
 # homeassistant.components.azure_event_hub
 azure-eventhub==5.11.1
@@ -1770,7 +1767,7 @@ python-tado==0.17.4
 python-technove==1.2.2
 
 # homeassistant.components.telegram_bot
-python-telegram-bot==13.1
+python-telegram-bot[socks]==21.0.1
 
 # homeassistant.components.tile
 pytile==2023.04.0
