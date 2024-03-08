@@ -805,7 +805,7 @@ async def _async_resolve_domains_to_setup(
     return domains_to_setup, integration_cache
 
 
-RUN_PY_SPY = True
+RUN_PY_SPY = False
 RUN_PROFILE = False
 
 
