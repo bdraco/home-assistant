@@ -3,6 +3,7 @@
 Home Assistant is a Home Automation framework for observing the state
 of entities and react to changes.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -583,22 +584,37 @@ class HomeAssistant:
     @overload
     @callback
     def async_add_hass_job(
-        self, hassjob: HassJob[..., Coroutine[Any, Any, _R]], *args: Any
+        self,
+        hassjob: HassJob[..., Coroutine[Any, Any, _R]],
+        *args: Any,
+        eager_start: bool = False,
+        background: bool = False,
     ) -> asyncio.Future[_R] | None:
         ...
 
     @overload
     @callback
     def async_add_hass_job(
-        self, hassjob: HassJob[..., Coroutine[Any, Any, _R] | _R], *args: Any
+        self,
+        hassjob: HassJob[..., Coroutine[Any, Any, _R] | _R],
+        *args: Any,
+        eager_start: bool = False,
+        background: bool = False,
     ) -> asyncio.Future[_R] | None:
         ...
 
     @callback
     def async_add_hass_job(
-        self, hassjob: HassJob[..., Coroutine[Any, Any, _R] | _R], *args: Any
+        self,
+        hassjob: HassJob[..., Coroutine[Any, Any, _R] | _R],
+        *args: Any,
+        eager_start: bool = False,
+        background: bool = False,
     ) -> asyncio.Future[_R] | None:
         """Add a HassJob from within the event loop.
+
+        If eager_start is True, coroutine functions will be scheduled eagerly.
+        If background is True, the task will created as a background task.
 
         This method must be run in the event loop.
         hassjob: HassJob to call.
@@ -616,6 +632,12 @@ class HomeAssistant:
                 )
             # Use loop.create_task
             # to avoid the extra function call in asyncio.create_task.
+            if eager_start:
+                task = create_eager_task(
+                    hassjob.target(*args), name=hassjob.name, loop=self.loop
+                )
+                if task.done():
+                    return task
             task = self.loop.create_task(hassjob.target(*args), name=hassjob.name)
         elif hassjob.job_type is HassJobType.Callback:
             if TYPE_CHECKING:
@@ -627,8 +649,9 @@ class HomeAssistant:
                 hassjob.target = cast(Callable[..., _R], hassjob.target)
             task = self.loop.run_in_executor(None, hassjob.target, *args)
 
-        self._tasks.add(task)
-        task.add_done_callback(self._tasks.remove)
+        task_bucket = self._background_tasks if background else self._tasks
+        task_bucket.add(task)
+        task.add_done_callback(task_bucket.remove)
 
         return task
 
@@ -727,6 +750,7 @@ class HomeAssistant:
         hassjob: HassJob[..., Coroutine[Any, Any, _R]],
         *args: Any,
         eager_start: bool = False,
+        background: bool = False,
     ) -> asyncio.Future[_R] | None:
         ...
 
@@ -737,6 +761,7 @@ class HomeAssistant:
         hassjob: HassJob[..., Coroutine[Any, Any, _R] | _R],
         *args: Any,
         eager_start: bool = False,
+        background: bool = False,
     ) -> asyncio.Future[_R] | None:
         ...
 
@@ -746,12 +771,14 @@ class HomeAssistant:
         hassjob: HassJob[..., Coroutine[Any, Any, _R] | _R],
         *args: Any,
         eager_start: bool = False,
+        background: bool = False,
     ) -> asyncio.Future[_R] | None:
         """Run a HassJob from within the event loop.
 
         This method must be run in the event loop.
 
         If eager_start is True, coroutine functions will be scheduled eagerly.
+        If background is True, the task will created as a background task.
 
         hassjob: HassJob
         args: parameters for method to call.
@@ -760,18 +787,15 @@ class HomeAssistant:
         # if TYPE_CHECKING to avoid the overhead of constructing
         # the type used for the cast. For history see:
         # https://github.com/home-assistant/core/pull/71960
-        if eager_start and hassjob.job_type is HassJobType.Coroutinefunction:
-            if TYPE_CHECKING:
-                hassjob.target = cast(
-                    Callable[..., Coroutine[Any, Any, _R]], hassjob.target
-                )
-            return create_eager_task(hassjob.target(*args), name=hassjob.name)
         if hassjob.job_type is HassJobType.Callback:
             if TYPE_CHECKING:
                 hassjob.target = cast(Callable[..., _R], hassjob.target)
             hassjob.target(*args)
             return None
-        return self.async_add_hass_job(hassjob, *args)
+
+        return self.async_add_hass_job(
+            hassjob, *args, eager_start=eager_start, background=background
+        )
 
     @overload
     @callback
