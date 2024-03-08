@@ -832,6 +832,11 @@ class Integration:
         # True.
         return self.manifest.get("import_executor", True)
 
+    @cached_property
+    def has_translations(self) -> bool:
+        """Return if the integration has translations."""
+        return "translations" in self._top_level_files
+
     @property
     def mqtt(self) -> list[str] | None:
         """Return Integration MQTT entries."""
