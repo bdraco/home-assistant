@@ -7,6 +7,7 @@ from collections.abc import Callable, Coroutine, Mapping
 from dataclasses import dataclass, field
 from datetime import timedelta
 from enum import Enum
+from functools import partial
 from ipaddress import IPv4Address, IPv6Address
 import logging
 import socket
@@ -42,7 +43,7 @@ from homeassistant.const import (
     MATCH_ALL,
     __version__ as current_version,
 )
-from homeassistant.core import Event, HomeAssistant, callback as core_callback
+from homeassistant.core import Event, HassJob, HomeAssistant, callback as core_callback
 from homeassistant.data_entry_flow import BaseServiceInfo
 from homeassistant.helpers import config_validation as cv, discovery_flow
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -53,6 +54,7 @@ from homeassistant.helpers.system_info import async_get_system_info
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.loader import async_get_ssdp, bind_hass
 from homeassistant.util.async_ import create_eager_task
+from homeassistant.util.logging import catch_log_exception
 
 DOMAIN = "ssdp"
 SSDP_SCANNER = "scanner"
@@ -124,7 +126,9 @@ class SsdpServiceInfo(BaseServiceInfo):
 
 
 SsdpChange = Enum("SsdpChange", "ALIVE BYEBYE UPDATE")
-SsdpCallback = Callable[[SsdpServiceInfo, SsdpChange], Coroutine[Any, Any, Any]]
+SsdpHassJobCallback = HassJob[
+    [SsdpServiceInfo, SsdpChange], Coroutine[Any, Any, None] | None
+]
 
 SSDP_SOURCE_SSDP_CHANGE_MAPPING: Mapping[SsdpSource, SsdpChange] = {
     SsdpSource.SEARCH_ALIVE: SsdpChange.ALIVE,
@@ -135,10 +139,15 @@ SSDP_SOURCE_SSDP_CHANGE_MAPPING: Mapping[SsdpSource, SsdpChange] = {
 }
 
 
+def _format_err(name: str, *args: Any) -> str:
+    """Format error message."""
+    return f"Exception in SSDP callback {name}: {args}"
+
+
 @bind_hass
 async def async_register_callback(
     hass: HomeAssistant,
-    callback: SsdpCallback,
+    callback: Callable[[SsdpServiceInfo, SsdpChange], Coroutine[Any, Any, None] | None],
     match_dict: None | dict[str, str] = None,
 ) -> Callable[[], None]:
     """Register to receive a callback on ssdp broadcast.
@@ -146,7 +155,14 @@ async def async_register_callback(
     Returns a callback that can be used to cancel the registration.
     """
     scanner: Scanner = hass.data[DOMAIN][SSDP_SCANNER]
-    return await scanner.async_register_callback(callback, match_dict)
+    job = HassJob(
+        catch_log_exception(
+            callback,
+            partial(_format_err, str(callback)),
+        ),
+        f"ssdp callback {match_dict}",
+    )
+    return await scanner.async_register_callback(job, match_dict)
 
 
 @bind_hass
@@ -206,30 +222,20 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def _async_run_ssdp_callback(
-    callback: SsdpCallback,
-    discovery_info: SsdpServiceInfo,
-    ssdp_change: SsdpChange,
-) -> None:
-    try:
-        await callback(discovery_info, ssdp_change)
-    except Exception:  # pylint: disable=broad-except
-        _LOGGER.exception("Failed to callback info: %s", discovery_info)
-
-
 @core_callback
 def _async_process_callbacks(
     hass: HomeAssistant,
-    callbacks: list[SsdpCallback],
+    callbacks: list[SsdpHassJobCallback],
     discovery_info: SsdpServiceInfo,
     ssdp_change: SsdpChange,
 ) -> None:
     for callback in callbacks:
-        hass.async_create_background_task(
-            _async_run_ssdp_callback(callback, discovery_info, ssdp_change),
-            name="process ssdp callbacks",
-            eager_start=True,
-        )
+        try:
+            hass.async_run_hass_job(
+                callback, discovery_info, ssdp_change, eager_start=True, background=True
+            )
+        except Exception:  # pylint: disable=broad-except
+            _LOGGER.exception("Failed to callback info: %s", discovery_info)
 
 
 @core_callback
@@ -301,7 +307,7 @@ class Scanner:
         self._cancel_scan: Callable[[], None] | None = None
         self._ssdp_listeners: list[SsdpListener] = []
         self._device_tracker = SsdpDeviceTracker()
-        self._callbacks: list[tuple[SsdpCallback, dict[str, str]]] = []
+        self._callbacks: list[tuple[SsdpHassJobCallback, dict[str, str]]] = []
         self._description_cache: DescriptionCache | None = None
         self.integration_matchers = integration_matchers
 
@@ -311,7 +317,7 @@ class Scanner:
         return list(self._device_tracker.devices.values())
 
     async def async_register_callback(
-        self, callback: SsdpCallback, match_dict: None | dict[str, str] = None
+        self, callback: SsdpHassJobCallback, match_dict: None | dict[str, str] = None
     ) -> Callable[[], None]:
         """Register a callback."""
         if match_dict is None:
@@ -441,7 +447,7 @@ class Scanner:
     def _async_get_matching_callbacks(
         self,
         combined_headers: CaseInsensitiveDict,
-    ) -> list[SsdpCallback]:
+    ) -> list[SsdpHassJobCallback]:
         """Return a list of callbacks that match."""
         return [
             callback
