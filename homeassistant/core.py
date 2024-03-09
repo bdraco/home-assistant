@@ -639,6 +639,9 @@ class HomeAssistant:
                 if task.done():
                     return task
             else:
+                _LOGGER.warning(
+                    "Creating task %s (%s) non eagerly", hassjob.target, hassjob.name
+                )
                 task = self.loop.create_task(hassjob.target(*args), name=hassjob.name)
         elif hassjob.job_type is HassJobType.Callback:
             if TYPE_CHECKING:
