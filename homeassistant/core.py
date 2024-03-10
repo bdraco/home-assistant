@@ -818,21 +818,27 @@ class HomeAssistant:
     @overload
     @callback
     def async_run_job(
-        self, target: Callable[..., Coroutine[Any, Any, _R]], *args: Any
+        self,
+        target: Callable[..., Coroutine[Any, Any, _R]],
+        *args: Any,
+        eager_start: bool = False,
     ) -> asyncio.Future[_R] | None:
         ...
 
     @overload
     @callback
     def async_run_job(
-        self, target: Callable[..., Coroutine[Any, Any, _R] | _R], *args: Any
+        self,
+        target: Callable[..., Coroutine[Any, Any, _R] | _R],
+        *args: Any,
+        eager_start: bool = False,
     ) -> asyncio.Future[_R] | None:
         ...
 
     @overload
     @callback
     def async_run_job(
-        self, target: Coroutine[Any, Any, _R], *args: Any
+        self, target: Coroutine[Any, Any, _R], *args: Any, eager_start: bool = False
     ) -> asyncio.Future[_R] | None:
         ...
 
@@ -841,6 +847,7 @@ class HomeAssistant:
         self,
         target: Callable[..., Coroutine[Any, Any, _R] | _R] | Coroutine[Any, Any, _R],
         *args: Any,
+        eager_start: bool = True,
     ) -> asyncio.Future[_R] | None:
         """Run a job from within the event loop.
 
@@ -850,7 +857,7 @@ class HomeAssistant:
         args: parameters for method to call.
         """
         if asyncio.iscoroutine(target):
-            return self.async_create_task(target)
+            return self.async_create_task(target, eager_start=eager_start)
 
         # This code path is performance sensitive and uses
         # if TYPE_CHECKING to avoid the overhead of constructing
@@ -858,7 +865,7 @@ class HomeAssistant:
         # https://github.com/home-assistant/core/pull/71960
         if TYPE_CHECKING:
             target = cast(Callable[..., Coroutine[Any, Any, _R] | _R], target)
-        return self.async_run_hass_job(HassJob(target), *args, eager_start=True)
+        return self.async_run_hass_job(HassJob(target), *args, eager_start=eager_start)
 
     def block_till_done(self) -> None:
         """Block until all pending work is done."""
@@ -1273,6 +1280,7 @@ class _OneTimeListener:
     hass: HomeAssistant
     listener: Callable[[Event], Coroutine[Any, Any, None] | None]
     remove: CALLBACK_TYPE | None = None
+    run_immediately: bool = False
 
     @callback
     def __call__(self, event: Event) -> None:
@@ -1282,7 +1290,7 @@ class _OneTimeListener:
             return
         self.remove()
         self.remove = None
-        self.hass.async_run_job(self.listener, event)
+        self.hass.async_run_job(self.listener, event, eager_start=self.run_immediately)
 
     def __repr__(self) -> str:
         """Return the representation of the listener and source module."""
@@ -1468,6 +1476,7 @@ class EventBus:
         self,
         event_type: str,
         listener: Callable[[Event[Any]], Coroutine[Any, Any, None] | None],
+        run_immediately: bool = False,
     ) -> CALLBACK_TYPE:
         """Listen once for event of a specific type.
 
@@ -1478,7 +1487,9 @@ class EventBus:
 
         This method must be run in the event loop.
         """
-        one_time_listener = _OneTimeListener(self._hass, listener)
+        one_time_listener = _OneTimeListener(
+            self._hass, listener, None, run_immediately
+        )
         remove = self._async_listen_filterable_job(
             event_type,
             (
@@ -1488,7 +1499,7 @@ class EventBus:
                     job_type=HassJobType.Callback,
                 ),
                 None,
-                False,
+                run_immediately,
             ),
         )
         one_time_listener.remove = remove
