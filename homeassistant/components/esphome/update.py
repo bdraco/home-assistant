@@ -61,7 +61,9 @@ async def async_setup_entry(
         return
 
     unsubs = [
-        entry_data.async_subscribe_device_updated(_async_setup_update_entity),
+        async_dispatcher_connect(
+            hass, entry_data.signal_device_updated, _async_setup_update_entity
+        ),
         dashboard.async_add_listener(_async_setup_update_entity),
     ]
 
@@ -157,7 +159,11 @@ class ESPHomeUpdateEntity(CoordinatorEntity[ESPHomeDashboard], UpdateEntity):
             )
         )
         self.async_on_remove(
-            entry_data.async_subscribe_device_updated(self._handle_device_update)
+            async_dispatcher_connect(
+                hass,
+                entry_data.signal_device_updated,
+                self._handle_device_update,
+            )
         )
 
     async def async_install(
