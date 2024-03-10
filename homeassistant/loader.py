@@ -1100,6 +1100,15 @@ class Integration:
             import_futures.append((platform_name, import_future))
 
         if load_executor_platforms or load_event_loop_platforms:
+            if self.domain in self._cache:
+                executor = self.hass.async_add_executor_job
+            else:
+                # If the integration is not loaded we use the import
+                # executor to avoid deadlocks since importing the
+                # integration is likely to import requirements
+                # which may be shared between other integrations.
+                executor = self.hass.async_add_import_executor_job
+
             if debug := _LOGGER.isEnabledFor(logging.DEBUG):
                 start = time.perf_counter()
 
@@ -1107,9 +1116,7 @@ class Integration:
                 if load_executor_platforms:
                     try:
                         platforms.update(
-                            await self.hass.async_add_import_executor_job(
-                                self._load_platforms, platform_names
-                            )
+                            await executor(self._load_platforms, platform_names)
                         )
                     except ImportError as ex:
                         _LOGGER.debug(
