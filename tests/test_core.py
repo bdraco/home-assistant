@@ -2114,16 +2114,18 @@ async def test_async_functions_with_callback(hass: HomeAssistant) -> None:
     assert len(runs) == 3
 
 
-async def test_async_run_job_starts_task_eagerly(hass: HomeAssistant) -> None:
+async def test_async_run_job_starts_tasks_eagerly(hass: HomeAssistant) -> None:
     """Test async_run_job starts tasks eagerly."""
     runs = []
 
     async def _test():
         runs.append(True)
 
-    await hass.async_run_job(_test)
+    task = hass.async_run_job(_test)
     # No call to hass.async_block_till_done to ensure the task is run eagerly
     assert len(runs) == 1
+    assert task.done()
+    await task
 
 
 def test_valid_entity_id() -> None:
