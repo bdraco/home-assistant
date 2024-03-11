@@ -157,9 +157,9 @@ class Store(Generic[_T]):
 
         start = time.monotonic()
         if storage_semaphore.locked():
-            _LOGGER.warning("Waiting for storage semaphore for %s", self.key)
+            _LOGGER.debug("Waiting for storage semaphore for %s", self.key)
         else:
-            _LOGGER.warning("Loading data for %s", self.key)
+            _LOGGER.debug("Loading data for %s", self.key)
 
         try:
             async with storage_semaphore:
@@ -167,7 +167,7 @@ class Store(Generic[_T]):
         finally:
             self._load_task = None
 
-            _LOGGER.warning(
+            _LOGGER.debug(
                 "Loaded data for %s in %s", self.key, time.monotonic() - start
             )
 
