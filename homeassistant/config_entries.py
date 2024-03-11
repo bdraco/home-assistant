@@ -1068,7 +1068,7 @@ class ConfigEntriesFlowManager(data_entry_flow.FlowManager[ConfigFlowResult, str
         self.config_entries = config_entries
         self._hass_config = hass_config
         self._pending_import_flows: dict[str, dict[str, asyncio.Future[None]]] = {}
-        self._initialize_futures: dict[str, list[asyncio.Future[None]]] = {}
+        self._initialize_futures: dict[str, set[asyncio.Future[None]]] = {}
         self._discovery_debouncer = Debouncer[None](
             hass,
             _LOGGER,
@@ -1117,14 +1117,15 @@ class ConfigEntriesFlowManager(data_entry_flow.FlowManager[ConfigFlowResult, str
             )
 
         loop = self.hass.loop
+        pending_import_futures: dict[str, asyncio.Future[None]] | None = None
 
         if context["source"] == SOURCE_IMPORT:
-            self._pending_import_flows.setdefault(handler, {})[
-                flow_id
-            ] = loop.create_future()
+            pending_import_futures = self._pending_import_flows.setdefault(handler, {})
+            pending_import_futures[flow_id] = loop.create_future()
 
         cancel_init_future = loop.create_future()
-        self._initialize_futures.setdefault(handler, []).append(cancel_init_future)
+        initialize_futures = self._initialize_futures.setdefault(handler, set())
+        initialize_futures.add(cancel_init_future)
         try:
             async with interrupt(
                 cancel_init_future,
@@ -1135,8 +1136,10 @@ class ConfigEntriesFlowManager(data_entry_flow.FlowManager[ConfigFlowResult, str
         except FlowCancelledError as ex:
             raise asyncio.CancelledError from ex
         finally:
-            self._initialize_futures[handler].remove(cancel_init_future)
-            self._pending_import_flows.get(handler, {}).pop(flow_id, None)
+            _LOGGER.warning("Remove from initialize_futures: %s", initialize_futures)
+            initialize_futures.remove(cancel_init_future)
+            if pending_import_futures:
+                pending_import_futures.pop(flow_id, None)
 
         if result["type"] != data_entry_flow.FlowResultType.ABORT:
             await self.async_post_init(flow, result)
