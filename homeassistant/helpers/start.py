@@ -30,7 +30,7 @@ def _async_at_core_state(
     """
     at_start_job = HassJob(at_start_cb)
     if check_state(hass):
-        hass.async_run_hass_job(at_start_job, hass, eager_start=True)
+        hass.async_run_hass_job(at_start_job, hass)
         return lambda: None
 
     unsub: None | CALLBACK_TYPE = None
@@ -38,7 +38,7 @@ def _async_at_core_state(
     @callback
     def _matched_event(event: Event) -> None:
         """Call the callback when Home Assistant started."""
-        hass.async_run_hass_job(at_start_job, hass, eager_start=True)
+        hass.async_run_hass_job(at_start_job, hass)
         nonlocal unsub
         unsub = None
 
@@ -51,10 +51,6 @@ def _async_at_core_state(
     return cancel
 
 
-def _is_running(hass: HomeAssistant) -> bool:
-    return hass.state is CoreState.running
-
-
 @callback
 def async_at_start(
     hass: HomeAssistant,
@@ -62,10 +58,13 @@ def async_at_start(
 ) -> CALLBACK_TYPE:
     """Execute a job at_start_cb when Home Assistant is starting.
 
-    The job is executed immediately if Home Assistant has fired
-    the start event (reached CoreState.running), Otherwise, it
-    will wait for EVENT_HOMEASSISTANT_START
+    The job is executed immediately if Home Assistant is already starting or started.
+    Will wait for EVENT_HOMEASSISTANT_START if it isn't.
     """
+
+    def _is_running(hass: HomeAssistant) -> bool:
+        return hass.is_running
+
     return _async_at_core_state(
         hass, at_start_cb, EVENT_HOMEASSISTANT_START, _is_running
     )
@@ -78,10 +77,13 @@ def async_at_started(
 ) -> CALLBACK_TYPE:
     """Execute a job at_start_cb when Home Assistant has started.
 
-    The job is executed immediately if Home Assistant has fired
-    the start event (reached CoreState.running), Otherwise, it
-    will wait for EVENT_HOMEASSISTANT_STARTED
+    The job is executed immediately if Home Assistant is already started.
+    Will wait for EVENT_HOMEASSISTANT_STARTED if it isn't.
     """
+
+    def _is_started(hass: HomeAssistant) -> bool:
+        return hass.state is CoreState.running
+
     return _async_at_core_state(
-        hass, at_start_cb, EVENT_HOMEASSISTANT_STARTED, _is_running
+        hass, at_start_cb, EVENT_HOMEASSISTANT_STARTED, _is_started
     )
