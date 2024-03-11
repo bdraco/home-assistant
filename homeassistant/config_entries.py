@@ -1136,7 +1136,6 @@ class ConfigEntriesFlowManager(data_entry_flow.FlowManager[ConfigFlowResult, str
         except FlowCancelledError as ex:
             raise asyncio.CancelledError from ex
         finally:
-            _LOGGER.warning("Remove from initialize_futures: %s", initialize_futures)
             initialize_futures.remove(cancel_init_future)
             if pending_import_futures:
                 pending_import_futures.pop(flow_id, None)
