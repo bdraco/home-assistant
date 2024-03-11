@@ -651,6 +651,7 @@ class HomeAssistant:
                     hassjob.target(*args), name=hassjob.name, loop=self.loop
                 )
                 if task.done():
+                    _LOGGER.warning("Created job %s finished right away", hassjob)
                     return task
             else:
                 _LOGGER.warning(
