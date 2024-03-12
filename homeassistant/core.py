@@ -1275,9 +1275,8 @@ _FilterableJobType = tuple[
 @dataclass(slots=True)
 class _OneTimeListener:
     hass: HomeAssistant
-    listener: Callable[[Event], Coroutine[Any, Any, None] | None]
+    listener_job: HassJob[[Event], Coroutine[Any, Any, None] | None]
     remove: CALLBACK_TYPE | None = None
-    run_immediately: bool = False
 
     @callback
     def __call__(self, event: Event) -> None:
@@ -1287,14 +1286,14 @@ class _OneTimeListener:
             return
         self.remove()
         self.remove = None
-        self.hass.async_run_job(self.listener, event, eager_start=self.run_immediately)
+        self.hass.async_run_hass_job(self.listener_job, event)
 
     def __repr__(self) -> str:
         """Return the representation of the listener and source module."""
-        module = inspect.getmodule(self.listener)
+        module = inspect.getmodule(self.listener_job.target)
         if module:
-            return f"<_OneTimeListener {module.__name__}:{self.listener}>"
-        return f"<_OneTimeListener {self.listener}>"
+            return f"<_OneTimeListener {module.__name__}:{self.listener_job.target}>"
+        return f"<_OneTimeListener {self.listener_job.target}>"
 
 
 class EventBus:
@@ -1484,9 +1483,7 @@ class EventBus:
 
         This method must be run in the event loop.
         """
-        one_time_listener = _OneTimeListener(
-            self._hass, listener, None, run_immediately
-        )
+        one_time_listener = _OneTimeListener(self._hass, HassJob(listener))
         remove = self._async_listen_filterable_job(
             event_type,
             (
