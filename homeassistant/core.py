@@ -700,6 +700,7 @@ class HomeAssistant:
         if eager_start:
             task = create_eager_task(target, name=name, loop=self.loop)
             if task.done():
+                _LOGGER.warning("Created task %s finished right away", task)
                 return task
         else:
             # Use loop.create_task
