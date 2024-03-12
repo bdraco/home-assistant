@@ -46,6 +46,7 @@ def json_encoder_default(obj: Any) -> Any:
 
     Hand other objects to the original method.
     """
+    _LOGGER.error("Processing json_encoder_default: %s", obj)
     if hasattr(obj, "json_fragment"):
         return obj.json_fragment
     if isinstance(obj, (set, tuple)):
