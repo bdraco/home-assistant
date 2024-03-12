@@ -713,11 +713,11 @@ class _ScriptRun:
             # is cancelled otherwise the CancelledError exception will not be raised to
             # here due to the call to asyncio.wait(). Rather we'll check for that below.
             if self._stop.done():
-                # Stop requested, cancel long task and return None.
+                # Stop requested, cancel long task and return None below
                 await async_cancel_long_task()
 
-        if long_task.cancelled() or self._stop.done():
-            raise asyncio.CancelledError
+        if self._stop.done():
+            return None
         if long_task.done():
             # Propagate any exceptions that occurred.
             return long_task.result()
