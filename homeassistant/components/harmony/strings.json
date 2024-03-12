@@ -39,7 +39,6 @@
   "entity": {
     "select": {
       "activities": {
-        "name": "Activities",
         "state": {
           "power_off": "Power Off"
         }

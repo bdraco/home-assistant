@@ -2,31 +2,38 @@
 
 from datetime import timedelta
 
+from homeassistant.components.harmony.const import DOMAIN
 from homeassistant.components.select import (
     ATTR_OPTION,
     DOMAIN as SELECT_DOMAIN,
     SERVICE_SELECT_OPTION,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON, STATE_UNAVAILABLE
+from homeassistant.const import (
+    ATTR_ENTITY_ID,
+    CONF_HOST,
+    CONF_NAME,
+    STATE_OFF,
+    STATE_ON,
+    STATE_UNAVAILABLE,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.util import utcnow
 
-from .const import ENTITY_REMOTE, ENTITY_SELECT
+from .const import ENTITY_REMOTE, ENTITY_SELECT, HUB_NAME
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 
 
 async def test_connection_state_changes(
-    harmony_client,
-    mock_hc,
-    hass: HomeAssistant,
-    mock_write_config,
-    mock_config_entry: MockConfigEntry,
+    harmony_client, mock_hc, hass: HomeAssistant, mock_write_config
 ) -> None:
     """Ensure connection changes are reflected in the switch states."""
+    entry = MockConfigEntry(
+        domain=DOMAIN, data={CONF_HOST: "192.0.2.0", CONF_NAME: HUB_NAME}
+    )
 
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
 
     # mocks start with current activity == Watch TV
@@ -49,13 +56,14 @@ async def test_connection_state_changes(
     assert hass.states.is_state(ENTITY_SELECT, "Watch TV")
 
 
-async def test_options(
-    mock_hc, hass: HomeAssistant, mock_write_config, mock_config_entry: MockConfigEntry
-) -> None:
+async def test_options(mock_hc, hass: HomeAssistant, mock_write_config) -> None:
     """Ensure calls to the switch modify the harmony state."""
+    entry = MockConfigEntry(
+        domain=DOMAIN, data={CONF_HOST: "192.0.2.0", CONF_NAME: HUB_NAME}
+    )
 
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
 
     # assert we have all options
@@ -68,12 +76,14 @@ async def test_options(
     ]
 
 
-async def test_select_option(
-    mock_hc, hass: HomeAssistant, mock_write_config, mock_config_entry: MockConfigEntry
-) -> None:
+async def test_select_option(mock_hc, hass: HomeAssistant, mock_write_config) -> None:
     """Ensure calls to the switch modify the harmony state."""
-    mock_config_entry.add_to_hass(hass)
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    entry = MockConfigEntry(
+        domain=DOMAIN, data={CONF_HOST: "192.0.2.0", CONF_NAME: HUB_NAME}
+    )
+
+    entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
 
     # mocks start with current activity == Watch TV
