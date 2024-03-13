@@ -653,7 +653,7 @@ class HomeAssistant:
                     hassjob.target(*args), name=hassjob.name, loop=self.loop
                 )
                 if task.done():
-                    _LOGGER.warning("Created job %s finished right away", hassjob)
+                    _LOGGER.debug("Created job %s finished right away", hassjob)
                     return task
             else:
                 _LOGGER.warning(
@@ -702,7 +702,7 @@ class HomeAssistant:
         if eager_start:
             task = create_eager_task(target, name=name, loop=self.loop)
             if task.done():
-                _LOGGER.warning(
+                _LOGGER.debug(
                     "Created task %s with target %s finished right away", task, target
                 )
                 return task
@@ -737,6 +737,9 @@ class HomeAssistant:
         if eager_start:
             task = create_eager_task(target, name=name, loop=self.loop)
             if task.done():
+                _LOGGER.warning(
+                    "Created background task %s (%s) finished right away", task, target
+                )
                 return task
         else:
             # Use loop.create_task
