@@ -821,7 +821,7 @@ async def _async_set_up_integrations(
     hass: core.HomeAssistant, config: dict[str, Any]
 ) -> None:
     """Set up all the integrations."""
-
+    hass.loop.set_debug(True)
     proc: asyncio.subprocess.Process | None = None
     with contextlib.suppress(Exception):
         if RUN_PY_SPY:

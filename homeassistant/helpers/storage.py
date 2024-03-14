@@ -390,6 +390,7 @@ class Store(Generic[_T]):
             data = self._data
 
             if "data_func" in data:
+                _LOGGER.warning("Writing data with data_func: %s", self.key)
                 data["data"] = data.pop("data_func")()
 
             self._data = None
