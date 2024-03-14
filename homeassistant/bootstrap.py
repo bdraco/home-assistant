@@ -839,6 +839,9 @@ async def _async_set_up_integrations(
                 "--output",
                 f"/config/www/bootstrap.{time.time()}.svg",
             )
+            hass.async_create_background_task(
+                proc.communicate(), name="bootstrap py-spy"
+            )
 
     if RUN_PROFILE:
         pr = cProfile.Profile()
@@ -954,10 +957,6 @@ async def _async_set_up_integrations(
         pr.dump_stats(file)
         _LOGGER.warning(file)
 
-    if proc:
-        with contextlib.suppress(Exception):
-            await proc.communicate()
-
     with contextlib.suppress(Exception):
         if RUN_PY_SPY_AFTER_SETUP:
             proc = await asyncio.create_subprocess_exec(
@@ -972,3 +971,4 @@ async def _async_set_up_integrations(
                 "--output",
                 f"/config/www/startup.{time.time()}.svg",
             )
+            hass.async_create_background_task(proc.communicate(), name="startup py-spy")
