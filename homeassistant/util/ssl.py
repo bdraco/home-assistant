@@ -164,10 +164,3 @@ def server_context_intermediate() -> ssl.SSLContext:
     context.set_ciphers(SSL_CIPHER_LISTS[SSLCipherList.INTERMEDIATE])
 
     return context
-
-
-# Call as soon as the module is loaded to ensure the cache is populated.
-# as we do not want to do it once the event loop is running because it does
-# I/O.
-get_default_context()
-get_default_no_verify_context()
