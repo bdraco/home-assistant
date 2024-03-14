@@ -2,6 +2,7 @@
 
 from datetime import timedelta
 from functools import lru_cache
+import logging
 import os
 from pathlib import Path
 from unittest.mock import patch
@@ -12,13 +13,14 @@ import pytest
 from homeassistant.components.profiler import (
     _LRU_CACHE_WRAPPER_OBJECT,
     _SQLALCHEMY_LRU_OBJECT,
+    CONF_ENABLED,
     CONF_SECONDS,
     SERVICE_DUMP_LOG_OBJECTS,
     SERVICE_LOG_EVENT_LOOP_SCHEDULED,
-    SERVICE_LOG_SSL,
     SERVICE_LOG_THREAD_FRAMES,
     SERVICE_LRU_STATS,
     SERVICE_MEMORY,
+    SERVICE_SET_ASYNCIO_DEBUG,
     SERVICE_START,
     SERVICE_START_LOG_OBJECT_SOURCES,
     SERVICE_START_LOG_OBJECTS,
@@ -371,8 +373,10 @@ async def test_log_object_sources(
         )
 
 
-async def test_log_ssl(hass: HomeAssistant, caplog: pytest.LogCaptureFixture) -> None:
-    """Test logging ssl objects."""
+async def test_set_asyncio_debug(
+    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test setting asyncio debug."""
 
     entry = MockConfigEntry(domain=DOMAIN)
     entry.add_to_hass(hass)
@@ -380,45 +384,29 @@ async def test_log_ssl(hass: HomeAssistant, caplog: pytest.LogCaptureFixture) ->
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
 
-    class SSLProtocol:
-        def __init__(self):
-            """Mock an SSLProtocol."""
-            self._transport = None
+    assert hass.services.has_service(DOMAIN, SERVICE_SET_ASYNCIO_DEBUG)
 
-    class SSLObject:
-        def __init__(self):
-            """Mock an SSLObject."""
-            self._transport = None
+    hass.loop.set_debug(False)
+    original_level = logging.getLogger().getEffectiveLevel()
+    logging.getLogger().setLevel(logging.WARNING)
 
-        def getpeercert(self, binary_form=False):
-            """Mock getpeercert."""
-            return {"subject": (("commonName", "test"),)}
+    await hass.services.async_call(DOMAIN, SERVICE_SET_ASYNCIO_DEBUG, {}, blocking=True)
+    assert hass.loop.get_debug() is True
 
-        def server_hostname(self):
-            """Mock server_hostname."""
-            return "test"
+    # Ensure logging is at least at INFO level
+    assert logging.getLogger().getEffectiveLevel() == logging.INFO
 
-    class _SSLProtocolTransport:
-        def __init__(self):
-            """Mock an _SSLProtocolTransport."""
+    await hass.services.async_call(
+        DOMAIN, SERVICE_SET_ASYNCIO_DEBUG, {CONF_ENABLED: False}, blocking=True
+    )
+    assert hass.loop.get_debug() is False
 
-    ssl_protocol = SSLProtocol()
-    ssl_object = SSLObject()
-    ssl_protocol_transport = _SSLProtocolTransport()
-    assert hass.services.has_service(DOMAIN, SERVICE_LOG_SSL)
+    await hass.services.async_call(
+        DOMAIN, SERVICE_SET_ASYNCIO_DEBUG, {CONF_ENABLED: True}, blocking=True
+    )
+    assert hass.loop.get_debug() is True
 
-    def _mock_by_type(type_):
-        if type_ == "SSLProtocol":
-            return [ssl_protocol]
-        if type_ == "SSLObject":
-            return [ssl_object]
-        if type_ == "_SSLProtocolTransport":
-            return [ssl_protocol_transport]
-        raise ValueError("Unknown type")
+    logging.getLogger().setLevel(original_level)
 
-    with patch("objgraph.by_type", side_effect=_mock_by_type):
-        await hass.services.async_call(DOMAIN, SERVICE_LOG_SSL, blocking=True)
-
-    assert "SSLProtocol" in caplog.text
-    assert "SSLObject" in caplog.text
-    assert "_SSLProtocolTransport" in caplog.text
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    await hass.async_block_till_done()
