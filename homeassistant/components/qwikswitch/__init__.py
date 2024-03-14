@@ -212,7 +212,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         if comp_conf:
             load_platform(hass, comp_name, DOMAIN, {DOMAIN: comp_conf}, config)
 
-    update_job = HassJob(qsusb.update_from_devices)
+    HassJob(qsusb.update_from_devices)
 
     def callback_qs_listen(qspacket):
         """Typically a button press or update signal."""
@@ -227,7 +227,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 async_dispatcher_send(hass, qspacket[QS_ID], qspacket)
 
         # Update all ha_objects
-        hass.async_add_hass_job(update_job)
+        hass.async_create_task(qsusb.update_from_devices())
 
     @callback
     def async_start(_):
