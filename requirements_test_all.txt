@@ -448,7 +448,7 @@ auroranoaa==0.0.3
 aurorapy==0.2.7
 
 # homeassistant.components.axis
-axis==54
+axis==55
 
 # homeassistant.components.azure_event_hub
 azure-eventhub==5.11.1
@@ -547,7 +547,7 @@ colorthief==0.2.1
 construct==2.10.68
 
 # homeassistant.components.utility_meter
-croniter==1.0.6
+croniter==2.0.2
 
 # homeassistant.components.crownstone
 crownstone-cloud==1.4.9
@@ -723,6 +723,9 @@ freebox-api==1.1.0
 # homeassistant.components.fritz
 # homeassistant.components.fritzbox_callmonitor
 fritzconnection[qr]==1.13.2
+
+# homeassistant.components.fyta
+fyta_cli==0.3.3
 
 # homeassistant.components.google_translate
 gTTS==2.2.4
@@ -1122,7 +1125,6 @@ numato-gpio==0.12.0
 
 # homeassistant.components.compensation
 # homeassistant.components.iqvia
-# homeassistant.components.opencv
 # homeassistant.components.stream
 # homeassistant.components.tensorflow
 # homeassistant.components.trend
@@ -1162,7 +1164,7 @@ openerz-api==0.3.0
 openhomedevice==2.2.0
 
 # homeassistant.components.opower
-opower==0.4.0
+opower==0.4.1
 
 # homeassistant.components.oralb
 oralb-ble==0.17.6
@@ -1611,7 +1613,7 @@ pyqwikswitch==0.93
 pyrainbird==4.0.2
 
 # homeassistant.components.risco
-pyrisco==0.5.8
+pyrisco==0.5.10
 
 # homeassistant.components.rituals_perfume_genie
 pyrituals==0.0.6
