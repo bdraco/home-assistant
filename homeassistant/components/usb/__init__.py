@@ -255,7 +255,8 @@ class USBDiscovery:
 
         try:
             context = Context()
-        except (ImportError, OSError):
+        except (ImportError, OSError) as ex:
+            _LOGGER.debug("Unable to create pyudev context: %s", ex)
             return None
 
         monitor = Monitor.from_netlink(context)
