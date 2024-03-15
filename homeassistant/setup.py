@@ -442,6 +442,12 @@ async def _async_setup_component(  # noqa: C901
                     for entry in entries
                 )
             )
+            _LOGGER.debug(
+                "Setting up of domain %s config entries (%d) took %.1f seconds",
+                domain,
+                len(entries),
+                timer() - end,
+            )
 
     # Cleanup
     if domain in hass.data[DATA_SETUP]:
