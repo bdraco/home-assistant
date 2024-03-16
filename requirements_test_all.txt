@@ -451,7 +451,7 @@ auroranoaa==0.0.3
 aurorapy==0.2.7
 
 # homeassistant.components.axis
-axis==55
+axis==56
 
 # homeassistant.components.azure_event_hub
 azure-eventhub==5.11.1
@@ -905,7 +905,7 @@ ibeacon-ble==1.2.0
 # homeassistant.components.google
 # homeassistant.components.local_calendar
 # homeassistant.components.local_todo
-ical==7.0.1
+ical==7.0.3
 
 # homeassistant.components.ping
 icmplib==3.0
