@@ -8,7 +8,7 @@ from collections.abc import Callable, Iterable, Sequence
 from contextlib import suppress
 from dataclasses import dataclass
 from enum import StrEnum
-from functools import reduce
+from functools import partial, reduce
 import logging
 import operator
 import os
@@ -1436,25 +1436,32 @@ def extract_domain_configs(config: ConfigType, domain: str) -> Sequence[str]:
     return domain_configs
 
 
+@dataclass(slots=True)
+class _PlatformIntegration:
+    """Class to hold platform integration information."""
+
+    path: str
+    name: str
+    integration: Integration
+    config: ConfigType
+    validated_config: ConfigType
+
+
 async def _async_load_and_validate_platform(
     domain: str,
     integration_docs: str | None,
     config_exceptions: list[ConfigExceptionInfo],
-    platform_path: str,
-    p_name: str,
-    p_integration: Integration,
-    p_config: ConfigType,
-    p_validated: ConfigType,
+    p_integration: _PlatformIntegration,
 ) -> ConfigType | None:
     """Load a platform and validate its config."""
     try:
-        platform = await p_integration.async_get_platform(domain)
+        platform = await p_integration.integration.async_get_platform(domain)
     except LOAD_EXCEPTIONS as exc:
         exc_info = ConfigExceptionInfo(
             exc,
             ConfigErrorTranslationKey.PLATFORM_COMPONENT_LOAD_EXC,
-            platform_path,
-            p_config,
+            p_integration.path,
+            p_integration.config,
             integration_docs,
         )
         config_exceptions.append(exc_info)
@@ -1462,26 +1469,26 @@ async def _async_load_and_validate_platform(
 
     # Validate platform specific schema
     if not hasattr(platform, "PLATFORM_SCHEMA"):
-        return p_validated
+        return p_integration.validated_config
 
     try:
-        return platform.PLATFORM_SCHEMA(p_config)  # type: ignore[no-any-return]
+        return platform.PLATFORM_SCHEMA(p_integration.config)  # type: ignore[no-any-return]
     except vol.Invalid as exc:
         exc_info = ConfigExceptionInfo(
             exc,
             ConfigErrorTranslationKey.PLATFORM_CONFIG_VALIDATION_ERR,
-            platform_path,
-            p_config,
-            p_integration.documentation,
+            p_integration.path,
+            p_integration.config,
+            p_integration.integration.documentation,
         )
         config_exceptions.append(exc_info)
     except Exception as exc:  # pylint: disable=broad-except
         exc_info = ConfigExceptionInfo(
             exc,
             ConfigErrorTranslationKey.PLATFORM_SCHEMA_VALIDATOR_ERR,
-            p_name,
-            p_config,
-            p_integration.documentation,
+            p_integration.name,
+            p_integration.config,
+            p_integration.integration.documentation,
         )
         config_exceptions.append(exc_info)
 
@@ -1603,7 +1610,7 @@ async def async_process_component_config(  # noqa: C901
     if component_platform_schema is None:
         return IntegrationConfigInfo(config, [])
 
-    platforms_to_load: list[tuple[str, str, Integration, ConfigType, ConfigType]] = []
+    platforms_to_load: list[_PlatformIntegration] = []
     platforms: list[ConfigType] = []
     for p_name, p_config in config_per_platform(config, domain):
         # Validate component specific platform schema
@@ -1652,7 +1659,9 @@ async def async_process_component_config(  # noqa: C901
             continue
 
         platforms_to_load.append(
-            (platform_path, p_name, p_integration, p_config, p_validated)
+            _PlatformIntegration(
+                platform_path, p_name, p_integration, p_config, p_validated
+            )
         )
 
     #
@@ -1672,21 +1681,16 @@ async def async_process_component_config(  # noqa: C901
     # all integrations that need the base `sensor` platform to proceed with setup.
     #
     if platforms_to_load:
+        async_load_and_validate = partial(
+            _async_load_and_validate_platform,
+            domain,
+            integration_docs,
+            config_exceptions,
+        )
         results = await asyncio.gather(
             *(
-                create_eager_task(
-                    _async_load_and_validate_platform(
-                        domain,
-                        integration_docs,
-                        config_exceptions,
-                        platform_path,
-                        p_name,
-                        p_integration,
-                        p_config,
-                        p_validated,
-                    )
-                )
-                for platform_path, p_name, p_integration, p_config, p_validated in platforms_to_load
+                create_eager_task(async_load_and_validate(p_integration))
+                for p_integration in platforms_to_load
             )
         )
         platforms.extend(
