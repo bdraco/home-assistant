@@ -717,7 +717,7 @@ async def _async_resolve_domains_to_setup(
     #
     # `template` has to be loaded to validate the config for sensor
     # so we want to start loading `sensor` as soon as we know
-    # it will be needed. The more platforms under sensor: the longer
+    # it will be needed. The more platforms under `sensor:`, the longer
     # it will take to finish setup for `sensor` because each of these
     # platforms has to be imported before we can validate the config.
     #
@@ -828,7 +828,12 @@ async def _async_resolve_domains_to_setup(
     # time it gets to it.
     hass.async_create_background_task(
         translation.async_load_integrations(
-            hass, {*BASE_PLATFORMS, *platform_integrations, *domains_to_setup}
+            hass,
+            {
+                *BASE_PLATFORMS,
+                *chain.from_iterable(platform_integrations.values()),
+                *domains_to_setup,
+            },
         ),
         "load translations",
         eager_start=True,
