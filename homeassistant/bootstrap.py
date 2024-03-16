@@ -672,17 +672,18 @@ async def async_setup_multi_components(
     """Set up multiple domains. Log on failure."""
     # Avoid creating tasks for domains that were setup in a previous stage
     domains_not_yet_setup = domains - hass.config.components
-    # Sort the domains to setup so base platforms are setup first
-    # as everything has to wait for them at some point
-    setup_order = sorted(domains_not_yet_setup, key=SETUP_ORDER_SORT_KEY, reverse=True)
-    _LOGGER.debug("Setup order: %s", setup_order)
+    # Create setup tasks for base platforms first since everything will have
+    # to wait to be imported, and the sooner we can get the base platforms
+    # loaded the sooner we can start loading the rest of the integrations.
     futures = {
         domain: hass.async_create_task(
             async_setup_component(hass, domain, config),
             f"setup component {domain}",
             eager_start=True,
         )
-        for domain in setup_order
+        for domain in sorted(
+            domains_not_yet_setup, key=SETUP_ORDER_SORT_KEY, reverse=True
+        )
     }
     results = await asyncio.gather(*futures.values(), return_exceptions=True)
     for idx, domain in enumerate(futures):
@@ -704,37 +705,46 @@ async def _async_resolve_domains_to_setup(
     platform_integrations = conf_util.extract_platform_integrations(
         config, BASE_PLATFORMS
     )
-    # Make sure we load the base platforms for platform integrations
-    # as soon as possible since every config entry integration will
-    # be waiting for them to be loaded before they can be set up
-    # their platforms.
+    # Ensure base platforms that have platform integrations are added to
+    # to `domains_to_setup so they can be setup first instead of
+    # discovering them when later when a config entry setup task
+    # notices its needed and there is already a long line to use
+    # the import executor.
     #
     # For example if we have
     # sensor:
     #   - platform: template
     #
-    # template has to be loaded to validate the config for sensor
-    # so we want to start loading the base platforms as soon as possible
+    # `template` has to be loaded to validate the config for sensor
+    # so we want to start loading `sensor` as soon as we know
+    # it will be needed. The more platforms under sensor: the longer
+    # it will take to finish setup for `sensor` because each of these
+    # platforms has to be imported before we can validate the config.
+    #
+    # Thankfully we are migrating away from the platform pattern
+    # so this will be less of a problem in the future.
     domains_to_setup.update(platform_integrations)
 
-    # Load base platforms right away since
-    # we do not require the manifest to list
-    # them as dependencies and we want
-    # to avoid the lock contention when multiple
-    # integrations try to resolve them at once
-    additional = {*BASE_PLATFORMS, *chain.from_iterable(platform_integrations.values())}
+    # Load manifests for base platforms and platform based integrations
+    # that are defined under base platforms right away since we do not require
+    # the manifest to list them as dependencies and we want to avoid the lock
+    # contention when multiple integrations try to load them at once
+    additional_manifests_to_load = {
+        *BASE_PLATFORMS,
+        *chain.from_iterable(platform_integrations.values()),
+    }
 
     # Resolve all dependencies so we know all integrations
     # that will have to be loaded and start right-away
     integration_cache: dict[str, loader.Integration] = {}
     to_resolve: set[str] = domains_to_setup
-    while to_resolve or additional:
+    while to_resolve or additional_manifests_to_load:
         old_to_resolve: set[str] = to_resolve
         to_resolve = set()
 
-        if additional:
-            to_get = {*old_to_resolve, *additional}
-            additional.clear()
+        if additional_manifests_to_load:
+            to_get = {*old_to_resolve, *additional_manifests_to_load}
+            additional_manifests_to_load.clear()
         else:
             to_get = old_to_resolve
 
@@ -748,12 +758,11 @@ async def _async_resolve_domains_to_setup(
             integration_cache[domain] = itg
             needed_requirements.update(itg.requirements)
 
-            # Make sure dependencies in manifests are
-            # loaded in the next loop to try to group
-            # as many as possible in a single call and
-            # after the manifest being loaded later in
-            # a single job.
-            additional.update(
+            # Make sure manifests for dependencies are loaded in the next
+            # loop to try to group as many as manifest loads in a single
+            # call to avoid the creating one-off executor jobs later in
+            # the setup process
+            additional_manifests_to_load.update(
                 dep
                 for dep in chain(itg.dependencies, itg.after_dependencies)
                 if dep not in integration_cache
