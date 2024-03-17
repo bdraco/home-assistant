@@ -84,6 +84,7 @@ from .helpers.typing import ConfigType
 from .setup import (
     BASE_PLATFORMS,
     DATA_SETUP_STARTED,
+    DATA_SETUP_TIME,
     async_get_setup_timings,
     async_notify_setup_error,
     async_set_domains_to_be_loaded,
@@ -599,7 +600,9 @@ class _WatchPendingSetups:
     """Periodic log and dispatch of setups that are pending."""
 
     def __init__(
-        self, hass: core.HomeAssistant, setup_started: dict[str, float]
+        self,
+        hass: core.HomeAssistant,
+        setup_started: dict[tuple[str, str | None], float],
     ) -> None:
         """Initialize the WatchPendingSetups class."""
         self._hass = hass
@@ -615,8 +618,8 @@ class _WatchPendingSetups:
         self._duration_count += SLOW_STARTUP_CHECK_INTERVAL
 
         remaining_with_setup_started: dict[str, float] = {}
-        for unique, start_time in self._setup_started.items():
-            domain, _, _ = unique.partition(".")
+        for integration_group, start_time in self._setup_started.items():
+            domain, _ = integration_group
             remaining_with_setup_started[domain] = remaining_with_setup_started.get(
                 domain, 0
             ) + (now - start_time)
@@ -634,7 +637,7 @@ class _WatchPendingSetups:
             # once we take over LOG_SLOW_STARTUP_INTERVAL (60s) to start up
             _LOGGER.warning(
                 "Waiting on integrations to complete setup: %s",
-                ", ".join(self._setup_started),
+                self._setup_started,
             )
 
         _LOGGER.debug("Running timeout Zones: %s", self._hass.timeout.zones)
@@ -873,7 +876,7 @@ async def _async_set_up_integrations(
         pr = cProfile.Profile()
         pr.enable()
 
-    setup_started: dict[str, float] = {}
+    setup_started: dict[tuple[str, str | None], float] = {}
     hass.data[DATA_SETUP_STARTED] = setup_started
     watcher = _WatchPendingSetups(hass, setup_started)
     watcher.async_start()
@@ -994,7 +997,7 @@ async def _async_set_up_integrations(
 
     if _LOGGER.isEnabledFor(logging.DEBUG):
         _LOGGER.debug(
-            "Integration setup times: %s",
+            "Calculated setup times: %s",
             dict(
                 sorted(
                     async_get_setup_timings(hass).items(),
@@ -1003,3 +1006,4 @@ async def _async_set_up_integrations(
                 )
             ),
         )
+        _LOGGER.debug("Full setup times: %s", hass.data.get(DATA_SETUP_TIME, {}))
