@@ -42,7 +42,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def _async_on_stop(event: Event) -> None:
         await data.shutdown()
 
-    cancel_stop = hass.bus.async_listen(EVENT_HOMEASSISTANT_STOP, _async_on_stop)
+    cancel_stop = hass.bus.async_listen(
+        EVENT_HOMEASSISTANT_STOP, _async_on_stop, run_immediately=True
+    )
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         HARMONY_DATA: data,
