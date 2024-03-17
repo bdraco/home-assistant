@@ -84,7 +84,6 @@ from .helpers.typing import ConfigType
 from .setup import (
     BASE_PLATFORMS,
     DATA_SETUP_STARTED,
-    DATA_SETUP_TIME,
     async_get_setup_timings,
     async_notify_setup_error,
     async_set_domains_to_be_loaded,
@@ -1006,4 +1005,3 @@ async def _async_set_up_integrations(
                 )
             ),
         )
-        _LOGGER.debug("Full setup times: %s", hass.data.get(DATA_SETUP_TIME, {}))
