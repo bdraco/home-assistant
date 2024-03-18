@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-import asyncio
 from collections.abc import AsyncIterable
 from dataclasses import asdict
 import logging
@@ -28,9 +27,7 @@ from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.loader import async_suggest_report_issue
-from homeassistant.setup import SetupPhases, async_pause_setup
 from homeassistant.util import dt as dt_util, language as language_util
-from homeassistant.util.async_ import create_eager_task
 
 from .const import (
     DATA_PROVIDERS,
@@ -130,18 +127,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     platform_setups = async_setup_legacy(hass, config)
 
+    for setup in platform_setups:
+        hass.async_create_task(setup, eager_start=True)
+
     hass.http.register_view(SpeechToTextView(hass.data[DATA_PROVIDERS]))
-
-    # We need to add the component here break the deadlock
-    # when setting up integrations from config entries as
-    # they would otherwise wait for the stt to be
-    # setup and thus the config entries would not be able to
-    # setup their platforms.
-    hass.config.components.add(DOMAIN)
-
-    if platform_setups:
-        with async_pause_setup(hass, SetupPhases.WAIT_PLATFORM_INTEGRATION):
-            await asyncio.wait([create_eager_task(setup) for setup in platform_setups])
 
     return True
 
