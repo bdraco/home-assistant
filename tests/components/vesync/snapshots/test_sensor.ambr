@@ -107,7 +107,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.air_purifier_131s_air_quality',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'unavailable',
   })
@@ -122,7 +121,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.air_purifier_131s_filter_lifetime',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'unavailable',
   })
@@ -206,7 +204,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.air_purifier_200s_filter_lifetime',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '99',
   })
@@ -352,7 +349,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.air_purifier_400s_air_quality',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '5',
   })
@@ -367,7 +363,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.air_purifier_400s_filter_lifetime',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '99',
   })
@@ -383,7 +378,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.air_purifier_400s_pm2_5',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '1',
   })
@@ -529,7 +523,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.air_purifier_600s_air_quality',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '5',
   })
@@ -544,7 +537,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.air_purifier_600s_filter_lifetime',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '99',
   })
@@ -560,7 +552,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.air_purifier_600s_pm2_5',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '1',
   })
@@ -898,7 +889,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.outlet_current_power',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '25.0',
   })
@@ -914,7 +904,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.outlet_current_voltage',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '120.0',
   })
@@ -930,7 +919,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.outlet_energy_use_monthly',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '0',
   })
@@ -946,7 +934,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.outlet_energy_use_today',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '100',
   })
@@ -962,7 +949,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.outlet_energy_use_weekly',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '0',
   })
@@ -978,7 +964,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.outlet_energy_use_yearly',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '0',
   })
