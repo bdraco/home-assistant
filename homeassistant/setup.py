@@ -657,11 +657,6 @@ class SetupPhases(StrEnum):
     """Wait time for the platforms to import."""
     WAIT_IMPORT_PACKAGES = "wait_import_packages"
     """Wait time for the packages to import."""
-    WAIT_PLATFORM_INTEGRATION = "wait_platform_integration"
-    """Wait time for a platform integration to setup inside of a base platform.
-
-    ex a `- platform: XXX` under `sensor:` in configuration.yaml
-    """
 
 
 @contextlib.contextmanager
@@ -722,7 +717,7 @@ def async_start_setup(
     """
     if hass.is_stopping or hass.state is core.CoreState.running:
         # Don't track setup times when we are shutting down or already running
-        # as we present the timings are "Integration startup time", and we
+        # as we present the timings as "Integration startup time", and we
         # don't want to add all the setup retry times to that.
         yield
         return

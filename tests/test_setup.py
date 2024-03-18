@@ -779,7 +779,7 @@ async def test_async_start_setup_config_entry(hass: HomeAssistant) -> None:
     ):
         assert isinstance(setup_started[("august", "entry_id")], float)
     # Platforms outside of CONFIG_ENTRY_SETUP should be tracked
-    # This is simulates a late platform forward
+    # This simulates a late platform forward
     assert setup_time["august"] == {
         None: {setup.SetupPhases.SETUP: ANY},
         "entry_id": {
@@ -795,7 +795,7 @@ async def test_async_start_setup_config_entry(hass: HomeAssistant) -> None:
         phase=setup.SetupPhases.CONFIG_ENTRY_SETUP,
     ):
         assert isinstance(setup_started[("august", "entry_id2")], float)
-        # We wrap places were we wait for other components
+        # We wrap places where we wait for other components
         # or the import of a module with async_freeze_setup
         # so we can subtract the time waited from the total setup time
         with setup.async_pause_setup(hass, setup.SetupPhases.WAIT_BASE_PLATFORM_SETUP):
@@ -879,23 +879,17 @@ async def test_async_start_setup_legacy_platform_integration(
     ):
         assert isinstance(setup_started[("notify", None)], float)
 
-        # Platform integration setup is awaited inside SETUP for legacy platforms
-        with setup.async_pause_setup(
-            hass, setup.SetupPhases.WAIT_PLATFORM_INTEGRATION
-        ), setup.async_start_setup(
-            hass,
-            integration="legacy_notify_integration",
-            group="123456",
-            phase=setup.SetupPhases.PLATFORM_SETUP,
-        ):
-            assert isinstance(
-                setup_started[("legacy_notify_integration", "123456")], float
-            )
+    with setup.async_start_setup(
+        hass,
+        integration="legacy_notify_integration",
+        group="123456",
+        phase=setup.SetupPhases.PLATFORM_SETUP,
+    ):
+        assert isinstance(setup_started[("legacy_notify_integration", "123456")], float)
 
     assert setup_time["notify"] == {
         None: {
             setup.SetupPhases.SETUP: ANY,
-            setup.SetupPhases.WAIT_PLATFORM_INTEGRATION: ANY,
         },
     }
     assert setup_time["legacy_notify_integration"] == {
@@ -945,7 +939,6 @@ async def test_async_get_setup_timings(hass) -> None:
             "notify": {
                 None: {
                     setup.SetupPhases.SETUP: 2,
-                    setup.SetupPhases.WAIT_PLATFORM_INTEGRATION: -1,
                 },
             },
             "legacy_notify_integration": {
@@ -967,10 +960,10 @@ async def test_async_get_setup_timings(hass) -> None:
     )
     assert setup.async_get_setup_timings(hass) == {
         "august": 6,
-        "filter": 2,
+        "notify": 2,
         "legacy_notify_integration": 3,
-        "notify": 1,
         "sensor": 1,
+        "filter": 2,
     }
 
 

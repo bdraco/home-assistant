@@ -124,7 +124,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     )
 
     component.register_shutdown()
-
     platform_setups = async_setup_legacy(hass, config)
 
     for setup in platform_setups:
