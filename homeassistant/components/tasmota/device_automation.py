@@ -1,8 +1,5 @@
 """Provides device automations for Tasmota."""
 
-from collections.abc import Mapping
-from typing import Any
-
 from hatasmota.const import AUTOMATION_TYPE_TRIGGER
 from hatasmota.models import DiscoveryHashType
 from hatasmota.trigger import TasmotaTrigger
@@ -30,9 +27,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> N
         await async_remove_automations(hass, event.data["device_id"])
 
     @callback
-    def _async_device_removed_filter(event_data: Mapping[str, Any]) -> bool:
+    def _async_device_removed_filter(event: Event) -> bool:
         """Filter device registry events."""
-        return event_data["action"] == "remove"
+        return event.data["action"] == "remove"
 
     async def async_discover(
         tasmota_automation: TasmotaTrigger, discovery_hash: DiscoveryHashType

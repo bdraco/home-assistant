@@ -7,7 +7,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.home_assistant_io_admin',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'admin@example.com',
   })
@@ -84,7 +83,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.home_assistant_io_created',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '2019-01-01T00:00:00+00:00',
   })
@@ -165,7 +163,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.home_assistant_io_days_until_expiration',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '364',
   })
@@ -242,7 +239,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.home_assistant_io_expires',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '2023-01-01T00:00:00+00:00',
   })
@@ -319,7 +315,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.home_assistant_io_last_updated',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '2021-12-31T23:00:00+00:00',
   })
@@ -395,7 +390,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.home_assistant_io_owner',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'owner@example.com',
   })
@@ -471,7 +465,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.home_assistant_io_registrant',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'registrant@example.com',
   })
@@ -547,7 +540,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.home_assistant_io_registrar',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'My Registrar',
   })
@@ -623,7 +615,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.home_assistant_io_reseller',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'Top Domains, Low Prices',
   })
@@ -700,7 +691,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.home_assistant_io_last_updated',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '2021-12-31T23:00:00+00:00',
   })

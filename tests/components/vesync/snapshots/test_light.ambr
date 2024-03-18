@@ -226,7 +226,6 @@
     'context': <ANY>,
     'entity_id': 'light.dimmable_light',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'unavailable',
   })
@@ -316,7 +315,6 @@
     'context': <ANY>,
     'entity_id': 'light.dimmer_switch',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'on',
   })
@@ -471,7 +469,6 @@
     'context': <ANY>,
     'entity_id': 'light.temperature_light',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'off',
   })

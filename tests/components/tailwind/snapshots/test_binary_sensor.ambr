@@ -8,7 +8,6 @@
     'context': <ANY>,
     'entity_id': 'binary_sensor.door_1_operational_problem',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'off',
   })
@@ -85,7 +84,6 @@
     'context': <ANY>,
     'entity_id': 'binary_sensor.door_2_operational_problem',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'off',
   })

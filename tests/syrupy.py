@@ -198,7 +198,6 @@ class HomeAssistantSnapshotSerializer(AmberDataSerializer):
             | {
                 "context": ANY,
                 "last_changed": ANY,
-                "last_reported": ANY,
                 "last_updated": ANY,
             }
         )
