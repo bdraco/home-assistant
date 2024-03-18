@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal, DecimalException, InvalidOperation
 import logging
-from typing import Any, Final, Self
+from typing import TYPE_CHECKING, Any, Final, Self
 
 import voluptuous as vol
 
@@ -23,6 +23,7 @@ from homeassistant.const import (
     CONF_METHOD,
     CONF_NAME,
     CONF_UNIQUE_ID,
+    EVENT_STATE_REPORTED,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     UnitOfTime,
@@ -35,10 +36,7 @@ from homeassistant.helpers import (
 )
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import (
-    EventStateChangedData,
-    async_track_state_change_event,
-)
+from homeassistant.helpers.event import EventStateReportedData
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from .const import (
@@ -293,9 +291,10 @@ class IntegrationSensor(RestoreSensor):
             self._unit_of_measurement = state.attributes.get(ATTR_UNIT_OF_MEASUREMENT)
 
         @callback
-        def calc_integration(event: Event[EventStateChangedData]) -> None:
+        def calc_integration(event: Event[EventStateReportedData]) -> None:
             """Handle the sensor state changes."""
-            old_state = event.data["old_state"]
+            old_last_reported = event.data.get("old_last_reported")
+            old_state = event.data.get("old_state")
             new_state = event.data["new_state"]
 
             if (
@@ -307,7 +306,7 @@ class IntegrationSensor(RestoreSensor):
 
             self._attr_available = True
 
-            if old_state is None or new_state is None:
+            if (old_last_reported is None and old_state is None) or new_state is None:
                 # we can't calculate the elapsed time, so we can't calculate the integral
                 return
 
@@ -326,9 +325,17 @@ class IntegrationSensor(RestoreSensor):
             self.async_write_ha_state()
 
             try:
+                if old_state:
+                    old_state_state = old_state.state
+                    old_last_reported = old_state.last_reported
+                else:
+                    old_state_state = new_state.state
+
                 # integration as the Riemann integral of previous measures.
+                if TYPE_CHECKING:
+                    assert old_last_reported is not None
                 elapsed_time = (
-                    new_state.last_updated - old_state.last_updated
+                    new_state.last_reported - old_last_reported
                 ).total_seconds()
 
                 if (
@@ -338,22 +345,22 @@ class IntegrationSensor(RestoreSensor):
                         STATE_UNKNOWN,
                         STATE_UNAVAILABLE,
                     )
-                    and old_state.state
+                    and old_state_state
                     not in (
                         STATE_UNKNOWN,
                         STATE_UNAVAILABLE,
                     )
                 ):
                     area = (
-                        (Decimal(new_state.state) + Decimal(old_state.state))
+                        (Decimal(new_state.state) + Decimal(old_state_state))
                         * Decimal(elapsed_time)
                         / 2
                     )
-                elif self._method == METHOD_LEFT and old_state.state not in (
+                elif self._method == METHOD_LEFT and old_state_state not in (
                     STATE_UNKNOWN,
                     STATE_UNAVAILABLE,
                 ):
-                    area = Decimal(old_state.state) * Decimal(elapsed_time)
+                    area = Decimal(old_state_state) * Decimal(elapsed_time)
                 elif self._method == METHOD_RIGHT and new_state.state not in (
                     STATE_UNKNOWN,
                     STATE_UNAVAILABLE,
@@ -363,7 +370,7 @@ class IntegrationSensor(RestoreSensor):
                     _LOGGER.debug(
                         "Could not apply method %s to %s -> %s",
                         self._method,
-                        old_state.state,
+                        old_state_state,
                         new_state.state,
                     )
                     return
@@ -377,7 +384,7 @@ class IntegrationSensor(RestoreSensor):
                 _LOGGER.warning("While calculating integration: %s", err)
             except DecimalException as err:
                 _LOGGER.warning(
-                    "Invalid state (%s > %s): %s", old_state.state, new_state.state, err
+                    "Invalid state (%s > %s): %s", old_state_state, new_state.state, err
                 )
             except AssertionError as err:
                 _LOGGER.error("Could not calculate integral: %s", err)
@@ -390,8 +397,12 @@ class IntegrationSensor(RestoreSensor):
                 self.async_write_ha_state()
 
         self.async_on_remove(
-            async_track_state_change_event(
-                self.hass, [self._sensor_source_id], calc_integration
+            self.hass.bus.async_listen(
+                EVENT_STATE_REPORTED,
+                calc_integration,
+                event_filter=callback(
+                    lambda event_data: event_data["entity_id"] == self._sensor_source_id
+                ),
             )
         )
 

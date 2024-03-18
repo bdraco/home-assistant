@@ -922,8 +922,9 @@ def test_state_as_dict() -> None:
         "happy.happy",
         "on",
         {"pig": "dog"},
-        last_updated=last_time,
         last_changed=last_time,
+        last_reported=last_time,
+        last_updated=last_time,
     )
     expected = {
         "context": {
@@ -934,6 +935,7 @@ def test_state_as_dict() -> None:
         "entity_id": "happy.happy",
         "attributes": {"pig": "dog"},
         "last_changed": last_time.isoformat(),
+        "last_reported": last_time.isoformat(),
         "last_updated": last_time.isoformat(),
         "state": "on",
     }
@@ -954,13 +956,15 @@ def test_state_as_dict_json() -> None:
         "happy.happy",
         "on",
         {"pig": "dog"},
-        last_updated=last_time,
-        last_changed=last_time,
         context=ha.Context(id="01H0D6K3RFJAYAV2093ZW30PCW"),
+        last_changed=last_time,
+        last_reported=last_time,
+        last_updated=last_time,
     )
     expected = (
         b'{"entity_id":"happy.happy","state":"on","attributes":{"pig":"dog"},'
-        b'"last_changed":"1984-12-08T12:00:00","last_updated":"1984-12-08T12:00:00",'
+        b'"last_changed":"1984-12-08T12:00:00","last_reported":"1984-12-08T12:00:00",'
+        b'"last_updated":"1984-12-08T12:00:00",'
         b'"context":{"id":"01H0D6K3RFJAYAV2093ZW30PCW","parent_id":null,"user_id":null}}'
     )
     as_dict_json_1 = state.as_dict_json
@@ -978,9 +982,10 @@ def test_state_json_fragment() -> None:
             "happy.happy",
             "on",
             {"pig": "dog"},
-            last_updated=last_time,
-            last_changed=last_time,
             context=ha.Context(id="01H0D6K3RFJAYAV2093ZW30PCW"),
+            last_changed=last_time,
+            last_reported=last_time,
+            last_updated=last_time,
         )
         for _ in range(2)
     )
@@ -1108,9 +1113,9 @@ async def test_eventbus_filtered_listener(hass: HomeAssistant) -> None:
         calls.append(event)
 
     @ha.callback
-    def filter(event):
+    def filter(event_filter):
         """Mock filter."""
-        return not event.data["filtered"]
+        return not event_filter["filtered"]
 
     unsub = hass.bus.async_listen("test", listener, event_filter=filter)
 
@@ -1378,7 +1383,7 @@ def test_state_repr() -> None:
                 "happy.happy",
                 "on",
                 {"brightness": 144},
-                datetime(1984, 12, 8, 12, 0, 0),
+                last_changed=datetime(1984, 12, 8, 12, 0, 0),
             )
         )
         == "<state happy.happy=on; brightness=144 @ 1984-12-08T12:00:00+00:00>"
