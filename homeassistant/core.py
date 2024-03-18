@@ -1430,7 +1430,7 @@ class EventBus:
                 event_type, "event_type", MAX_LENGTH_EVENT_EVENT_TYPE
             )
 
-        listeners = self._listeners.get(event_type, [])
+        listeners = self._listeners.get(event_type)
         match_all_listeners = self._match_all_listeners
 
         if self._debug:
@@ -1438,11 +1438,13 @@ class EventBus:
                 "Bus:Handling %s", _event_repr(event_type, origin, event_data)
             )
 
-        if not listeners and not match_all_listeners:
-            return
-
         if event_type not in EVENTS_EXCLUDED_FROM_MATCH_ALL:
-            listeners = match_all_listeners + listeners
+            if listeners:
+                listeners = match_all_listeners + listeners
+            else:
+                listeners = match_all_listeners.copy()
+        elif not listeners:
+            return
 
         event: Event | None = None
 
