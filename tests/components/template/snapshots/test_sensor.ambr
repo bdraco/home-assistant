@@ -7,7 +7,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.my_template',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '30.0',
   })
@@ -23,7 +22,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.my_template',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '30.0',
   })

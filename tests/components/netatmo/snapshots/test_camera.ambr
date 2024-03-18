@@ -55,7 +55,6 @@
     'context': <ANY>,
     'entity_id': 'camera.front',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'streaming',
   })
@@ -116,7 +115,6 @@
     'context': <ANY>,
     'entity_id': 'camera.hall',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'streaming',
   })
@@ -175,7 +173,6 @@
     'context': <ANY>,
     'entity_id': 'camera.netatmo_doorbell',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'idle',
   })

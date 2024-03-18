@@ -306,7 +306,6 @@
     'context': <ANY>,
     'entity_id': 'switch.outlet',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'on',
   })
@@ -422,7 +421,6 @@
     'context': <ANY>,
     'entity_id': 'switch.wall_switch',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'on',
   })
