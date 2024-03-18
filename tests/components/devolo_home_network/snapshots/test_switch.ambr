@@ -93,7 +93,6 @@
     'context': <ANY>,
     'entity_id': 'switch.mock_title_enable_guest_wifi',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'off',
   })
@@ -139,7 +138,6 @@
     'context': <ANY>,
     'entity_id': 'switch.mock_title_enable_leds',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'off',
   })

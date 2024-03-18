@@ -97,7 +97,7 @@ async def fire_events_with_filter(hass):
     events_to_fire = 10**6
 
     @core.callback
-    def event_filter(event_data):
+    def event_filter(event):
         """Filter event."""
         return False
 

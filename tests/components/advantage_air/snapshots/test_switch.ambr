@@ -27,7 +27,6 @@
     'context': <ANY>,
     'entity_id': 'switch.myzone_myfan',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'off',
   })

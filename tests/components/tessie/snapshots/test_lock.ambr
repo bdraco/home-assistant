@@ -41,7 +41,6 @@
     'context': <ANY>,
     'entity_id': 'lock.test_charge_cable_lock',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'locked',
   })
@@ -88,7 +87,6 @@
     'context': <ANY>,
     'entity_id': 'lock.test_lock',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'locked',
   })
@@ -136,7 +134,6 @@
     'context': <ANY>,
     'entity_id': 'lock.test_speed_limit',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'unlocked',
   })

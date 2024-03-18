@@ -40,7 +40,6 @@
     'context': <ANY>,
     'entity_id': 'button.test_flash_lights',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'unknown',
   })
@@ -86,7 +85,6 @@
     'context': <ANY>,
     'entity_id': 'button.test_homelink',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'unknown',
   })
@@ -132,7 +130,6 @@
     'context': <ANY>,
     'entity_id': 'button.test_honk_horn',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'unknown',
   })
@@ -178,7 +175,6 @@
     'context': <ANY>,
     'entity_id': 'button.test_keyless_driving',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'unknown',
   })
@@ -224,7 +220,6 @@
     'context': <ANY>,
     'entity_id': 'button.test_play_fart',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'unknown',
   })
@@ -270,7 +265,6 @@
     'context': <ANY>,
     'entity_id': 'button.test_wake',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'unknown',
   })

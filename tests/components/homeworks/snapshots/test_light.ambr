@@ -14,7 +14,6 @@
     'context': <ANY>,
     'entity_id': 'light.foyer_sconces',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'off',
   })
@@ -34,7 +33,6 @@
     'context': <ANY>,
     'entity_id': 'light.foyer_sconces',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'on',
   })

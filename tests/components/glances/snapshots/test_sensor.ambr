@@ -43,7 +43,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.0_0_0_0_containers_active',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '2',
   })
@@ -93,7 +92,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.0_0_0_0_containers_cpu_usage',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '77.2',
   })
@@ -144,7 +142,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.0_0_0_0_containers_memory_used',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '1149.6',
   })
@@ -195,7 +192,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.0_0_0_0_cpu_thermal_1_temperature',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '59',
   })
@@ -246,7 +242,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.0_0_0_0_err_temp_temperature',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'unavailable',
   })
@@ -295,7 +290,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.0_0_0_0_md1_available',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '2',
   })
@@ -344,7 +338,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.0_0_0_0_md1_used',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '2',
   })
@@ -393,7 +386,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.0_0_0_0_md3_available',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '2',
   })
@@ -442,7 +434,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.0_0_0_0_md3_used',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '2',
   })
@@ -493,7 +484,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.0_0_0_0_media_disk_free',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '426.5',
   })
@@ -543,7 +533,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.0_0_0_0_media_disk_usage',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '6.7',
   })
@@ -594,7 +583,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.0_0_0_0_media_disk_used',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '30.7',
   })
@@ -645,7 +633,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.0_0_0_0_memory_free',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '2745.0',
   })
@@ -695,7 +682,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.0_0_0_0_memory_usage',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '27.6',
   })
@@ -746,7 +732,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.0_0_0_0_memory_use',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '1047.1',
   })
@@ -797,7 +782,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.0_0_0_0_na_temp_temperature',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'unavailable',
   })
@@ -848,7 +832,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.0_0_0_0_ssl_disk_free',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '426.5',
   })
@@ -898,7 +881,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.0_0_0_0_ssl_disk_usage',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '6.7',
   })
@@ -949,7 +931,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.0_0_0_0_ssl_disk_used',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '30.7',
   })

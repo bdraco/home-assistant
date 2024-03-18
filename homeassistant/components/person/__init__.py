@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable
 import logging
 from typing import Any, Self
 
@@ -248,11 +248,11 @@ class PersonStorageCollection(collection.DictStorageCollection):
         )
 
     @callback
-    def _entity_registry_filter(self, event_data: Mapping[str, Any]) -> bool:
+    def _entity_registry_filter(self, event: Event) -> bool:
         """Filter entity registry events."""
         return (
-            event_data["action"] == "remove"
-            and split_entity_id(event_data[ATTR_ENTITY_ID])[0] == "device_tracker"
+            event.data["action"] == "remove"
+            and split_entity_id(event.data[ATTR_ENTITY_ID])[0] == "device_tracker"
         )
 
     async def _entity_registry_updated(self, event: Event) -> None:
