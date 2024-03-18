@@ -108,6 +108,7 @@ async def test_prefs_default_voice(
 
     on_start_callback = cloud.register_on_start.call_args[0][0]
     await on_start_callback()
+    await hass.async_block_till_done()
 
     engine = get_engine_instance(hass, engine_id)
 
