@@ -128,6 +128,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     component.register_shutdown()
 
+    platform_setups = async_setup_legacy(hass, config)
+
     hass.http.register_view(SpeechToTextView(hass.data[DATA_PROVIDERS]))
 
     # We need to add the component here break the deadlock
@@ -136,8 +138,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     # setup and thus the config entries would not be able to
     # setup their platforms.
     hass.config.components.add(DOMAIN)
-
-    platform_setups = async_setup_legacy(hass, config)
 
     if platform_setups:
         with async_pause_setup(hass, SetupPhases.WAIT_PLATFORM_INTEGRATION):
