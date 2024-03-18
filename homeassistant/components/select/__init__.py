@@ -168,7 +168,7 @@ class SelectEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
             and self.entity_description.options is not None
         ):
             return self.entity_description.options
-        raise AttributeError()
+        raise AttributeError
 
     @cached_property
     def current_option(self) -> str | None:
@@ -201,7 +201,7 @@ class SelectEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     def select_option(self, option: str) -> None:
         """Change the selected option."""
-        raise NotImplementedError()
+        raise NotImplementedError
 
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""
