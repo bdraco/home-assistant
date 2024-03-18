@@ -8,7 +8,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.twente_milieu_christmas_tree_pickup',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '2022-01-06',
   })
@@ -85,7 +84,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.twente_milieu_non_recyclable_waste_pickup',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '2021-11-01',
   })
@@ -162,7 +160,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.twente_milieu_organic_waste_pickup',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '2021-11-02',
   })
@@ -239,7 +236,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.twente_milieu_packages_waste_pickup',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '2021-11-03',
   })
@@ -316,7 +312,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.twente_milieu_paper_waste_pickup',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'unknown',
   })

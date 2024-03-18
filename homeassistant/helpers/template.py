@@ -1042,12 +1042,6 @@ class TemplateStateBase(State):
         return self._state.last_changed
 
     @property
-    def last_reported(self) -> datetime:  # type: ignore[override]
-        """Wrap State.last_reported."""
-        self._collect_state()
-        return self._state.last_reported
-
-    @property
     def last_updated(self) -> datetime:  # type: ignore[override]
         """Wrap State.last_updated."""
         self._collect_state()

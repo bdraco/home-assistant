@@ -51,7 +51,6 @@
     'context': <ANY>,
     'entity_id': 'button.mock_title_identify_device_with_a_blinking_led',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'unknown',
   })
@@ -141,7 +140,6 @@
     'context': <ANY>,
     'entity_id': 'button.mock_title_restart_device',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'unknown',
   })
@@ -230,7 +228,6 @@
     'context': <ANY>,
     'entity_id': 'button.mock_title_start_plc_pairing',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'unknown',
   })
@@ -319,7 +316,6 @@
     'context': <ANY>,
     'entity_id': 'button.mock_title_start_wps',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'unknown',
   })

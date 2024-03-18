@@ -45,7 +45,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.water_monitor_daily_usage',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '200.44691536',
   })
@@ -96,7 +95,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.water_monitor_monthly_usage',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '420.514099294',
   })
@@ -147,7 +145,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.water_monitor_yearly_usage',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '65432.389256934',
   })

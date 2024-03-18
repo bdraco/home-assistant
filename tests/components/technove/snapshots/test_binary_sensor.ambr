@@ -40,7 +40,6 @@
     'context': <ANY>,
     'entity_id': 'binary_sensor.technove_station_battery_protected',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'off',
   })
@@ -87,7 +86,6 @@
     'context': <ANY>,
     'entity_id': 'binary_sensor.technove_station_charging',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'on',
   })
@@ -133,7 +131,6 @@
     'context': <ANY>,
     'entity_id': 'binary_sensor.technove_station_conflict_with_power_sharing_mode',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'off',
   })
@@ -179,7 +176,6 @@
     'context': <ANY>,
     'entity_id': 'binary_sensor.technove_station_power_sharing_mode',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'on',
   })
@@ -225,7 +221,6 @@
     'context': <ANY>,
     'entity_id': 'binary_sensor.technove_station_static_ip',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'off',
   })
@@ -272,7 +267,6 @@
     'context': <ANY>,
     'entity_id': 'binary_sensor.technove_station_update',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'off',
   })

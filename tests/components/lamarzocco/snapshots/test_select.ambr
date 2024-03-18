@@ -12,7 +12,6 @@
     'context': <ANY>,
     'entity_id': 'select.gs01234_prebrew_infusion_mode',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'unknown',
   })
@@ -69,7 +68,6 @@
     'context': <ANY>,
     'entity_id': 'select.lm01234_prebrew_infusion_mode',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'unknown',
   })
@@ -126,7 +124,6 @@
     'context': <ANY>,
     'entity_id': 'select.mr01234_prebrew_infusion_mode',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'unknown',
   })
@@ -183,7 +180,6 @@
     'context': <ANY>,
     'entity_id': 'select.mr01234_steam_level',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '3',
   })

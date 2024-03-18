@@ -10,7 +10,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.stockholm_c_to_uppsala_c_departure_time',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '2023-05-01T12:00:00+00:00',
   })
@@ -31,7 +30,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.stockholm_c_to_uppsala_c_departure_state',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'on_time',
   })
@@ -47,7 +45,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.stockholm_c_to_uppsala_c_departure_time_next',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '2023-05-01T17:15:00+00:00',
   })
@@ -63,7 +60,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.stockholm_c_to_uppsala_c_departure_time_next_after',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '2023-05-01T17:30:00+00:00',
   })
@@ -79,7 +75,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.stockholm_c_to_uppsala_c_actual_time',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '2023-05-01T12:00:00+00:00',
   })
@@ -94,7 +89,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.stockholm_c_to_uppsala_c_other_information',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'Some other info',
   })
@@ -110,7 +104,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.stockholm_c_to_uppsala_c_departure_time_next',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '2023-05-01T12:15:00+00:00',
   })
@@ -126,7 +119,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.stockholm_c_to_uppsala_c_departure_time_next_after',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '2023-05-01T12:30:00+00:00',
   })
@@ -142,7 +134,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.stockholm_c_to_uppsala_c_departure_time',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '2023-05-01T17:00:00+00:00',
   })
@@ -163,7 +154,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.stockholm_c_to_uppsala_c_departure_state',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'on_time',
   })
@@ -179,7 +169,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.stockholm_c_to_uppsala_c_actual_time',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '2023-05-01T17:00:00+00:00',
   })
@@ -194,7 +183,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.stockholm_c_to_uppsala_c_other_information',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'unknown',
   })
@@ -209,7 +197,6 @@
     'context': <ANY>,
     'entity_id': 'sensor.stockholm_c_to_uppsala_c_departure_time_2',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': '2023-05-01T11:00:00+00:00',
   })

@@ -84,7 +84,6 @@
     'context': <ANY>,
     'entity_id': 'fan.air_purifier_131s',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'unavailable',
   })
@@ -179,7 +178,6 @@
     'context': <ANY>,
     'entity_id': 'fan.air_purifier_200s',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'on',
   })
@@ -276,7 +274,6 @@
     'context': <ANY>,
     'entity_id': 'fan.air_purifier_400s',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'on',
   })
@@ -373,7 +370,6 @@
     'context': <ANY>,
     'entity_id': 'fan.air_purifier_600s',
     'last_changed': <ANY>,
-    'last_reported': <ANY>,
     'last_updated': <ANY>,
     'state': 'on',
   })
