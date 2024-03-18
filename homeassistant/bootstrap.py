@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections import defaultdict
 import contextlib
 import cProfile
 from functools import partial
@@ -616,12 +617,10 @@ class _WatchPendingSetups:
         now = monotonic()
         self._duration_count += SLOW_STARTUP_CHECK_INTERVAL
 
-        remaining_with_setup_started: dict[str, float] = {}
+        remaining_with_setup_started: defaultdict[str, float] = defaultdict(float)
         for integration_group, start_time in self._setup_started.items():
             domain, _ = integration_group
-            remaining_with_setup_started[domain] = remaining_with_setup_started.get(
-                domain, 0
-            ) + (now - start_time)
+            remaining_with_setup_started[domain] += now - start_time
 
         if remaining_with_setup_started:
             _LOGGER.debug("Integration remaining: %s", remaining_with_setup_started)
