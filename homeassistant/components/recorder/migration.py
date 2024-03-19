@@ -1781,8 +1781,8 @@ def initialize_database(session_maker: Callable[[], Session]) -> bool:
         return False
 
 
-class BaseMigration(ABC):
-    """Base class for migrations."""
+class BaseRunTimeMigration(ABC):
+    """Base class for run time migrations."""
 
     required_schema_version = 0
     migration_version = 1
@@ -1792,7 +1792,7 @@ class BaseMigration(ABC):
     def __init__(
         self, session: Session, schema_version: int, migration_changes: dict[str, int]
     ) -> None:
-        """Initialize a new BaseMigration."""
+        """Initialize a new BaseRunTimeMigration."""
         self.schema_version = schema_version
         self.session = session
         self.migration_changes = migration_changes
@@ -1802,7 +1802,14 @@ class BaseMigration(ABC):
         """Return the query to check if the migration needs to run."""
 
     def needs_migrate(self) -> bool:
-        """Return if the migration needs to run."""
+        """Return if the migration needs to run.
+
+        If the migration needs to run, it will return True.
+
+        If the migration does not need to run, it will return False and
+        mark the migration as done in the database if its not already
+        marked as done.
+        """
         if self.schema_version < self.required_schema_version:
             # Schema is too old, we must have to migrate
             return True
@@ -1812,15 +1819,13 @@ class BaseMigration(ABC):
         # We do not know if the migration is done from the
         # migration changes table so we must check the data
         # This is the slow path
-        if not bool(
-            execute_stmt_lambda_element(self.session, self.needs_migrate_query())
-        ):
+        if not execute_stmt_lambda_element(self.session, self.needs_migrate_query()):
             _mark_migration_done(self.session, self.__class__)
             return False
         return True
 
 
-class StatesContextIDMigration(BaseMigration):
+class StatesContextIDMigration(BaseRunTimeMigration):
     """Migration to migrate states context_ids to binary format."""
 
     required_schema_version = CONTEXT_ID_AS_BINARY_SCHEMA_VERSION
@@ -1832,7 +1837,7 @@ class StatesContextIDMigration(BaseMigration):
         return has_states_context_ids_to_migrate()
 
 
-class EventsContextIDMigration(BaseMigration):
+class EventsContextIDMigration(BaseRunTimeMigration):
     """Migration to migrate events context_ids to binary format."""
 
     required_schema_version = CONTEXT_ID_AS_BINARY_SCHEMA_VERSION
@@ -1844,7 +1849,7 @@ class EventsContextIDMigration(BaseMigration):
         return has_events_context_ids_to_migrate()
 
 
-class EventTypeIDMigration(BaseMigration):
+class EventTypeIDMigration(BaseRunTimeMigration):
     """Migration to migrate event_type to event_type_ids."""
 
     required_schema_version = EVENT_TYPE_IDS_SCHEMA_VERSION
@@ -1856,7 +1861,7 @@ class EventTypeIDMigration(BaseMigration):
         return has_event_type_to_migrate()
 
 
-class EntityIDMigration(BaseMigration):
+class EntityIDMigration(BaseRunTimeMigration):
     """Migration to migrate entity_ids to states_meta."""
 
     required_schema_version = STATES_META_SCHEMA_VERSION
@@ -1868,9 +1873,10 @@ class EntityIDMigration(BaseMigration):
         return has_entity_ids_to_migrate()
 
 
-def _mark_migration_done(session: Session, migration: type[BaseMigration]) -> None:
-    """Mark a migration as done."""
-    _LOGGER.warning("Marking migration %s as done", migration.__name__)
+def _mark_migration_done(
+    session: Session, migration: type[BaseRunTimeMigration]
+) -> None:
+    """Mark a migration as done in the database."""
     session.merge(
         MigrationChanges(
             migration_id=migration.migration_id, version=migration.migration_version
