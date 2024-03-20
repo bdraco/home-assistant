@@ -29,9 +29,9 @@ from .const import SECRET_YAML
 from .objects import Input, NodeDictClass, NodeListClass, NodeStrClass
 
 if TYPE_CHECKING:
-    pass
+    from functools import cached_property
 else:
-    pass
+    from homeassistant.backports.functools import cached_property
 
 
 # mypy: allow-untyped-calls, no-warn-return-any
@@ -119,12 +119,12 @@ class _LoaderMixin:
     name: str
     stream: Any
 
-    @property
+    @cached_property
     def get_name(self) -> str:
         """Get the name of the loader."""
         return self.name
 
-    @property
+    @cached_property
     def get_stream_name(self) -> str:
         """Get the name of the stream."""
         return getattr(self.stream, "name", "")
