@@ -1102,8 +1102,6 @@ class Entity(
             # Polling returned after the entity has already been removed
             return
 
-        _LOGGER.debug("Updating state for %s", self.entity_id)
-
         hass = self.hass
         entity_id = self.entity_id
 
