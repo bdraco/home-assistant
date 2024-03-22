@@ -990,6 +990,18 @@ async def _async_set_up_integrations(
             )
             hass.async_create_background_task(proc.communicate(), name="startup py-spy")
 
+    import orjson
+
+    from .setup import _setup_times
+
+    _LOGGER.warning(
+        "Timings: %s",
+        orjson.dumps(
+            _setup_times(hass),
+            option=orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS | orjson.OPT_NON_STR_KEYS,
+        ).decode(),
+    )
+
     if _LOGGER.isEnabledFor(logging.DEBUG):
         setup_time = async_get_setup_timings(hass)
         _LOGGER.debug(
