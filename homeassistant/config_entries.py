@@ -1887,6 +1887,11 @@ class ConfigEntries:
         # Setup Component if not set up yet
         if domain not in self.hass.config.components:
             with async_pause_setup(self.hass, SetupPhases.WAIT_BASE_PLATFORM_SETUP):
+                _LOGGER.warning(
+                    "Integration %s will wait for base platform %s",
+                    entry.domain,
+                    domain,
+                )
                 result = await async_setup_component(
                     self.hass, domain, self._hass_config
                 )
