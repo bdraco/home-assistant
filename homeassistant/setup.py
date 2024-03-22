@@ -696,10 +696,12 @@ def async_pause_setup(
             # context manager may have exited by that time if it's running in the
             # background and not being awaited. So we also check if the integration
             # group is still in the `setup_started`, as that indicates whether the
-            # context manager is still running. If it's not in `setup_started`, the
+            # inner code is still running. If it's not in `setup_started`, the
             # context manager has exited, and we should not subtract the time.
-            _LOGGER.debug("%s (%s) finished while waiting", integration, group)
-            # There is not return here since we are in a finally and do not
+            _LOGGER.debug(
+                "%s (%s) finished while waiting for %s", integration, group, phase
+            )
+            # There is no return here since we are in a finally and do not
             # want to swallow exceptions
         else:
             time_taken = time.monotonic() - started
@@ -710,7 +712,7 @@ def async_pause_setup(
                 phase,
                 integration,
                 group,
-                -time_taken,
+                time_taken,
             )
 
 
