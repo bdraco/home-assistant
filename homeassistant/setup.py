@@ -33,9 +33,9 @@ from .helpers.issue_registry import IssueSeverity, async_create_issue
 from .helpers.typing import ConfigType
 from .util.async_ import create_eager_task
 
-current_setup_group_phase: contextvars.ContextVar[
-    tuple[str, str | None, SetupPhases] | None
-] = contextvars.ContextVar("current_setup_group_phase", default=None)
+current_setup_group: contextvars.ContextVar[
+    tuple[str, str | None] | None
+] = contextvars.ContextVar("current_setup_group", default=None)
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -63,10 +63,6 @@ DATA_SETUP_DONE = "setup_done"
 # DATA_SETUP_STARTED is a dict [tuple[str, str | None], float], indicating when an attempt
 # to setup a component started.
 DATA_SETUP_STARTED = "setup_started"
-
-# DATA_SETUP_RUNNING is a set [tuple[str, str | None, SetupPhase]] of integration, group, phase
-# to indicate a phase is currently running
-DATA_SETUP_RUNNING = "setup_running"
 
 # DATA_SETUP_TIME is a defaultdict[str, defaultdict[str | None, defaultdict[SetupPhases, float]]]
 # indicating how time was spent setting up a component and each group (config entry).
@@ -662,6 +658,15 @@ class SetupPhases(StrEnum):
     """Wait time for the packages to import."""
 
 
+def _setup_started(
+    hass: core.HomeAssistant,
+) -> dict[tuple[str, str | None], float]:
+    """Return the setup started dict."""
+    if DATA_SETUP_STARTED not in hass.data:
+        hass.data[DATA_SETUP_STARTED] = {}
+    return hass.data[DATA_SETUP_STARTED]  # type: ignore[no-any-return]
+
+
 @contextlib.contextmanager
 def async_pause_setup(
     hass: core.HomeAssistant, phase: SetupPhases
@@ -672,7 +677,7 @@ def async_pause_setup(
     setting up the base components so we can subtract it
     from the total setup time.
     """
-    if not (running := current_setup_group_phase.get()):
+    if not (running := current_setup_group.get()):
         # This means we are likely in a late platform setup
         # that is running in a task so we do not want
         # to subtract out the time later as nothing is waiting
@@ -684,32 +689,28 @@ def async_pause_setup(
     try:
         yield
     finally:
-        integration, group, running_phase = running
-        if (integration, group) not in _setup_started(hass):
-            # If there is a pause inside of task that runs from the
-            # the context manager will finish while waiting for the
-            # task to finish so we do not want to subtract out the time
-            # as it means the context var carried over but we did
-            # not actually wait because it was a another task.
-            _LOGGER.debug(
-                "Phase %s of %s (%s) finished while waiting",
-                running_phase,
-                integration,
-                group,
-            )
-            # no return here since we are in a finally and do not
+        integration, group = running
+        if running not in _setup_started(hass):
+            # Suppose a task is started from inside the `async_start_setup` context
+            # manager. In that case, we will see the `current_setup_group`, but the
+            # context manager may have exited by that time if it's running in the
+            # background and not being awaited. So we also check if the integration
+            # group is still in the `setup_started`, as that indicates whether the
+            # context manager is still running. If it's not in `setup_started`, the
+            # context manager has exited, and we should not subtract the time.
+            _LOGGER.debug("%s (%s) finished while waiting", integration, group)
+            # There is not return here since we are in a finally and do not
             # want to swallow exceptions
         else:
             time_taken = time.monotonic() - started
             # Add negative time for the time we waited
             _setup_times(hass)[integration][group][phase] = -time_taken
             _LOGGER.debug(
-                "Adding wait for %s for %s (%s) of %.2f (running_phase=%s)",
+                "Adding wait for %s for %s (%s) of %.2f",
                 phase,
                 integration,
                 group,
                 -time_taken,
-                running_phase,
             )
 
 
@@ -722,24 +723,6 @@ def _setup_times(
             lambda: defaultdict(lambda: defaultdict(float))
         )
     return hass.data[DATA_SETUP_TIME]  # type: ignore[no-any-return]
-
-
-def _setup_started(
-    hass: core.HomeAssistant,
-) -> dict[tuple[str, str | None], float]:
-    """Return the setup started dict."""
-    if DATA_SETUP_STARTED not in hass.data:
-        hass.data[DATA_SETUP_STARTED] = {}
-    return hass.data[DATA_SETUP_STARTED]  # type: ignore[no-any-return]
-
-
-def _setup_running(
-    hass: core.HomeAssistant,
-) -> set[tuple[str, str | None, SetupPhases]]:
-    """Return the setup running set."""
-    if DATA_SETUP_RUNNING not in hass.data:
-        hass.data[DATA_SETUP_RUNNING] = set()
-    return hass.data[DATA_SETUP_RUNNING]  # type: ignore[no-any-return]
 
 
 @contextlib.contextmanager
@@ -767,28 +750,23 @@ def async_start_setup(
         return
 
     setup_started = _setup_started(hass)
-    current_group = (integration, group)
-    if current_group in setup_started:
+    current = (integration, group)
+    if current in setup_started:
         # We are already inside another async_start_setup, this like means we
         # are setting up a platform inside async_setup_entry so we should not
         # record this as a new setup
         yield
         return
 
-    setup_running = _setup_running(hass)
     started = time.monotonic()
-    running_group_phase = (integration, group, phase)
-
-    current_setup_group_phase.set(running_group_phase)
-    setup_started[current_group] = started
-    setup_running.add(running_group_phase)
+    current_setup_group.set(current)
+    setup_started[current] = started
 
     try:
         yield
     finally:
         time_taken = time.monotonic() - started
-        del setup_started[current_group]
-        setup_running.remove(running_group_phase)
+        del setup_started[current]
         group_setup_times = _setup_times(hass)[integration][group]
         # We may see the phase multiple times if there are multiple
         # platforms, but we only care about the longest time.
