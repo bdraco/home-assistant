@@ -914,8 +914,6 @@ async def _async_set_up_integrations(
             deps_promotion.update(dep_itg.all_dependencies)
 
     stage_2_domains = domains_to_setup - stage_1_domains
-    for domain_group in pre_stage_domains.values():
-        stage_2_domains -= domain_group
 
     for name, domain_group in pre_stage_domains:
         if domain_group:
