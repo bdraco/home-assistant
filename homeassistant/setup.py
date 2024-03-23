@@ -275,6 +275,7 @@ async def _async_setup_component(  # noqa: C901
         )
         async_notify_setup_error(hass, domain, link)
 
+    _LOGGER.debug("Enter _async_setup_component %s", domain)
     try:
         integration = await loader.async_get_integration(hass, domain)
     except loader.IntegrationNotFound:
@@ -285,10 +286,12 @@ async def _async_setup_component(  # noqa: C901
         log_error(f"Dependency is disabled - {integration.disabled}")
         return False
 
+    _LOGGER.debug("Resolve deps %s", domain)
     # Validate all dependencies exist and there are no circular dependencies
     if not await integration.resolve_dependencies():
         return False
 
+    _LOGGER.debug("Process deps %s", domain)
     # Process requirements as soon as possible, so we can import the component
     # without requiring imports to be in functions.
     try:
@@ -297,6 +300,7 @@ async def _async_setup_component(  # noqa: C901
         log_error(str(err))
         return False
 
+    _LOGGER.debug("Get comp %s", domain)
     # Some integrations fail on import because they call functions incorrectly.
     # So we do it before validating config to catch these errors.
     try:
@@ -305,6 +309,7 @@ async def _async_setup_component(  # noqa: C901
         log_error(f"Unable to import component: {err}", err)
         return False
 
+    _LOGGER.debug("async_process_component_config %s", domain)
     integration_config_info = await conf_util.async_process_component_config(
         hass, config, integration, component
     )
