@@ -244,6 +244,7 @@ class Store(Generic[_T]):
                 raise
 
             if data == {}:
+                _LOGGER.warning("Storage file for %s is empty", self.key)
                 return None
 
         # Add minor_version if not set
