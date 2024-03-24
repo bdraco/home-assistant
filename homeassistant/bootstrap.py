@@ -737,7 +737,7 @@ async def _async_resolve_domains_to_setup(
         *chain.from_iterable(platform_integrations.values()),
     }
 
-    translations_to_load = {*domains_to_setup, *additional_manifests_to_load}
+    translations_to_load = additional_manifests_to_load.copy()
 
     # Resolve all dependencies so we know all integrations
     # that will have to be loaded and start right-away
@@ -816,6 +816,7 @@ async def _async_resolve_domains_to_setup(
     # Optimistically check if requirements are already installed
     # ahead of setting up the integrations so we can prime the cache
     # We do not wait for this since its an optimization only
+    _LOGGER.debug("Pre-checking requirements: %s", needed_requirements)
     hass.async_create_background_task(
         requirements.async_load_installed_versions(hass, needed_requirements),
         "check installed requirements",
@@ -831,6 +832,8 @@ async def _async_resolve_domains_to_setup(
     # hold the translation load lock and if anything is fast enough to
     # wait for the translation load lock, loading will be done by the
     # time it gets to it.
+    translations_to_load.update(domains_to_setup)
+    _LOGGER.debug("Pre-loading translations: %s", translations_to_load)
     hass.async_create_background_task(
         translation.async_load_integrations(hass, translations_to_load),
         "load translations",
