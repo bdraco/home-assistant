@@ -397,6 +397,7 @@ async def _async_setup_component(  # noqa: C901
                 return False
 
             if task:
+                _LOGGER.info("About to setup %s", domain)
                 async with hass.timeout.async_timeout(SLOW_SETUP_MAX_WAIT, domain):
                     result = await task
         except TimeoutError:
@@ -415,6 +416,7 @@ async def _async_setup_component(  # noqa: C901
             async_notify_setup_error(hass, domain, integration.documentation)
             return False
         finally:
+            _LOGGER.info("Completed setup %s", domain)
             if warn_task:
                 warn_task.cancel()
         if result is False:
