@@ -430,6 +430,7 @@ async def _async_setup_component(  # noqa: C901
             return False
 
         if load_translations_task:
+            _LOGGER.info("Waiting for %s translations to be loaded", domain)
             await load_translations_task
 
     if integration.platforms_exists(("config_flow",)):
@@ -460,6 +461,7 @@ async def _async_setup_component(  # noqa: C901
     if domain in hass.data[DATA_SETUP]:
         hass.data[DATA_SETUP].pop(domain)
 
+    _LOGGER.info("Component %s is set up, firing event", domain)
     hass.bus.async_fire(EVENT_COMPONENT_LOADED, {ATTR_COMPONENT: domain})
 
     return True
