@@ -74,11 +74,9 @@ class SteamistConfigFlow(ConfigFlow, domain=DOMAIN):
             if entry.unique_id == mac or entry.data[CONF_HOST] == host:
                 if (
                     async_update_entry_from_discovery(self.hass, entry, device)
-                    and entry.state is ConfigEntryState.LOADED
+                    and entry.state is not ConfigEntryState.SETUP_IN_PROGRESS
                 ):
-                    self.hass.async_create_task(
-                        self.hass.config_entries.async_reload(entry.entry_id)
-                    )
+                    self.hass.config_entries.async_schedule_reload(entry.entry_id)
                 return self.async_abort(reason="already_configured")
         self.context[CONF_HOST] = host
         for progress in self._async_in_progress():
