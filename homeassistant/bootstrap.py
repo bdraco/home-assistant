@@ -850,7 +850,7 @@ async def _async_resolve_domains_to_setup(
 
 
 RUN_PY_SPY = False
-RUN_PY_SPY_AFTER_SETUP = True
+RUN_PY_SPY_AFTER_SETUP = False
 RUN_PROFILE = False
 ASYNCIO_DEBUG = False
 
