@@ -51,6 +51,8 @@ _LOGGER = logging.getLogger(__name__)
 STORAGE_SEMAPHORE = "storage_semaphore"
 STORAGE_MANAGER = "storage_manager"
 
+MANAGER_CLEANUP_DELAY = 60
+
 _T = TypeVar("_T", bound=Mapping[str, Any] | Sequence[Any])
 
 
@@ -150,9 +152,19 @@ class _StoreManager:
         self, key: str
     ) -> tuple[bool, json_util.JsonValueType | None] | None:
         """Fetch data from cache."""
+        #
         # If the key is invalidated, we don't need to check the cache
         # If async_initialize has not been called yet, we don't know
         # if the file exists or not so its a cache miss
+        #
+        # It is very important that we check if self._files is None
+        # because we do not want to incorrectly return a cache miss
+        # because async_initialize has not been called yet as it would
+        # cause the Store to return None when it should not.
+        #
+        # The "/" in key check is to prevent the cache from being used
+        # for subdirs in case we have a key like "hacs/XXX"
+        #
         if "/" in key or key in self._invalidated or self._files is None:
             _LOGGER.debug("%s: Cache miss", key)
             return None
@@ -174,14 +186,18 @@ class _StoreManager:
     @callback
     def _async_schedule_cleanup(self, _event: Event) -> None:
         """Schedule the cleanup of old files."""
-        self._cancel_cleanup = self._hass.loop.call_later(60, self._async_cleanup)
+        self._cancel_cleanup = self._hass.loop.call_later(
+            MANAGER_CLEANUP_DELAY, self._async_cleanup
+        )
         # Handle the case where we stop in the first 60s
         self._hass.bus.async_listen_once(
-            EVENT_HOMEASSISTANT_STOP, self._async_cancel_cleanup, run_immediately=True
+            EVENT_HOMEASSISTANT_STOP,
+            self._async_cancel_and_cleanup,
+            run_immediately=True,
         )
 
     @callback
-    def _async_cancel_cleanup(self, _event: Event) -> None:
+    def _async_cancel_and_cleanup(self, _event: Event) -> None:
         """Cancel the cleanup of old files."""
         self._async_cleanup()
         if self._cancel_cleanup:
