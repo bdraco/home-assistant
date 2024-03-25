@@ -134,6 +134,7 @@ class _StoreManager:
             run_immediately=True,
         )
 
+    @callback
     def async_invalidate(self, key: str) -> None:
         """Invalidate cache.
 
@@ -186,6 +187,7 @@ class _StoreManager:
             self._cancel_cleanup.cancel()
             self._cancel_cleanup = None
 
+    @callback
     def _async_cleanup(self) -> None:
         """Cleanup unused cache.
 
