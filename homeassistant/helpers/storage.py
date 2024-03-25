@@ -141,8 +141,9 @@ class _StoreManager:
         Store calls this when its going to save data
         to ensure that the cache is not used after that.
         """
-        self._invalidated.add(key)
-        self._data_preload.pop(key, None)
+        if "/" not in key:
+            self._invalidated.add(key)
+            self._data_preload.pop(key, None)
 
     @callback
     def async_fetch(
@@ -152,7 +153,7 @@ class _StoreManager:
         # If the key is invalidated, we don't need to check the cache
         # If async_initialize has not been called yet, we don't know
         # if the file exists or not so its a cache miss
-        if key in self._invalidated or self._files is None:
+        if "/" in key or key in self._invalidated or self._files is None:
             _LOGGER.debug("%s: Cache miss", key)
             return None
 
