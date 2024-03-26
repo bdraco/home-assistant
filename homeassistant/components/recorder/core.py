@@ -1211,6 +1211,8 @@ class Recorder(threading.Thread):
                 for state_id, last_reported_timestamp in self.states_manager.get_pending_last_reported_timestamp().items()
             ],
         )
+        session.commit()
+
         self._event_session_has_pending_writes = False
         # We just committed the state attributes to the database
         # and we now know the attributes_ids.  We can save
