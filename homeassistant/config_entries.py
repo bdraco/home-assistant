@@ -372,9 +372,9 @@ class ConfigEntry:
         self._async_cancel_retry_setup: Callable[[], Any] | None = None
 
         # Hold list for actions to call on unload.
-        self._on_unload: list[
-            Callable[[], Coroutine[Any, Any, None] | None]
-        ] | None = None
+        self._on_unload: list[Callable[[], Coroutine[Any, Any, None] | None]] | None = (
+            None
+        )
 
         # Reload lock to prevent conflicting reloads
         self.reload_lock = asyncio.Lock()
@@ -1087,7 +1087,7 @@ class ConfigEntriesFlowManager(data_entry_flow.FlowManager[ConfigFlowResult]):
         self.config_entries = config_entries
         self._hass_config = hass_config
         self._pending_import_flows: dict[str, dict[str, asyncio.Future[None]]] = {}
-        self._initialize_futures: dict[str, set[asyncio.Future[None]]] = {}
+        self._initialize_futures: dict[str, list[asyncio.Future[None]]] = {}
         self._discovery_debouncer = Debouncer[None](
             hass,
             _LOGGER,
@@ -1136,15 +1136,14 @@ class ConfigEntriesFlowManager(data_entry_flow.FlowManager[ConfigFlowResult]):
             )
 
         loop = self.hass.loop
-        pending_import_futures: dict[str, asyncio.Future[None]] | None = None
 
         if context["source"] == SOURCE_IMPORT:
-            pending_import_futures = self._pending_import_flows.setdefault(handler, {})
-            pending_import_futures[flow_id] = loop.create_future()
+            self._pending_import_flows.setdefault(handler, {})[flow_id] = (
+                loop.create_future()
+            )
 
         cancel_init_future = loop.create_future()
-        initialize_futures = self._initialize_futures.setdefault(handler, set())
-        initialize_futures.add(cancel_init_future)
+        self._initialize_futures.setdefault(handler, []).append(cancel_init_future)
         try:
             async with interrupt(
                 cancel_init_future,
@@ -1155,9 +1154,8 @@ class ConfigEntriesFlowManager(data_entry_flow.FlowManager[ConfigFlowResult]):
         except FlowCancelledError as ex:
             raise asyncio.CancelledError from ex
         finally:
-            initialize_futures.remove(cancel_init_future)
-            if pending_import_futures:
-                pending_import_futures.pop(flow_id, None)
+            self._initialize_futures[handler].remove(cancel_init_future)
+            self._pending_import_flows.get(handler, {}).pop(flow_id, None)
 
         if result["type"] != data_entry_flow.FlowResultType.ABORT:
             await self.async_post_init(flow, result)
@@ -1718,8 +1716,6 @@ class ConfigEntries:
         if (entry := self.async_get_entry(entry_id)) is None:
             raise UnknownEntry
 
-        _LOGGER.error("Reloading %s (%s) config entry", entry.title, entry.domain)
-
         async with entry.reload_lock:
             unload_result = await self.async_unload(entry_id)
 
@@ -1888,11 +1884,6 @@ class ConfigEntries:
         # Setup Component if not set up yet
         if domain not in self.hass.config.components:
             with async_pause_setup(self.hass, SetupPhases.WAIT_BASE_PLATFORM_SETUP):
-                _LOGGER.warning(
-                    "Integration %s will wait for base platform %s",
-                    entry.domain,
-                    domain,
-                )
                 result = await async_setup_component(
                     self.hass, domain, self._hass_config
                 )

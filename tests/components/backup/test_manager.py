@@ -18,10 +18,7 @@ from .common import TEST_BACKUP
 from tests.common import MockPlatform, mock_platform
 
 
-async def _mock_backup_generation(
-    manager: BackupManager,
-    password: str | None = None,
-) -> None:
+async def _mock_backup_generation(manager: BackupManager):
     """Mock backup generator."""
 
     def _mock_iterdir(path: Path) -> list[Path]:
@@ -33,36 +30,44 @@ async def _mock_backup_generation(
             Path(".storage"),
         ]
 
-    with patch(
-        "homeassistant.components.backup.manager.SecureTarFile"
-    ) as mocked_tarfile, patch("pathlib.Path.iterdir", _mock_iterdir), patch(
-        "pathlib.Path.stat", MagicMock(st_size=123)
-    ), patch("pathlib.Path.is_file", lambda x: x.name != ".storage"), patch(
-        "pathlib.Path.is_dir",
-        lambda x: x.name == ".storage",
-    ), patch(
-        "pathlib.Path.exists",
-        lambda x: x != manager.backup_dir,
-    ), patch(
-        "pathlib.Path.is_symlink",
-        lambda _: False,
-    ), patch(
-        "pathlib.Path.mkdir",
-        MagicMock(),
-    ), patch(
-        "homeassistant.components.backup.manager.json_bytes",
-        return_value=b"{}",  # Empty JSON
-    ) as mocked_json_bytes, patch(
-        "homeassistant.components.backup.manager.HAVERSION",
-        "2025.1.0",
+    with (
+        patch(
+            "homeassistant.components.backup.manager.SecureTarFile"
+        ) as mocked_tarfile,
+        patch("pathlib.Path.iterdir", _mock_iterdir),
+        patch("pathlib.Path.stat", MagicMock(st_size=123)),
+        patch("pathlib.Path.is_file", lambda x: x.name != ".storage"),
+        patch(
+            "pathlib.Path.is_dir",
+            lambda x: x.name == ".storage",
+        ),
+        patch(
+            "pathlib.Path.exists",
+            lambda x: x != manager.backup_dir,
+        ),
+        patch(
+            "pathlib.Path.is_symlink",
+            lambda _: False,
+        ),
+        patch(
+            "pathlib.Path.mkdir",
+            MagicMock(),
+        ),
+        patch(
+            "homeassistant.components.backup.manager.json_bytes",
+            return_value=b"{}",  # Empty JSON
+        ) as mocked_json_bytes,
+        patch(
+            "homeassistant.components.backup.manager.HAVERSION",
+            "2025.1.0",
+        ),
     ):
-        await manager.generate_backup(password=password)
+        await manager.generate_backup()
 
         assert mocked_json_bytes.call_count == 1
         backup_json_dict = mocked_json_bytes.call_args[0][0]
         assert isinstance(backup_json_dict, dict)
         assert backup_json_dict["homeassistant"] == {"version": "2025.1.0"}
-        assert backup_json_dict.get("protected", False) is bool(password)
         assert manager.backup_dir.as_posix() in str(
             mocked_tarfile.call_args_list[0][0][0]
         )
@@ -86,20 +91,24 @@ async def test_constructor(hass: HomeAssistant) -> None:
 async def test_load_backups(hass: HomeAssistant) -> None:
     """Test loading backups."""
     manager = BackupManager(hass)
-    with patch("pathlib.Path.glob", return_value=[TEST_BACKUP.path]), patch(
-        "tarfile.open", return_value=MagicMock()
-    ), patch(
-        "homeassistant.components.backup.manager.json_loads_object",
-        return_value={
-            "slug": TEST_BACKUP.slug,
-            "name": TEST_BACKUP.name,
-            "date": TEST_BACKUP.date,
-        },
-    ), patch(
-        "pathlib.Path.stat",
-        return_value=MagicMock(st_size=TEST_BACKUP.size),
+    with (
+        patch("pathlib.Path.glob", return_value=[TEST_BACKUP.path]),
+        patch("tarfile.open", return_value=MagicMock()),
+        patch(
+            "homeassistant.components.backup.manager.json_loads_object",
+            return_value={
+                "slug": TEST_BACKUP.slug,
+                "name": TEST_BACKUP.name,
+                "date": TEST_BACKUP.date,
+            },
+        ),
+        patch(
+            "pathlib.Path.stat",
+            return_value=MagicMock(st_size=TEST_BACKUP.size),
+        ),
     ):
-        backups = await manager.get_backups()
+        await manager.load_backups()
+    backups = await manager.get_backups()
     assert backups == {TEST_BACKUP.slug: TEST_BACKUP}
 
 
@@ -109,8 +118,9 @@ async def test_load_backups_with_exception(
 ) -> None:
     """Test loading backups with exception."""
     manager = BackupManager(hass)
-    with patch("pathlib.Path.glob", return_value=[TEST_BACKUP.path]), patch(
-        "tarfile.open", side_effect=OSError("Test exception")
+    with (
+        patch("pathlib.Path.glob", return_value=[TEST_BACKUP.path]),
+        patch("tarfile.open", side_effect=OSError("Test exception")),
     ):
         await manager.load_backups()
     backups = await manager.get_backups()
@@ -170,33 +180,19 @@ async def test_generate_backup_when_backing_up(hass: HomeAssistant) -> None:
         await manager.generate_backup()
 
 
-@pytest.mark.parametrize(
-    "password",
-    (
-        None,
-        "abc123",
-    ),
-)
 async def test_generate_backup(
     hass: HomeAssistant,
     caplog: pytest.LogCaptureFixture,
-    password: str | None,
 ) -> None:
     """Test generate backup."""
     manager = BackupManager(hass)
     manager.loaded_backups = True
 
-    assert len(manager.backups) == 0
-
-    await _mock_backup_generation(manager, password=password)
+    await _mock_backup_generation(manager)
 
     assert "Generated new backup with slug " in caplog.text
     assert "Creating backup directory" in caplog.text
     assert "Loaded 0 platforms" in caplog.text
-
-    assert len(manager.backups) == 1
-    backup = list(manager.backups.values())[0]
-    assert backup.protected is bool(password)
 
 
 async def test_loading_platforms(
