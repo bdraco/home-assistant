@@ -1102,11 +1102,11 @@ class Recorder(threading.Thread):
                 pending_state.last_reported_ts = old_state.last_reported_timestamp
         elif old_state_id := states_manager.pop_committed(entity_id):
             dbstate.old_state_id = old_state_id
-            if old_state:
-                session.query(States).filter_by(state_id=old_state_id).update(
-                    {States.last_reported_ts: old_state.last_reported_timestamp},
-                    synchronize_session=False,
-                )
+        #            if old_state:
+        #                session.query(States).filter_by(state_id=old_state_id).update(
+        #                    {States.last_reported_ts: old_state.last_reported_timestamp},
+        #                    synchronize_session=False,
+        #                )
         if entity_removed:
             dbstate.state = None
         else:
