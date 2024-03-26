@@ -1200,17 +1200,21 @@ class Recorder(threading.Thread):
         session = self.event_session
         self._commits_without_expire += 1
 
-        with session.no_autoflush:
-            session.execute(
-                update(States),
-                [
-                    {
-                        "state_id": state_id,
-                        "last_reported_timestamp": last_reported_timestamp,
-                    }
-                    for state_id, last_reported_timestamp in self.states_manager.get_pending_last_reported_timestamp().items()
-                ],
-            )
+        if (
+            pending_last_reported
+            := self.states_manager.get_pending_last_reported_timestamp()
+        ):
+            with session.no_autoflush:
+                session.execute(
+                    update(States),
+                    [
+                        {
+                            "state_id": state_id,
+                            "last_reported_timestamp": last_reported_timestamp,
+                        }
+                        for state_id, last_reported_timestamp in pending_last_reported.items()
+                    ],
+                )
         session.commit()
 
         self._event_session_has_pending_writes = False
