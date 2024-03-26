@@ -982,6 +982,12 @@ async def test_store_manager_caching(
         # Load should pop the cache
         assert store_manager.async_fetch("integration2") is None
 
+        integration3 = storage.Store(hass, 1, "integration3")
+        assert await integration3.async_load() is None
+
+        await integration3.async_save({"integration3": "updated"})
+        assert await integration3.async_load() == {"integration3": "updated"}
+
         await hass.async_stop(force=True)
 
     # Now make sure everything still works when we do not
