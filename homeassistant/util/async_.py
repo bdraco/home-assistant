@@ -109,13 +109,25 @@ def run_callback_threadsafe(
 
 
 def check_loop(
-    func: Callable[..., Any], strict: bool = True, advise_msg: str | None = None
+    func: Callable[..., Any],
+    strict: bool = True,
+    strict_core: bool = False,
+    advise_msg: str | None = None,
+    **mapped_args: Any,
 ) -> None:
     """Warn if called inside the event loop. Raise if `strict` is True.
 
     The default advisory message is 'Use `await hass.async_add_executor_job()'
     Set `advise_msg` to an alternate message if the solution differs.
     """
+    if (
+        func.__name__ == "import_module"
+        and (args := mapped_args.get("args"))
+        and args[0] in sys.modules
+    ):
+        # If the module is already imported, we can ignore it.
+        return
+
     try:
         get_running_loop()
         in_loop = True
@@ -151,11 +163,18 @@ def check_loop(
             offender_frame = get_current_frame(3)
             if offender_frame.f_code.co_filename.endswith("pydevd.py"):
                 return
-
     try:
         integration_frame = get_integration_frame()
     except MissingIntegrationFrame:
         # Did not source from integration? Hard error.
+        if not strict_core:
+            _LOGGER.warning(
+                "Detected blocking call to %s with args %s inside the event loop",
+                func.__name__,
+                mapped_args,
+            )
+            return
+
         if found_frame is None:
             raise RuntimeError(  # noqa: TRY200
                 f"Detected blocking call to {func.__name__} inside the event loop. "
@@ -196,12 +215,16 @@ def check_loop(
         )
 
 
-def protect_loop(func: Callable[_P, _R], strict: bool = True) -> Callable[_P, _R]:
+def protect_loop(
+    func: Callable[_P, _R], strict: bool = True, strict_core: bool = True
+) -> Callable[_P, _R]:
     """Protect function from running in event loop."""
 
     @functools.wraps(func)
     def protected_loop_func(*args: _P.args, **kwargs: _P.kwargs) -> _R:
-        check_loop(func, strict=strict)
+        check_loop(
+            func, strict=strict, strict_core=strict_core, args=args, kwargs=kwargs
+        )
         return func(*args, **kwargs)
 
     return protected_loop_func
