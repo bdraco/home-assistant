@@ -6,6 +6,7 @@ from asyncio import AbstractEventLoop, Future, Semaphore, Task, gather, get_runn
 from collections.abc import Awaitable, Callable, Coroutine
 import concurrent.futures
 import logging
+import sys
 import threading
 from typing import Any, TypeVar, TypeVarTuple
 
