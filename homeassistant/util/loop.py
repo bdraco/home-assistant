@@ -26,11 +26,16 @@ _R = TypeVar("_R")
 _P = ParamSpec("_P")
 
 
+def _get_line_from_cache(filename: str, lineno: int) -> str:
+    """Get line from cache or read from file."""
+    return (linecache.getline(filename, lineno) or "?").strip()
+
+
 def check_loop(
     func: Callable[..., Any],
     check_allowed: Callable[[dict[str, Any]], bool] | None = None,
     strict: bool = True,
-    strict_core: bool = False,
+    strict_core: bool = True,
     advise_msg: str | None = None,
     **mapped_args: Any,
 ) -> None:
@@ -55,9 +60,7 @@ def check_loop(
     offender_frame = get_current_frame(2)
     offender_filename = offender_frame.f_code.co_filename
     offender_lineno = offender_frame.f_lineno
-    offender_line = (
-        linecache.getline(offender_filename, offender_lineno) or "?"
-    ).strip()
+    offender_line = _get_line_from_cache(offender_filename, offender_lineno)
 
     try:
         integration_frame = get_integration_frame()
@@ -78,7 +81,7 @@ def check_loop(
         if found_frame is None:
             raise RuntimeError(  # noqa: TRY200
                 f"Detected blocking call to {func.__name__} inside the event loop "
-                f"in {offender_filename}, line {offender_lineno}: {offender_line}."
+                f"in {offender_filename}, line {offender_lineno}: {offender_line}. "
                 f"{advise_msg or 'Use `await hass.async_add_executor_job()`'}; "
                 "This is causing stability issues. Please create a bug report at "
                 f"https://github.com/home-assistant/core/issues?q=is%3Aopen+is%3Aissue"
@@ -96,7 +99,7 @@ def check_loop(
     _LOGGER.warning(
         (
             "Detected blocking call to %s inside the event loop by %sintegration '%s' "
-            "at %s, line %s: %s, (offender: %s, line %s: %s) please %s"
+            "at %s, line %s: %s (offender: %s, line %s: %s), please %s"
         ),
         func.__name__,
         "custom " if integration_frame.custom_integration else "",
