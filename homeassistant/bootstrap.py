@@ -226,6 +226,7 @@ SETUP_ORDER = (
 # If they do not exist they will not be loaded
 #
 PRELOAD_STORAGE = [
+    "core.logger",
     "core.network",
     "http.auth",
     "image",
