@@ -16,7 +16,7 @@ from tests.common import MockConfigEntry
 
 
 @pytest.fixture
-def mock_agent_support_all(hass):
+def mock_agent_support_all(hass: HomeAssistant):
     """Mock agent that supports all languages."""
     entry = MockConfigEntry(entry_id="mock-entry-support-all")
     entry.add_to_hass(hass)
@@ -36,7 +36,7 @@ def mock_shopping_list_io():
 
 
 @pytest.fixture
-async def sl_setup(hass):
+async def sl_setup(hass: HomeAssistant):
     """Set up the shopping list."""
 
     entry = MockConfigEntry(domain="shopping_list")
