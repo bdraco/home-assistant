@@ -734,6 +734,7 @@ class HomeAssistant:
                 )
                 return task
         else:
+            _LOGGER.warning("Created task %s without eager_start (%s)", target, name)
             # Use loop.create_task
             # to avoid the extra function call in asyncio.create_task.
             task = self.loop.create_task(target, name=name)
