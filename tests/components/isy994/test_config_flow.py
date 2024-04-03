@@ -6,7 +6,7 @@ from unittest.mock import patch
 from pyisy import ISYConnectionError, ISYInvalidAuthError
 import pytest
 
-from homeassistant import config_entries, data_entry_flow
+from homeassistant import config_entries
 from homeassistant.components import dhcp, ssdp
 from homeassistant.components.isy994.const import (
     CONF_TLS_VER,
@@ -17,6 +17,7 @@ from homeassistant.components.isy994.const import (
 from homeassistant.config_entries import SOURCE_DHCP, SOURCE_IGNORE, SOURCE_SSDP
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResultType
 
 from . import (
     MOCK_CONFIG_RESPONSE,
@@ -72,7 +73,7 @@ async def test_form(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] == data_entry_flow.FlowResultType.FORM
+    assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with (
@@ -87,7 +88,7 @@ async def test_form(hass: HomeAssistant) -> None:
             MOCK_USER_INPUT,
         )
         await hass.async_block_till_done()
-    assert result2["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
+    assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == f"{MOCK_DEVICE_NAME} ({MOCK_HOSTNAME})"
     assert result2["result"].unique_id == MOCK_UUID
     assert result2["data"] == MOCK_USER_INPUT
@@ -110,7 +111,7 @@ async def test_form_invalid_host(hass: HomeAssistant) -> None:
         },
     )
 
-    assert result2["type"] == data_entry_flow.FlowResultType.FORM
+    assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {"base": "invalid_host"}
 
 
@@ -128,7 +129,7 @@ async def test_form_invalid_auth(hass: HomeAssistant) -> None:
             MOCK_USER_INPUT,
         )
 
-    assert result2["type"] == data_entry_flow.FlowResultType.FORM
+    assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {CONF_PASSWORD: "invalid_auth"}
 
 
@@ -146,7 +147,7 @@ async def test_form_unknown_exeption(hass: HomeAssistant) -> None:
             MOCK_USER_INPUT,
         )
 
-    assert result2["type"] == data_entry_flow.FlowResultType.FORM
+    assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {"base": "unknown"}
 
 
@@ -164,7 +165,7 @@ async def test_form_isy_connection_error(hass: HomeAssistant) -> None:
             MOCK_USER_INPUT,
         )
 
-    assert result2["type"] == data_entry_flow.FlowResultType.FORM
+    assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {"base": "cannot_connect"}
 
 
@@ -184,7 +185,7 @@ async def test_form_isy_parse_response_error(
             MOCK_USER_INPUT,
         )
 
-    assert result2["type"] == data_entry_flow.FlowResultType.FORM
+    assert result2["type"] is FlowResultType.FORM
     assert "ISY Could not parse response, poorly formatted XML." in caplog.text
 
 
@@ -204,7 +205,7 @@ async def test_form_no_name_in_response(hass: HomeAssistant) -> None:
             MOCK_USER_INPUT,
         )
 
-    assert result2["type"] == data_entry_flow.FlowResultType.FORM
+    assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {"base": "cannot_connect"}
 
 
@@ -215,7 +216,7 @@ async def test_form_existing_config_entry(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] == data_entry_flow.FlowResultType.FORM
+    assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
     with patch(PATCH_CONNECTION, return_value=MOCK_CONFIG_RESPONSE):
@@ -223,7 +224,7 @@ async def test_form_existing_config_entry(hass: HomeAssistant) -> None:
             result["flow_id"],
             MOCK_USER_INPUT,
         )
-    assert result2["type"] == data_entry_flow.FlowResultType.ABORT
+    assert result2["type"] is FlowResultType.ABORT
 
 
 async def test_form_ssdp_already_configured(hass: HomeAssistant) -> None:
@@ -248,7 +249,7 @@ async def test_form_ssdp_already_configured(hass: HomeAssistant) -> None:
             },
         ),
     )
-    assert result["type"] == data_entry_flow.FlowResultType.ABORT
+    assert result["type"] is FlowResultType.ABORT
 
 
 async def test_form_ssdp(hass: HomeAssistant) -> None:
@@ -267,7 +268,7 @@ async def test_form_ssdp(hass: HomeAssistant) -> None:
             },
         ),
     )
-    assert result["type"] == data_entry_flow.FlowResultType.FORM
+    assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
@@ -284,7 +285,7 @@ async def test_form_ssdp(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
+    assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == f"{MOCK_DEVICE_NAME} ({MOCK_HOSTNAME})"
     assert result2["result"].unique_id == MOCK_UUID
     assert result2["data"] == MOCK_USER_INPUT
@@ -317,7 +318,7 @@ async def test_form_ssdp_existing_entry(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result["type"] == data_entry_flow.FlowResultType.ABORT
+    assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
     assert entry.data[CONF_HOST] == f"http://3.3.3.3:80{ISY_URL_POSTFIX}"
 
@@ -348,7 +349,7 @@ async def test_form_ssdp_existing_entry_with_no_port(hass: HomeAssistant) -> Non
         )
         await hass.async_block_till_done()
 
-    assert result["type"] == data_entry_flow.FlowResultType.ABORT
+    assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
     assert entry.data[CONF_HOST] == f"http://3.3.3.3:80/{ISY_URL_POSTFIX}"
 
@@ -381,7 +382,7 @@ async def test_form_ssdp_existing_entry_with_alternate_port(
         )
         await hass.async_block_till_done()
 
-    assert result["type"] == data_entry_flow.FlowResultType.ABORT
+    assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
     assert entry.data[CONF_HOST] == f"http://3.3.3.3:1443/{ISY_URL_POSTFIX}"
 
@@ -412,7 +413,7 @@ async def test_form_ssdp_existing_entry_no_port_https(hass: HomeAssistant) -> No
         )
         await hass.async_block_till_done()
 
-    assert result["type"] == data_entry_flow.FlowResultType.ABORT
+    assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
     assert entry.data[CONF_HOST] == f"https://3.3.3.3:443/{ISY_URL_POSTFIX}"
 
@@ -429,7 +430,7 @@ async def test_form_dhcp(hass: HomeAssistant) -> None:
             macaddress=MOCK_MAC,
         ),
     )
-    assert result["type"] == data_entry_flow.FlowResultType.FORM
+    assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {}
 
@@ -446,7 +447,7 @@ async def test_form_dhcp(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
+    assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == f"{MOCK_DEVICE_NAME} ({MOCK_HOSTNAME})"
     assert result2["result"].unique_id == MOCK_UUID
     assert result2["data"] == MOCK_USER_INPUT
@@ -465,7 +466,7 @@ async def test_form_dhcp_with_polisy(hass: HomeAssistant) -> None:
             macaddress=MOCK_POLISY_MAC,
         ),
     )
-    assert result["type"] == data_entry_flow.FlowResultType.FORM
+    assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {}
     assert (
@@ -486,7 +487,7 @@ async def test_form_dhcp_with_polisy(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
+    assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == f"{MOCK_DEVICE_NAME} ({MOCK_HOSTNAME})"
     assert result2["result"].unique_id == MOCK_UUID
     assert result2["data"] == MOCK_IOX_USER_INPUT
@@ -505,7 +506,7 @@ async def test_form_dhcp_with_eisy(hass: HomeAssistant) -> None:
             macaddress=MOCK_MAC,
         ),
     )
-    assert result["type"] == data_entry_flow.FlowResultType.FORM
+    assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
     assert result["errors"] == {}
     assert (
@@ -526,7 +527,7 @@ async def test_form_dhcp_with_eisy(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result2["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
+    assert result2["type"] is FlowResultType.CREATE_ENTRY
     assert result2["title"] == f"{MOCK_DEVICE_NAME} ({MOCK_HOSTNAME})"
     assert result2["result"].unique_id == MOCK_UUID
     assert result2["data"] == MOCK_IOX_USER_INPUT
@@ -555,7 +556,7 @@ async def test_form_dhcp_existing_entry(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result["type"] == data_entry_flow.FlowResultType.ABORT
+    assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
     assert entry.data[CONF_HOST] == f"http://1.2.3.4{ISY_URL_POSTFIX}"
 
@@ -585,7 +586,7 @@ async def test_form_dhcp_existing_entry_preserves_port(hass: HomeAssistant) -> N
         )
         await hass.async_block_till_done()
 
-    assert result["type"] == data_entry_flow.FlowResultType.ABORT
+    assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
     assert entry.data[CONF_HOST] == f"http://1.2.3.4:1443{ISY_URL_POSTFIX}"
     assert entry.data[CONF_USERNAME] == "bob"
@@ -611,7 +612,7 @@ async def test_form_dhcp_existing_ignored_entry(hass: HomeAssistant) -> None:
         )
         await hass.async_block_till_done()
 
-    assert result["type"] == data_entry_flow.FlowResultType.ABORT
+    assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
 
