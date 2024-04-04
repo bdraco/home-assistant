@@ -6,14 +6,11 @@ from collections.abc import Callable
 from contextlib import suppress
 import dataclasses
 from datetime import timedelta
+from functools import cached_property
 import logging
 from math import ceil, floor
 from typing import TYPE_CHECKING, Any, Self, final
 
-if TYPE_CHECKING:
-    from functools import cached_property
-else:
-    from homeassistant.backports.functools import cached_property
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
@@ -47,11 +44,6 @@ from .const import (  # noqa: F401
     NumberMode,
 )
 from .websocket_api import async_setup as async_setup_ws_api
-
-if TYPE_CHECKING:
-    from functools import cached_property
-else:
-    from homeassistant.backports.functools import cached_property
 
 _LOGGER = logging.getLogger(__name__)
 

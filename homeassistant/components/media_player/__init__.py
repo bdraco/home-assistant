@@ -9,18 +9,14 @@ from contextlib import suppress
 import datetime as dt
 from enum import StrEnum
 import functools as ft
-from functools import lru_cache
+from functools import cached_property, lru_cache
 import hashlib
 from http import HTTPStatus
 import logging
 import secrets
-from typing import TYPE_CHECKING, Any, Final, Required, TypedDict, final
+from typing import Any, Final, Required, TypedDict, final
 from urllib.parse import quote, urlparse
 
-if TYPE_CHECKING:
-    from functools import cached_property
-else:
-    from homeassistant.backports.functools import cached_property
 from aiohttp import web
 from aiohttp.hdrs import CACHE_CONTROL, CONTENT_TYPE
 from aiohttp.typedefs import LooseHeaders
@@ -137,11 +133,6 @@ from .const import (  # noqa: F401
     RepeatMode,
 )
 from .errors import BrowseError
-
-if TYPE_CHECKING:
-    from functools import cached_property
-else:
-    from homeassistant.backports.functools import cached_property
 
 _LOGGER = logging.getLogger(__name__)
 
