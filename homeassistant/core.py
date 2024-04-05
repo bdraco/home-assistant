@@ -1709,7 +1709,7 @@ class State:
     @cached_property
     def last_reported_timestamp(self) -> float:
         """Timestamp of last report."""
-        if self.last_changed == self.last_updated:
+        if self.last_reported == self.last_updated:
             return self.last_updated_timestamp
         return self.last_reported.timestamp()
 
