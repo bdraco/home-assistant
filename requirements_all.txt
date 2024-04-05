@@ -1041,7 +1041,7 @@ habitipy==0.2.0
 habluetooth==2.4.2
 
 # homeassistant.components.cloud
-hass-nabucasa==0.79.0
+hass-nabucasa==0.80.0
 
 # homeassistant.components.splunk
 hass-splunk==0.1.1
@@ -1081,7 +1081,7 @@ hole==0.8.0
 holidays==0.46
 
 # homeassistant.components.frontend
-home-assistant-frontend==20240404.0
+home-assistant-frontend==20240404.1
 
 # homeassistant.components.conversation
 home-assistant-intents==2024.4.3
