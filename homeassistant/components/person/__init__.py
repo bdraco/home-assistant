@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from functools import cached_property
 import logging
 from typing import Any, Self
 
@@ -403,23 +402,15 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-CACHED_PROPERTIES_WITH_ATTR_ = {
-    "device_trackers",
-}
-
-
 class Person(
     collection.CollectionEntity,
     RestoreEntity,
-    cached_properties=CACHED_PROPERTIES_WITH_ATTR_,
 ):
     """Represent a tracked person."""
 
     _entity_component_unrecorded_attributes = frozenset({ATTR_DEVICE_TRACKERS})
 
     _attr_should_poll = False
-    _attr_state: str | None = None
-    _attr_device_trackers: list[str] = []
     editable: bool
 
     def __init__(self, config: dict[str, Any]) -> None:
@@ -430,6 +421,8 @@ class Person(
         self._gps_accuracy: float | None = None
         self._source: str | None = None
         self._unsub_track_device: Callable[[], None] | None = None
+        self._attr_state: str | None = None
+        self.device_trackers: list[str] = []
 
         self._attr_unique_id = config[CONF_ID]
         self._set_attrs_from_config()
@@ -438,7 +431,7 @@ class Person(
         """Set attributes from config."""
         self._attr_name = self._config[CONF_NAME]
         self._attr_entity_picture = self._config.get(CONF_PICTURE)
-        self._attr_device_trackers = self._config[CONF_DEVICE_TRACKERS]
+        self.device_trackers = self._config[CONF_DEVICE_TRACKERS]
 
     @classmethod
     def from_storage(cls, config: ConfigType) -> Self:
@@ -453,11 +446,6 @@ class Person(
         person = cls(config)
         person.editable = False
         return person
-
-    @cached_property
-    def device_trackers(self) -> list[str]:
-        """Return the device trackers for the person."""
-        return self._attr_device_trackers
 
     async def async_added_to_hass(self) -> None:
         """Register device trackers."""
