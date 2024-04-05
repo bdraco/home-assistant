@@ -1468,17 +1468,9 @@ class EventBus:
                 except Exception:  # pylint: disable=broad-except
                     _LOGGER.exception("Error running job: %s", job)
             else:
-                if event_filter is None and event.event_type not in (
-                    EVENT_HOMEASSISTANT_CLOSE,
-                    EVENT_HOMEASSISTANT_FINAL_WRITE,
-                    EVENT_HOMEASSISTANT_START,
-                    EVENT_HOMEASSISTANT_CLOSE,
-                    EVENT_HOMEASSISTANT_STARTED,
-                    EVENT_HOMEASSISTANT_START,
-                ):
-                    _LOGGER.warning(
-                        "Fire unfiltered event with add job: %s - %s", job, event
-                    )
+                _LOGGER.warning(
+                    "Fire unfiltered event with add job: %s - %s", job, event
+                )
                 self._hass.async_add_hass_job(job, event)
 
     def listen(
