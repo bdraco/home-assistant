@@ -28,7 +28,6 @@ from homeassistant import core
 from homeassistant.components.homeassistant.exposed_entities import (
     async_listen_entity_updates,
     async_should_expose,
-    async_should_expose_entities,
 )
 from homeassistant.const import EVENT_STATE_CHANGED, MATCH_ALL
 from homeassistant.helpers import (
@@ -128,7 +127,8 @@ async def async_setup_default_agent(
     hass.data[DATA_DEFAULT_ENTITY] = entity
 
     entity_registry = er.async_get(hass)
-    async_should_expose_entities(hass, DOMAIN, entity_registry.entities)
+    for entity_id in entity_registry.entities:
+        async_should_expose(hass, DOMAIN, entity_id)
 
     @core.callback
     def async_entity_state_listener(
@@ -140,7 +140,8 @@ async def async_setup_default_agent(
     @core.callback
     def async_hass_started(hass: core.HomeAssistant) -> None:
         """Set expose flag on all entities."""
-        async_should_expose_entities(hass, DOMAIN, hass.states.async_entity_ids())
+        for state in hass.states.async_all():
+            async_should_expose(hass, DOMAIN, state.entity_id)
         async_track_state_added_domain(hass, MATCH_ALL, async_entity_state_listener)
 
     start.async_at_started(hass, async_hass_started)
@@ -770,13 +771,10 @@ class DefaultAgent(ConversationEntity):
             return self._slot_lists
 
         entity_registry = er.async_get(self.hass)
-        to_expose = async_should_expose_entities(
-            self.hass, DOMAIN, self.hass.states.async_entity_ids()
-        )
         states = [
             state
             for state in self.hass.states.async_all()
-            if state.entity_id in to_expose
+            if async_should_expose(self.hass, DOMAIN, state.entity_id)
         ]
 
         # Gather exposed entity names.

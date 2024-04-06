@@ -662,6 +662,10 @@ async def test_custom_agent(
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test a custom conversation agent."""
+    assert await async_setup_component(hass, "homeassistant", {})
+    assert await async_setup_component(hass, "conversation", {})
+    assert await async_setup_component(hass, "intent", {})
+
     client = await hass_client()
 
     data = {

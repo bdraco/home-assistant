@@ -14,9 +14,7 @@ from typing import Any, TypeVar
 
 import voluptuous as vol
 
-from homeassistant.components.homeassistant.exposed_entities import (
-    async_should_expose_entities,
-)
+from homeassistant.components.homeassistant.exposed_entities import async_should_expose
 from homeassistant.const import (
     ATTR_DEVICE_CLASS,
     ATTR_ENTITY_ID,
@@ -371,13 +369,10 @@ def async_match_states(
 
     if assistant is not None:
         # Filter by exposure
-        to_expose = async_should_expose_entities(
-            hass, assistant, (state.entity_id for state, _ in states_and_entities)
-        )
         states_and_entities = [
             (state, entity)
             for state, entity in states_and_entities
-            if state.entity_id in to_expose
+            if async_should_expose(hass, assistant, state.entity_id)
         ]
 
     if name is not None:
