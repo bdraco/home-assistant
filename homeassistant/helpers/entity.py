@@ -14,7 +14,6 @@ import logging
 import math
 from operator import attrgetter
 import sys
-from timeit import default_timer as timer
 from types import FunctionType
 from typing import (
     TYPE_CHECKING,
@@ -1112,9 +1111,10 @@ class Entity(
                 )
             return
 
-        start = timer()
+        loop = hass.loop
+        state_calculate_start = loop.time()
         state, attr, capabilities, shadowed_attr = self.__async_calculate_state()
-        end = timer()
+        time_now = loop.time()
 
         if entry:
             # Make sure capabilities in the entity registry are up to date. Capabilities
@@ -1127,7 +1127,6 @@ class Entity(
                 or supported_features != entry.supported_features
             ):
                 if not self.__capabilities_updated_at_reported:
-                    time_now = hass.loop.time()
                     # _Entity__capabilities_updated_at is because of name mangling
                     if not (
                         capabilities_updated_at := getattr(
@@ -1161,14 +1160,14 @@ class Entity(
                     supported_features=supported_features,
                 )
 
-        if end - start > 0.4 and not self._slow_reported:
+        if time_now - state_calculate_start > 0.4 and not self._slow_reported:
             self._slow_reported = True
             report_issue = self._suggest_report_issue()
             _LOGGER.warning(
                 "Updating state for %s (%s) took %.3f seconds. Please %s",
                 entity_id,
                 type(self),
-                end - start,
+                time_now - state_calculate_start,
                 report_issue,
             )
 
@@ -1178,7 +1177,7 @@ class Entity(
 
         if (
             self._context_set is not None
-            and hass.loop.time() - self._context_set > CONTEXT_RECENT_TIME_SECONDS
+            and time_now - self._context_set > CONTEXT_RECENT_TIME_SECONDS
         ):
             self._context = None
             self._context_set = None
