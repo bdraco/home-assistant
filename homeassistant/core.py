@@ -1656,6 +1656,7 @@ class State:
         context: Context | None = None,
         validate_entity_id: bool | None = True,
         state_info: StateInfo | None = None,
+        last_updated_timestamp: float | None = None,
     ) -> None:
         """Initialize a new state."""
         state = str(state)
@@ -1683,6 +1684,12 @@ class State:
         self.context = context or Context()
         self.state_info = state_info
         self.domain, self.object_id = split_entity_id(self.entity_id)
+        # last_updated_timestamp will nearly always be called by
+        # the recorder or websocket_api so we do not need to
+        # generate it lazily.
+        self.last_updated_timestamp = (
+            last_updated_timestamp or self.last_updated.timestamp()
+        )
 
     @cached_property
     def name(self) -> str:
@@ -1704,11 +1711,6 @@ class State:
         if self.last_reported == self.last_updated:
             return self.last_updated_timestamp
         return self.last_reported.timestamp()
-
-    @cached_property
-    def last_updated_timestamp(self) -> float:
-        """Timestamp of last update."""
-        return self.last_updated.timestamp()
 
     @cached_property
     def _as_dict(self) -> dict[str, Any]:
@@ -2198,6 +2200,7 @@ class StateMachine:
             context,
             old_state is None,
             state_info,
+            timestamp,
         )
         if old_state is not None:
             old_state.expire()
