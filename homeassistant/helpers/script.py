@@ -914,16 +914,11 @@ class _ScriptRun:
                     break
 
                 if iteration > 1:
-                    # If the user creates an script with a tight loop,
-                    # yield to the event loop so the system stays
-                    # responsive while all the cpu time is consumed.
-                    await asyncio.sleep(0)
                     if iteration >= REPEAT_WARN_ITERATIONS:
                         if not warned_too_many_loops:
                             warned_too_many_loops = True
                             _LOGGER.warning(
-                                "While condition %s in script `%s`"
-                                " is looping more than %s times",
+                                "While condition %s in script `%s` looped %s times",
                                 repeat[CONF_WHILE],
                                 self._script.name,
                                 REPEAT_WARN_ITERATIONS,
@@ -932,13 +927,21 @@ class _ScriptRun:
                         if iteration >= REPEAT_TERMINATE_ITERATIONS:
                             _LOGGER.critical(
                                 "While condition %s in script `%s` "
-                                "terminated because it looping more "
-                                "than %s times",
+                                "terminated because it looped %s times",
                                 repeat[CONF_WHILE],
                                 self._script.name,
                                 REPEAT_TERMINATE_ITERATIONS,
                             )
-                            break
+                            raise _AbortScript(
+                                f"While condition {repeat[CONF_WHILE]} "
+                                "terminated because it looped "
+                                f" {REPEAT_TERMINATE_ITERATIONS} times"
+                            )
+
+                    # If the user creates a script with a tight loop,
+                    # yield to the event loop so the system stays
+                    # responsive while all the cpu time is consumed.
+                    await asyncio.sleep(0)
 
                 await async_run_sequence(iteration)
 
@@ -962,8 +965,7 @@ class _ScriptRun:
                     if not warned_too_many_loops:
                         warned_too_many_loops = True
                         _LOGGER.warning(
-                            "Until condition %s in script `%s` "
-                            "is looping more than %s times",
+                            "Until condition %s in script `%s` looped %s times",
                             repeat[CONF_UNTIL],
                             self._script.name,
                             REPEAT_WARN_ITERATIONS,
@@ -972,15 +974,18 @@ class _ScriptRun:
                     if iteration >= REPEAT_TERMINATE_ITERATIONS:
                         _LOGGER.critical(
                             "Until condition %s in script `%s` "
-                            "terminated because it looping more "
-                            "than %s times",
+                            "terminated because it looped %s times",
                             repeat[CONF_UNTIL],
                             self._script.name,
                             REPEAT_TERMINATE_ITERATIONS,
                         )
-                        break
+                        raise _AbortScript(
+                            f"Until condition {repeat[CONF_UNTIL]} "
+                            "terminated because it looped "
+                            f"{REPEAT_TERMINATE_ITERATIONS} times"
+                        )
 
-                # If the user creates an script with a tight loop,
+                # If the user creates a script with a tight loop,
                 # yield to the event loop so the system stays responsive
                 # while all the cpu time is consumed.
                 await asyncio.sleep(0)
