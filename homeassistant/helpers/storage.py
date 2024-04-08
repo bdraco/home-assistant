@@ -126,7 +126,6 @@ class _StoreManager:
         hass.bus.async_listen_once(
             EVENT_HOMEASSISTANT_STARTED,
             self._async_schedule_cleanup,
-            run_immediately=True,
         )
 
     @callback
@@ -186,7 +185,6 @@ class _StoreManager:
         self._hass.bus.async_listen_once(
             EVENT_HOMEASSISTANT_STOP,
             self._async_cancel_and_cleanup,
-            run_immediately=True,
         )
 
     @callback
@@ -496,7 +494,6 @@ class Store(Generic[_T]):
             self._unsub_final_write_listener = self.hass.bus.async_listen_once(
                 EVENT_HOMEASSISTANT_FINAL_WRITE,
                 self._async_callback_final_write,
-                run_immediately=True,
             )
 
     @callback
