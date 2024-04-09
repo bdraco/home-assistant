@@ -612,9 +612,6 @@ class AutomationEntity(BaseAutomationEntity, RestoreEntity):
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the entity off."""
-        self._logger.debug(
-            "Automation %s is being turned off (%s)", self.entity_id, kwargs
-        )
         if CONF_STOP_ACTIONS in kwargs:
             await self.async_disable(kwargs[CONF_STOP_ACTIONS])
         else:
