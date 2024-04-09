@@ -1729,7 +1729,6 @@ class Script:
         aws = [
             create_eager_task(run.async_stop()) for run in self._runs if run != spare
         ]
-        _LOGGER.error("Stopping script: %s, tasks: %s", self.name, aws)
         if not aws:
             return
         await asyncio.shield(
