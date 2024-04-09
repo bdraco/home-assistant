@@ -469,7 +469,10 @@ class _ScriptRun:
             script_execution_set("error")
             raise
         else:
-            script_execution_set("finished")
+            if self._stop.done():
+                script_execution_set("cancelled")
+            else:
+                script_execution_set("finished")
         finally:
             # Pop the script from the script execution stack
             script_stack.pop()
