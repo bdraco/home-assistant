@@ -14,6 +14,7 @@ from kasa import (
     SmartDeviceException,
 )
 
+from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.debounce import Debouncer
@@ -52,6 +53,9 @@ class TPLinkDataUpdateCoordinator(DataUpdateCoordinator[None]):
                 hass, _LOGGER, cooldown=REQUEST_REFRESH_DELAY, immediate=False
             ),
         )
+        config_entry = config_entries.current_entry.get()
+        assert config_entry
+        self.config_entry: config_entries.ConfigEntry = config_entry
 
     async def _async_update_data(self) -> None:
         """Fetch all device and sensor data from api."""
