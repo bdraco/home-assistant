@@ -221,7 +221,7 @@ aioelectricitymaps==0.4.0
 aioemonitor==1.0.5
 
 # homeassistant.components.esphome
-aioesphomeapi==23.2.0
+aioesphomeapi==24.0.0
 
 # homeassistant.components.flo
 aioflo==2021.11.0
@@ -725,7 +725,7 @@ fnv-hash-fast==0.5.0
 foobot_async==1.0.0
 
 # homeassistant.components.forecast_solar
-forecast-solar==3.0.0
+forecast-solar==3.1.0
 
 # homeassistant.components.freebox
 freebox-api==1.1.0
@@ -1540,7 +1540,7 @@ pymeteoclimatic==0.1.0
 pymochad==0.2.0
 
 # homeassistant.components.modbus
-pymodbus==3.6.6
+pymodbus==3.6.7
 
 # homeassistant.components.monoprice
 pymonoprice==0.4
@@ -1894,7 +1894,7 @@ reolink-aio==0.8.9
 rflink==0.0.66
 
 # homeassistant.components.ring
-ring-doorbell[listen]==0.8.10
+ring-doorbell[listen]==0.8.11
 
 # homeassistant.components.roku
 rokuecp==0.19.2

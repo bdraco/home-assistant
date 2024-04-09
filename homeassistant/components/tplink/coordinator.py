@@ -33,6 +33,8 @@ REQUEST_REFRESH_DELAY = 0.35
 class TPLinkDataUpdateCoordinator(DataUpdateCoordinator[None]):
     """DataUpdateCoordinator to gather data for a specific TPLink device."""
 
+    config_entry: config_entries.ConfigEntry
+
     def __init__(
         self,
         hass: HomeAssistant,
