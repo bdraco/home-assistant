@@ -13,7 +13,7 @@ from functools import cached_property, partial
 import itertools
 import logging
 from types import MappingProxyType
-from typing import Any, Literal, TypedDict, TypeVar, cast
+from typing import Any, Literal, TypedDict, cast
 
 import async_interrupt
 import voluptuous as vol
@@ -75,6 +75,7 @@ from homeassistant.core import (
     HassJob,
     HomeAssistant,
     ServiceResponse,
+    State,
     SupportsResponse,
     callback,
 )
@@ -108,8 +109,6 @@ from .trigger import async_initialize_triggers, async_validate_trigger_config
 from .typing import UNDEFINED, ConfigType, UndefinedType
 
 # mypy: allow-untyped-calls, allow-untyped-defs, no-check-untyped-defs
-
-_T = TypeVar("_T")
 
 SCRIPT_MODE_PARALLEL = "parallel"
 SCRIPT_MODE_QUEUED = "queued"
@@ -623,7 +622,6 @@ class _ScriptRun:
         futures, timeout_handle, timeout_future = self._async_futures_with_timeout(
             delay
         )
-
         try:
             await asyncio.wait(futures, return_when=asyncio.FIRST_COMPLETED)
         finally:
@@ -660,8 +658,10 @@ class _ScriptRun:
         done = self._hass.loop.create_future()
         futures.append(done)
 
-        @callback
-        def async_script_wait(entity_id, from_s, to_s):
+        @callback  # type: ignore[misc]
+        def async_script_wait(
+            entity_id: str, from_s: State | None, to_s: State | None
+        ) -> None:
             """Handle script after template condition is true."""
             self._async_set_remaining_time_var(timeout_handle)
             self._variables["wait"]["completed"] = True
@@ -671,9 +671,12 @@ class _ScriptRun:
             self._hass, wait_template, async_script_wait, self._variables
         )
         self._changed()
-        await self._async_wait_with_optional_timeout(
-            futures, timeout_handle, timeout_future, unsub
-        )
+        try:
+            await self._async_wait_with_optional_timeout(futures, timeout_future)
+        finally:
+            if timeout_future and not timeout_future.done() and timeout_handle:
+                timeout_handle.cancel()
+            unsub()
 
     def _async_set_remaining_time_var(
         self, timeout_handle: asyncio.TimerHandle | None
@@ -684,17 +687,6 @@ class _ScriptRun:
             wait_var["remaining"] = timeout_handle.when() - self._hass.loop.time()
         else:
             wait_var["remaining"] = None
-
-    async def _async_run_long_action(self, long_task: asyncio.Task[_T]) -> _T | None:
-        """Run a long task while monitoring for stop request."""
-        try:
-            async with async_interrupt.interrupt(self._stop, ScriptStoppedError, None):
-                # if stop is set, interrupt will cancel inside the context
-                # manager which will cancel long_task, and raise
-                # ScriptStoppedError outside the context manager
-                return await long_task
-        except ScriptStoppedError as ex:
-            raise asyncio.CancelledError from ex
 
     async def _async_call_service_step(self):
         """Call the service specified in the action."""
@@ -729,16 +721,11 @@ class _ScriptRun:
             or params[CONF_DOMAIN] in ("python_script", "script")
         )
         trace_set_result(params=params, running_script=running_script)
-        response_data = await self._async_run_long_action(
-            self._hass.async_create_task(
-                self._hass.services.async_call(
-                    **params,
-                    blocking=True,
-                    context=self._context,
-                    return_response=return_response,
-                ),
-                eager_start=True,
-            )
+        response_data = await self._hass.services.async_call(
+            **params,
+            blocking=True,
+            context=self._context,
+            return_response=return_response,
         )
         if response_variable:
             self._variables[response_variable] = response_data
@@ -1059,16 +1046,14 @@ class _ScriptRun:
         If timeout is set, a timeout future and handle will be created
         and will be added to the list of futures.
         """
-        timeout_handle: asyncio.TimerHandle | None = None
-        timeout_future: asyncio.Future[None] | None = None
-        futures: list[asyncio.Future[None]] = []
-        if timeout:
-            timeout_future = self._hass.loop.create_future()
-            timeout_handle = self._hass.loop.call_later(
-                timeout, _set_result_unless_done, timeout_future
-            )
-            futures.append(timeout_future)
-        return futures, timeout_handle, timeout_future
+        if not timeout:
+            return [], None, None
+        loop = self._hass.loop
+        timeout_future = loop.create_future()
+        timeout_handle = loop.call_later(
+            timeout, _set_result_unless_done, timeout_future
+        )
+        return [timeout_future], timeout_handle, timeout_future
 
     async def _async_wait_for_trigger_step(self):
         """Wait for a trigger event."""
@@ -1080,13 +1065,8 @@ class _ScriptRun:
         self._variables["wait"] = {"remaining": timeout, "trigger": None}
         trace_set_result(wait=self._variables["wait"])
 
-        futures, timeout_handle, timeout_future = self._async_futures_with_timeout(
-            timeout
-        )
-        done = self._hass.loop.create_future()
-        futures.append(done)
-
         async def async_done(variables, context=None):
+            nonlocal done, timeout_handle
             self._async_set_remaining_time_var(timeout_handle)
             self._variables["wait"]["trigger"] = variables["trigger"]
             _set_result_unless_done(done)
@@ -1105,34 +1085,33 @@ class _ScriptRun:
         )
         if not remove_triggers:
             return
-        self._changed()
-        await self._async_wait_with_optional_timeout(
-            futures, timeout_handle, timeout_future, remove_triggers
+
+        futures, timeout_handle, timeout_future = self._async_futures_with_timeout(
+            timeout
         )
+        done = self._hass.loop.create_future()
+        futures.append(done)
+        self._changed()
+        try:
+            await self._async_wait_with_optional_timeout(futures, timeout_future)
+        finally:
+            remove_triggers()
+            if timeout_future and not timeout_future.done() and timeout_handle:
+                timeout_handle.cancel()
 
     async def _async_wait_with_optional_timeout(
         self,
         futures: list[asyncio.Future[None]],
-        timeout_handle: asyncio.TimerHandle | None,
         timeout_future: asyncio.Future[None] | None,
-        unsub: Callable[[], None],
     ) -> None:
-        try:
-            if len(futures) == 1:
-                await futures[0]
-            else:
-                await asyncio.wait(futures, return_when=asyncio.FIRST_COMPLETED)
-            if timeout_future and timeout_future.done():
-                self._variables["wait"]["remaining"] = 0.0
-                if not self._action.get(CONF_CONTINUE_ON_TIMEOUT, True):
-                    self._log(_TIMEOUT_MSG)
-                    trace_set_result(wait=self._variables["wait"], timeout=True)
-                    raise _AbortScript from TimeoutError()
-        finally:
-            if timeout_future and not timeout_future.done() and timeout_handle:
-                timeout_handle.cancel()
-
-            unsub()
+        await asyncio.wait(futures, return_when=asyncio.FIRST_COMPLETED)
+        if not timeout_future or not timeout_future.done():
+            return
+        self._variables["wait"]["remaining"] = 0.0
+        if not self._action.get(CONF_CONTINUE_ON_TIMEOUT, True):
+            self._log(_TIMEOUT_MSG)
+            trace_set_result(wait=self._variables["wait"], timeout=True)
+            raise _AbortScript from TimeoutError()
 
     async def _async_variables_step(self):
         """Set a variable value."""
@@ -1197,11 +1176,7 @@ class _ScriptRun:
 
     async def _async_run_script(self, script: Script) -> None:
         """Execute a script."""
-        result = await self._async_run_long_action(
-            self._hass.async_create_task(
-                script.async_run(self._variables, self._context), eager_start=True
-            )
-        )
+        result = await script.async_run(self._variables, self._context)
         if result and result.conversation_response is not UNDEFINED:
             self._conversation_response = result.conversation_response
 
