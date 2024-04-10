@@ -1755,7 +1755,13 @@ class State:
         if last_updated_timestamp is not None:
             # We round to 6 decimal places to match .timestamp() precision
             # using int() as it is ~4.8x faster than round()
+            import pprint
+
             self.last_updated_timestamp = int(last_updated_timestamp * 1e6 + 0.5) / 1e6
+            pprint.pprint(
+                ["input", last_updated_timestamp, "output", self.last_updated_timestamp]
+            )
+
         else:
             self.last_updated_timestamp = self.last_updated.timestamp()
 
