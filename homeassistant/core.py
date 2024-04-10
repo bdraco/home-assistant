@@ -1759,7 +1759,14 @@ class State:
 
             self.last_updated_timestamp = int(last_updated_timestamp * 1e6 + 0.5) / 1e6
             pprint.pprint(
-                ["input", last_updated_timestamp, "output", self.last_updated_timestamp]
+                [
+                    "input",
+                    last_updated_timestamp,
+                    "output",
+                    self.last_updated_timestamp,
+                    "round version",
+                    round(last_updated_timestamp, 6),
+                ]
             )
 
         else:
