@@ -226,9 +226,11 @@ async def trace_action(
                 hass, SCRIPT_DEBUG_CONTINUE_ALL, async_continue_stop
             )
 
-            await asyncio.wait([stop, done], return_when=asyncio.FIRST_COMPLETED)
-            remove_signal1()
-            remove_signal2()
+            try:
+                await done
+            finally:
+                remove_signal1()
+                remove_signal2()
 
     try:
         yield trace_element
@@ -1059,7 +1061,7 @@ class _ScriptRun:
         """
         timeout_handle: asyncio.TimerHandle | None = None
         timeout_future: asyncio.Future[None] | None = None
-        futures: list[asyncio.Future[None]] = [self._stop]
+        futures: list[asyncio.Future[None]] = []
         if timeout:
             timeout_future = self._hass.loop.create_future()
             timeout_handle = self._hass.loop.call_later(
@@ -1116,7 +1118,10 @@ class _ScriptRun:
         unsub: Callable[[], None],
     ) -> None:
         try:
-            await asyncio.wait(futures, return_when=asyncio.FIRST_COMPLETED)
+            if len(futures) == 1:
+                await futures[0]
+            else:
+                await asyncio.wait(futures, return_when=asyncio.FIRST_COMPLETED)
             if timeout_future and timeout_future.done():
                 self._variables["wait"]["remaining"] = 0.0
                 if not self._action.get(CONF_CONTINUE_ON_TIMEOUT, True):
