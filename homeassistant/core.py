@@ -1754,7 +1754,7 @@ class State:
         # generate it lazily.
         if last_updated_timestamp is not None:
             # We round to 6 decimal places to match .timestamp() precision
-            # using int() is ~4.8x faster than round()
+            # using int() as it is ~4.8x faster than round()
             self.last_updated_timestamp = (
                 int(last_updated_timestamp * 1000000.0 + 0.5) / 1000000.0
             )
