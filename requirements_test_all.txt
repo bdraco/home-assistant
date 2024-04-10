@@ -2264,7 +2264,7 @@ youless-api==1.0.1
 youtubeaio==1.1.5
 
 # homeassistant.components.media_extractor
-yt-dlp==2024.03.10
+yt-dlp==2024.04.09
 
 # homeassistant.components.zamg
 zamg==0.3.6
@@ -2276,7 +2276,7 @@ zeroconf==0.132.0
 zeversolar==0.3.1
 
 # homeassistant.components.zha
-zha-quirks==0.0.113
+zha-quirks==0.0.114
 
 # homeassistant.components.zha
 zigpy-deconz==0.23.1

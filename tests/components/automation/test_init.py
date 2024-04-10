@@ -2657,7 +2657,10 @@ async def test_automation_turns_off_other_automation(
     hass: HomeAssistant, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Test an automation that turns off another automation."""
+    hass.set_state(CoreState.not_running)
     calls = async_mock_service(hass, "persistent_notification", "create")
+    hass.states.async_set("binary_sensor.presence", "on")
+    await hass.async_block_till_done()
 
     assert await async_setup_component(
         hass,
@@ -2668,7 +2671,25 @@ async def test_automation_turns_off_other_automation(
                     "trigger": {
                         "platform": "state",
                         "entity_id": "binary_sensor.presence",
-                        "to": "on",
+                        "from": "on",
+                    },
+                    "action": {
+                        "service": "automation.turn_off",
+                        "target": {
+                            "entity_id": "automation.automation_1",
+                        },
+                        "data": {
+                            "stop_actions": True,
+                        },
+                    },
+                    "id": "automation_0",
+                    "mode": "single",
+                },
+                {
+                    "trigger": {
+                        "platform": "state",
+                        "entity_id": "binary_sensor.presence",
+                        "from": "on",
                         "for": {
                             "hours": 0,
                             "minutes": 0,
@@ -2682,31 +2703,29 @@ async def test_automation_turns_off_other_automation(
                             "message": "Test race",
                         },
                     },
-                    "id": "automation_0",
-                    "mode": "single",
-                },
-                {
-                    "trigger": {
-                        "platform": "state",
-                        "entity_id": "binary_sensor.presence",
-                        "to": "on",
-                    },
-                    "action": {
-                        "service": "automation.turn_off",
-                        "target": {
-                            "entity_id": "automation.automation_0",
-                        },
-                        "data": {
-                            "stop_actions": True,
-                        },
-                    },
                     "id": "automation_1",
                     "mode": "single",
                 },
             ]
         },
     )
-    hass.states.async_set("binary_sensor.presence", "on")
+    await hass.async_start()
+    await hass.async_block_till_done()
+
+    hass.states.async_set("binary_sensor.presence", "off")
+    await hass.async_block_till_done()
+    assert len(calls) == 0
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=5))
+    await hass.async_block_till_done()
+    assert len(calls) == 0
+
+    await hass.services.async_call(
+        "automation",
+        "turn_on",
+        {"entity_id": "automation.automation_1"},
+        blocking=True,
+    )
+    hass.states.async_set("binary_sensor.presence", "off")
     await hass.async_block_till_done()
     assert len(calls) == 0
     async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=5))
