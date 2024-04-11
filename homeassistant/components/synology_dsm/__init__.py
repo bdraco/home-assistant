@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from itertools import chain
 import logging
 
@@ -97,20 +98,35 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # The central coordinator needs to be refreshed first since
     # the next two rely on data from it
     coordinator_cameras: SynologyDSMCameraUpdateCoordinator | None = None
+    tasks: list[asyncio.Task[None]] = []
     if api.surveillance_station is not None:
         coordinator_cameras = SynologyDSMCameraUpdateCoordinator(hass, entry, api)
-        await coordinator_cameras.async_config_entry_first_refresh()
+        tasks.append(
+            hass.async_create_task(
+                coordinator_cameras.async_config_entry_first_refresh()
+            )
+        )
 
     coordinator_switches: SynologyDSMSwitchUpdateCoordinator | None = None
+    switch_setup_task: asyncio.Task[None] | None = None
     if (
         SynoSurveillanceStation.INFO_API_KEY in available_apis
         and SynoSurveillanceStation.HOME_MODE_API_KEY in available_apis
         and api.surveillance_station is not None
     ):
         coordinator_switches = SynologyDSMSwitchUpdateCoordinator(hass, entry, api)
-        await coordinator_switches.async_config_entry_first_refresh()
+        tasks.append(
+            hass.async_create_task(
+                coordinator_switches.async_config_entry_first_refresh()
+            )
+        )
+        switch_setup_task = hass.async_create_task(coordinator_switches.async_setup())
+        tasks.append(switch_setup_task)
+
+    await asyncio.gather(*tasks)
+    if switch_setup_task:
         try:
-            await coordinator_switches.async_setup()
+            await switch_setup_task
         except SYNOLOGY_CONNECTION_EXCEPTIONS as ex:
             raise ConfigEntryNotReady from ex
 

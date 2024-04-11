@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable
 from contextlib import suppress
 import logging
@@ -94,9 +95,31 @@ class SynoApi:
         self._with_surveillance_station = bool(
             self.dsm.apis.get(SynoSurveillanceStation.CAMERA_API_KEY)
         )
+        surveillance_station_update_task: asyncio.Task[None] | None = None
+        tasks: list[asyncio.Task[None]] = []
         if self._with_surveillance_station:
+            surveillance_station_update_task = self._hass.async_create_task(
+                self.dsm.surveillance_station.update()
+            )
+            tasks.append(surveillance_station_update_task)
+
+        upgrade_task = self._hass.async_create_task(self.dsm.upgrade.update())
+        tasks.append(upgrade_task)
+        tasks.append(self._hass.async_create_task(self._fetch_device_configuration()))
+
+        await asyncio.gather(*tasks)
+
+        # check if upgrade is available
+        try:
+            await upgrade_task
+        except SYNOLOGY_CONNECTION_EXCEPTIONS as ex:
+            self._with_upgrade = False
+            self.dsm.reset(SynoCoreUpgrade.API_KEY)
+            LOGGER.debug("Disabled fetching upgrade data during setup: %s", ex)
+
+        if surveillance_station_update_task:
             try:
-                await self.dsm.surveillance_station.update()
+                await surveillance_station_update_task
             except SYNOLOGY_CONNECTION_EXCEPTIONS:
                 self._with_surveillance_station = False
                 self.dsm.reset(SynoSurveillanceStation.API_KEY)
@@ -110,16 +133,6 @@ class SynoApi:
             self._entry.unique_id,
             self._with_surveillance_station,
         )
-
-        # check if upgrade is available
-        try:
-            await self.dsm.upgrade.update()
-        except SYNOLOGY_CONNECTION_EXCEPTIONS as ex:
-            self._with_upgrade = False
-            self.dsm.reset(SynoCoreUpgrade.API_KEY)
-            LOGGER.debug("Disabled fetching upgrade data during setup: %s", ex)
-
-        await self._fetch_device_configuration()
 
         try:
             await self._update()
