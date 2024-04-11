@@ -5,8 +5,9 @@ from __future__ import annotations
 from datetime import timedelta
 from functools import cached_property, partial
 import logging
-from typing import Any, final, override
+from typing import Any, final
 
+from typing_extensions import override
 import voluptuous as vol
 
 import homeassistant.components.persistent_notification as pn
