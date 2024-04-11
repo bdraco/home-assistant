@@ -127,7 +127,7 @@ STOPPING_STAGE_SHUTDOWN_TIMEOUT = 20
 STOP_STAGE_SHUTDOWN_TIMEOUT = 100
 FINAL_WRITE_STAGE_SHUTDOWN_TIMEOUT = 60
 CLOSE_STAGE_SHUTDOWN_TIMEOUT = 30
-
+RUN_PY_SPY = True
 
 _T = TypeVar("_T")
 _R = TypeVar("_R")
@@ -1069,6 +1069,25 @@ class HomeAssistant:
                 _LOGGER.warning(
                     "Stopping Home Assistant before startup has completed may fail"
                 )
+
+        with suppress(Exception):
+            if RUN_PY_SPY:
+                proc = await asyncio.create_subprocess_exec(
+                    "/config/py_spy-0.3.14.data/scripts/py-spy",
+                    "record",
+                    "--pid",
+                    str(os.getpid()),
+                    "--rate",
+                    "1000",
+                    "--duration",
+                    "60",
+                    "--output",
+                    f"/config/www/bootstrap.{time.time()}.svg",
+                )
+                _handle = asyncio.create_task(
+                    proc.communicate(), name="bootstrap py-spy"
+                )
+                assert _handle is not None
 
         # Stage 1 - Run shutdown jobs
         try:
