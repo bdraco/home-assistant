@@ -1080,14 +1080,13 @@ class HomeAssistant:
                     "--rate",
                     "1000",
                     "--duration",
-                    "60",
+                    "10",
                     "--output",
-                    f"/config/www/bootstrap.{time.time()}.svg",
+                    f"/config/www/shutdown.{time.time()}.svg",
                 )
-                _handle = asyncio.create_task(
-                    proc.communicate(), name="bootstrap py-spy"
+                spy_task = asyncio.create_task(
+                    proc.communicate(), name="shutdown py-spy"
                 )
-                assert _handle is not None
 
         # Stage 1 - Run shutdown jobs
         try:
@@ -1206,6 +1205,9 @@ class HomeAssistant:
 
         if self._stopped is not None:
             self._stopped.set()
+
+        if RUN_PY_SPY:
+            await spy_task
 
     def _cancel_cancellable_timers(self) -> None:
         """Cancel timer handles marked as cancellable."""
