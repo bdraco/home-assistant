@@ -1070,6 +1070,7 @@ class HomeAssistant:
                     "Stopping Home Assistant before startup has completed may fail"
                 )
 
+        spy_task: asyncio.Task[None] | None = None
         with suppress(Exception):
             if RUN_PY_SPY:
                 proc = await asyncio.create_subprocess_exec(
@@ -1206,7 +1207,7 @@ class HomeAssistant:
         if self._stopped is not None:
             self._stopped.set()
 
-        if RUN_PY_SPY:
+        if spy_task:
             await spy_task
 
     def _cancel_cancellable_timers(self) -> None:
