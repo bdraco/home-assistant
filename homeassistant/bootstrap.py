@@ -261,7 +261,7 @@ async def async_setup_hass(
                 "--rate",
                 "1000",
                 "--duration",
-                "15",
+                "5",
                 "--output",
                 f"/config/www/early.{time.time()}.svg",
             )
