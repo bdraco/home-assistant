@@ -241,7 +241,7 @@ PRELOAD_STORAGE = [
     "auth_module.totp",
 ]
 
-RUN_PY_SPY_EARLY = True
+RUN_PY_SPY_EARLY = False
 
 
 async def async_setup_hass(
