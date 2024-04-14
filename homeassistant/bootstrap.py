@@ -241,12 +241,31 @@ PRELOAD_STORAGE = [
     "auth_module.totp",
 ]
 
+RUN_PY_SPY_EARLY = True
+
 
 async def async_setup_hass(
     runtime_config: RuntimeConfig,
 ) -> core.HomeAssistant | None:
     """Set up Home Assistant."""
     hass = core.HomeAssistant(runtime_config.config_dir)
+
+    proc: asyncio.subprocess.Process | None = None
+    with contextlib.suppress(Exception):
+        if RUN_PY_SPY_EARLY:
+            proc = await asyncio.create_subprocess_exec(
+                "/config/py_spy-0.3.14.data/scripts/py-spy",
+                "record",
+                "--pid",
+                str(os.getpid()),
+                "--rate",
+                "1000",
+                "--duration",
+                "15",
+                "--output",
+                f"/config/www/early.{time.time()}.svg",
+            )
+            hass.async_create_background_task(proc.communicate(), name="early py-spy")
 
     async_enable_logging(
         hass,
