@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import logging
 from typing import cast
 
 from kasa import SmartDevice
@@ -35,6 +36,8 @@ from .const import (
 from .coordinator import TPLinkDataUpdateCoordinator
 from .entity import CoordinatedTPLinkEntity
 from .models import TPLinkData
+
+_LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -184,4 +187,5 @@ class SmartPlugSensor(CoordinatedTPLinkEntity, SensorEntity):
     @property
     def native_value(self) -> float | None:
         """Return the sensors state."""
+        _LOGGER.warning("Fetch name value for %s", self.entity_id)
         return async_emeter_from_device(self.coordinator, self.entity_description)
