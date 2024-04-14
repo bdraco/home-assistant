@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-import logging
 from typing import cast
 
 from kasa import SmartDevice
@@ -22,7 +21,7 @@ from homeassistant.const import (
     UnitOfEnergy,
     UnitOfPower,
 )
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import legacy_device_id
@@ -36,8 +35,6 @@ from .const import (
 from .coordinator import TPLinkDataUpdateCoordinator
 from .entity import CoordinatedTPLinkEntity
 from .models import TPLinkData
-
-_LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -95,26 +92,17 @@ ENERGY_SENSORS: tuple[TPLinkSensorEntityDescription, ...] = (
 
 
 def async_emeter_from_device(
-    coordinator: TPLinkDataUpdateCoordinator, description: TPLinkSensorEntityDescription
+    device: SmartDevice, description: TPLinkSensorEntityDescription
 ) -> float | None:
     """Map a sensor key to the device attribute."""
-    if (
-        (attr := description.emeter_attr)
-        and (emeter_realtime := coordinator.emeter_realtime)
-        and (precision := description.precision)
-    ):
-        val: float | None = getattr(emeter_realtime, attr)
-        if val is None:
+    if attr := description.emeter_attr:
+        if (val := getattr(device.emeter_realtime, attr)) is None:
             return None
-        return round(val, precision)
+        return round(cast(float, val), description.precision)
 
     # ATTR_TODAY_ENERGY_KWH
-    device = coordinator.device
-    if (emeter_today := device.emeter_today) is not None and (
-        precision := description.precision
-    ):
-        return round(cast(float, emeter_today), precision)
-
+    if (emeter_today := device.emeter_today) is not None:
+        return round(cast(float, emeter_today), description.precision)
     # today's consumption not available, when device was off all the day
     # bulb's do not report this information, so filter it out
     return None if device.is_bulb else 0.0
@@ -129,7 +117,7 @@ def _async_sensors_for_device(
     return [
         SmartPlugSensor(device, coordinator, description, has_parent)
         for description in ENERGY_SENSORS
-        if async_emeter_from_device(coordinator, description) is not None
+        if async_emeter_from_device(device, description) is not None
     ]
 
 
@@ -183,9 +171,17 @@ class SmartPlugSensor(CoordinatedTPLinkEntity, SensorEntity):
             else:
                 assert description.device_class
                 self._attr_translation_key = f"{description.device_class.value}_child"
+        self._async_update_attrs()
 
-    @property
-    def native_value(self) -> float | None:
-        """Return the sensors state."""
-        _LOGGER.warning("Fetch name value for %s", self.entity_id)
-        return async_emeter_from_device(self.coordinator, self.entity_description)
+    @callback
+    def _async_update_attrs(self) -> None:
+        """Update the entity's attributes."""
+        self._attr_native_value = async_emeter_from_device(
+            self.device, self.entity_description
+        )
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self._async_update_attrs()
+        super()._handle_coordinator_update()
