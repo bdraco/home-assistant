@@ -2719,6 +2719,7 @@ class _ComponentSet(set[str]):
         """Remove a component from the store."""
         if "." in component:
             raise ValueError("_ComponentSet does not support removing sub-components")
+        self._top_level_components.remove(component)
         return super().remove(component)
 
     def discard(self, component: str) -> None:
@@ -2758,12 +2759,12 @@ class Config:
         # List of packages to skip when installing requirements on startup
         self.skip_pip_packages: list[str] = []
 
-        # List of loaded top level components
+        # Set of loaded top level components
         # This set is updated by _ComponentSet
         # and should not be modified directly
         self.top_level_components: set[str] = set()
 
-        # List of loaded components
+        # Set of loaded components
         self.components: _ComponentSet = _ComponentSet(self.top_level_components)
 
         # API (HTTP) server configuration
