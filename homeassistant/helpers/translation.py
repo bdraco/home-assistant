@@ -84,7 +84,7 @@ def build_resources(
     translation_strings: dict[str, dict[str, dict[str, str] | str]],
     components: set[str],
     category: str,
-) -> dict[str, dict[str, str] | str]:
+) -> dict[str, dict[str, Any] | str]:
     """Build the resources response for the given components."""
     # Build response
     return {
