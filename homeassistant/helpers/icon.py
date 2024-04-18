@@ -71,14 +71,16 @@ class _IconsCache:
         """Initialize the cache."""
         self._hass = hass
         self._loaded: set[str] = set()
-        self._cache: defaultdict[str, defaultdict[str, Any]] = defaultdict(defaultdict)
+        self._cache: defaultdict[str, defaultdict[str, str | dict[str, Any]]] = (
+            defaultdict(lambda: defaultdict(dict))
+        )
         self._lock = asyncio.Lock()
 
     async def async_fetch(
         self,
         category: str,
         components: set[str],
-    ) -> dict[str, dict[str, str]]:
+    ) -> dict[str, str | dict[str, Any]]:
         """Load resources into the cache."""
         if components_to_load := components - self._loaded:
             # Icons are never unloaded so if there are no components to load
