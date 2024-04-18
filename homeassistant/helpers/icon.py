@@ -44,9 +44,9 @@ async def _async_get_component_icons(
     hass: HomeAssistant,
     components: set[str],
     integrations: dict[str, Integration],
-) -> dict[str, dict[str, str]]:
+) -> dict[str, dict[str, Any]]:
     """Load icons."""
-    icons: dict[str, dict[str, str]] = {}
+    icons: dict[str, dict[str, Any]] = {}
 
     # Determine files to load
     files_to_load = {
