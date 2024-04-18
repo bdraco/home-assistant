@@ -81,10 +81,10 @@ def _load_translations_files_by_language(
 
 
 def build_resources(
-    translation_strings: dict[str, dict[str, dict[str, Any] | str]],
+    translation_strings: dict[str, dict[str, dict[str, str] | str]],
     components: set[str],
     category: str,
-) -> dict[str, dict[str, Any] | str]:
+) -> dict[str, dict[str, str] | str]:
     """Build the resources response for the given components."""
     # Build response
     return {
