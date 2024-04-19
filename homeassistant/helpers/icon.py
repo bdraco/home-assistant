@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-from collections import defaultdict
 from collections.abc import Iterable
 from functools import lru_cache
 import logging
@@ -32,10 +31,10 @@ def _component_icons_path(integration: Integration) -> pathlib.Path:
 
 def _load_icons_files(
     icons_files: dict[str, pathlib.Path],
-) -> dict[str, dict[str, str]]:
+) -> dict[str, dict[str, Any]]:
     """Load and parse icons.json files."""
     return {
-        component: load_json_object(icons_file)  # type: ignore[misc]
+        component: load_json_object(icons_file)
         for component, icons_file in icons_files.items()
     }
 
@@ -44,9 +43,9 @@ async def _async_get_component_icons(
     hass: HomeAssistant,
     components: set[str],
     integrations: dict[str, Integration],
-) -> dict[str, dict[str, Any]]:
+) -> dict[str, Any]:
     """Load icons."""
-    icons: dict[str, dict[str, Any]] = {}
+    icons: dict[str, Any] = {}
 
     # Determine files to load
     files_to_load = {
@@ -71,16 +70,14 @@ class _IconsCache:
         """Initialize the cache."""
         self._hass = hass
         self._loaded: set[str] = set()
-        self._cache: defaultdict[str, defaultdict[str, str | dict[str, Any]]] = (
-            defaultdict(lambda: defaultdict(dict))
-        )
+        self._cache: dict[str, dict[str, Any]] = {}
         self._lock = asyncio.Lock()
 
     async def async_fetch(
         self,
         category: str,
         components: set[str],
-    ) -> dict[str, str | dict[str, Any]]:
+    ) -> dict[str, dict[str, Any]]:
         """Load resources into the cache."""
         if components_to_load := components - self._loaded:
             # Icons are never unloaded so if there are no components to load
@@ -94,7 +91,7 @@ class _IconsCache:
         return {
             component: result
             for component in components
-            if (result := self._cache[category][component])
+            if (result := self._cache.get(category, {}).get(component))
         }
 
     async def _async_load(self, components: set[str]) -> None:
@@ -124,7 +121,9 @@ class _IconsCache:
             category for component in icons.values() for category in component
         }
         for category in categories:
-            self._cache[category].update(build_resources(icons, components, category))
+            self._cache.setdefault(category, {}).update(
+                build_resources(icons, components, category)
+            )
 
 
 async def async_get_icons(

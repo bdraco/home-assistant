@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-from collections import defaultdict
 from collections.abc import Iterable, Mapping
 from contextlib import suppress
 import logging
@@ -57,16 +56,16 @@ def component_translation_path(language: str, integration: Integration) -> pathl
 
 def _load_translations_files_by_language(
     translation_files: dict[str, dict[str, pathlib.Path]],
-) -> defaultdict[str, defaultdict[str, Any]]:
+) -> dict[str, dict[str, Any]]:
     """Load and parse translation.json files."""
-    loaded: defaultdict[str, defaultdict[str, Any]] = defaultdict(
-        lambda: defaultdict(dict)
-    )
+    loaded: dict[str, dict[str, Any]] = {}
     for language, component_translation_file in translation_files.items():
-        loaded_for_language = loaded[language]
+        loaded_for_language: dict[str, Any] = {}
+        loaded[language] = loaded_for_language
 
         for component, translation_file in component_translation_file.items():
             loaded_json = load_json(translation_file)
+
             if not isinstance(loaded_json, dict):
                 _LOGGER.warning(
                     "Translation file is unexpected type %s. Expected dict for %s",
@@ -81,7 +80,7 @@ def _load_translations_files_by_language(
 
 
 def build_resources(
-    translation_strings: dict[str, dict[str, dict[str, str] | str]],
+    translation_strings: dict[str, dict[str, dict[str, Any] | str]],
     components: set[str],
     category: str,
 ) -> dict[str, dict[str, Any] | str]:
@@ -102,12 +101,10 @@ async def _async_get_component_strings(
     integrations: dict[str, Integration],
 ) -> dict[str, dict[str, Any]]:
     """Load translations."""
-    translations_by_language: defaultdict[str, dict[str, Any]] = defaultdict(dict)
+    translations_by_language: dict[str, dict[str, Any]] = {}
     # Determine paths of missing components/platforms
     files_to_load_by_language: dict[str, dict[str, pathlib.Path]] = {}
-    loaded_translations_by_language: defaultdict[str, defaultdict[str, Any]] = (
-        defaultdict(lambda: defaultdict(dict))
-    )
+    loaded_translations_by_language: dict[str, dict[str, Any]] = {}
     has_files_to_load = False
     for language in languages:
         files_to_load: dict[str, pathlib.Path] = {
@@ -127,16 +124,16 @@ async def _async_get_component_strings(
         )
 
     for language in languages:
-        loaded_translations = loaded_translations_by_language[language]
+        loaded_translations = loaded_translations_by_language.setdefault(language, {})
         for domain in components:
             # Translations that miss "title" will get integration put in.
-            component_translations = loaded_translations[domain]
+            component_translations = loaded_translations.setdefault(domain, {})
             if "title" not in component_translations and (
                 integration := integrations.get(domain)
             ):
                 component_translations["title"] = integration.name
 
-        translations_by_language[language].update(loaded_translations)
+        translations_by_language.setdefault(language, {}).update(loaded_translations)
 
     return translations_by_language
 
@@ -149,10 +146,8 @@ class _TranslationCache:
     def __init__(self, hass: HomeAssistant) -> None:
         """Initialize the cache."""
         self.hass = hass
-        self.loaded: defaultdict[str, set[str]] = defaultdict(set)
-        self.cache: defaultdict[
-            str, defaultdict[str, defaultdict[str, dict[str, str]]]
-        ] = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
+        self.loaded: dict[str, set[str]] = {}
+        self.cache: dict[str, dict[str, dict[str, dict[str, str]]]] = {}
         self.lock = asyncio.Lock()
 
     @callback
@@ -166,7 +161,7 @@ class _TranslationCache:
         components: set[str],
     ) -> None:
         """Load resources into the cache."""
-        loaded = self.loaded[language]
+        loaded = self.loaded.setdefault(language, set())
         if components_to_load := components - loaded:
             # Translations are never unloaded so if there are no components to load
             # we can skip the lock which reduces contention when multiple different
@@ -196,14 +191,12 @@ class _TranslationCache:
         components: set[str],
     ) -> dict[str, str]:
         """Read resources from the cache."""
-        if language not in self.cache or category not in self.cache[language]:
-            return {}
-        category_cache = self.cache[language][category]
+        category_cache = self.cache.get(language, {}).get(category, {})
         # If only one component was requested, return it directly
         # to avoid merging the dictionaries and keeping additional
         # copies of the same data in memory.
         if len(components) == 1 and (component := next(iter(components))):
-            return category_cache[component]
+            return category_cache.get(component, {})
 
         result: dict[str, str] = {}
         for component in components.intersection(category_cache):
@@ -245,7 +238,7 @@ class _TranslationCache:
                 language, components, translation_by_language_strings[language]
             )
 
-            loaded_english_components = self.loaded[LOCALE_EN]
+            loaded_english_components = self.loaded.setdefault(LOCALE_EN, set())
             # Since we just loaded english anyway we can avoid loading
             # again if they switch back to english.
             if loaded_english_components.isdisjoint(components):
@@ -309,7 +302,7 @@ class _TranslationCache:
     ) -> None:
         """Extract resources into the cache."""
         resource: dict[str, Any] | str
-        cached = self.cache[language]
+        cached = self.cache.setdefault(language, {})
         categories = {
             category
             for component in translation_strings.values()
@@ -318,10 +311,10 @@ class _TranslationCache:
 
         for category in categories:
             new_resources = build_resources(translation_strings, components, category)
-            category_cache = cached[category]
+            category_cache = cached.setdefault(category, {})
 
             for component, resource in new_resources.items():
-                component_cache = category_cache[component]
+                component_cache = category_cache.setdefault(component, {})
 
                 if not isinstance(resource, dict):
                     component_cache[f"component.{component}.{category}"] = resource
