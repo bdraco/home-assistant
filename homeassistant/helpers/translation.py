@@ -200,13 +200,14 @@ class _TranslationCache:
         if len(components) == 1 and (component := next(iter(components))):
             return category_cache.get(component, {})
 
+        result: dict[str, str] = {}
         return functools.reduce(
             operator.or_,
             (
                 category_cache[component]
                 for component in components.intersection(category_cache)
             ),
-            {},
+            result,
         )
 
     async def _async_load(self, language: str, components: set[str]) -> None:
