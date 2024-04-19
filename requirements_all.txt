@@ -140,7 +140,7 @@ TwitterAPI==2.7.12
 WSDiscovery==2.0.0
 
 # homeassistant.components.accuweather
-accuweather==2.1.1
+accuweather==3.0.0
 
 # homeassistant.components.adax
 adax==0.4.0
@@ -386,7 +386,7 @@ aiotankerkoenig==0.4.1
 aiotractive==0.5.6
 
 # homeassistant.components.unifi
-aiounifi==74
+aiounifi==75
 
 # homeassistant.components.vlc_telnet
 aiovlc==0.1.0
@@ -937,7 +937,7 @@ georss-qld-bushfire-alert-client==0.7
 getmac==0.9.4
 
 # homeassistant.components.gios
-gios==3.2.2
+gios==4.0.0
 
 # homeassistant.components.gitter
 gitterpy==0.1.7
@@ -1365,7 +1365,7 @@ netdata==1.1.0
 netmap==0.7.0.2
 
 # homeassistant.components.nam
-nettigo-air-monitor==2.2.2
+nettigo-air-monitor==3.0.0
 
 # homeassistant.components.neurio_energy
 neurio==0.3.1
@@ -1380,7 +1380,7 @@ nextcloudmonitor==1.5.0
 nextcord==2.6.0
 
 # homeassistant.components.nextdns
-nextdns==2.1.0
+nextdns==3.0.0
 
 # homeassistant.components.nibe_heatpump
 nibe==2.8.0
@@ -2911,7 +2911,7 @@ yeelight==0.7.14
 yeelightsunflower==0.0.10
 
 # homeassistant.components.yolink
-yolink-api==0.4.2
+yolink-api==0.4.3
 
 # homeassistant.components.youless
 youless-api==1.0.1
