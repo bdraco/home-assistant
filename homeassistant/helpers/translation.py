@@ -5,9 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Iterable, Mapping
 from contextlib import suppress
-import functools
 import logging
-import operator
 import pathlib
 import string
 from typing import Any
@@ -200,14 +198,10 @@ class _TranslationCache:
         if len(components) == 1 and (component := next(iter(components))):
             return category_cache.get(component, {})
 
-        return functools.reduce(
-            operator.or_,
-            (
-                category_cache[component]
-                for component in components.intersection(category_cache)
-            ),
-            {},
-        )
+        result: dict[str, str] = {}
+        for component in components.intersection(category_cache):
+            result.update(category_cache[component])
+        return result
 
     async def _async_load(self, language: str, components: set[str]) -> None:
         """Populate the cache for a given set of components."""
