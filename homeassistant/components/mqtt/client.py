@@ -542,6 +542,9 @@ class MQTT:
         self, client: mqtt.Client, userdata: Any, sock: SocketType
     ) -> None:
         """Handle socket open."""
+        _ = (
+            asyncio.get_running_loop()
+        )  # safety to ensure we are running in an event loop
         fileno = sock.fileno()
         _LOGGER.debug("%s: connection opened %s", self.config_entry.title, fileno)
         if fileno > -1:
@@ -585,6 +588,9 @@ class MQTT:
         self, client: mqtt.Client, userdata: Any, sock: SocketType
     ) -> None:
         """Register the socket for writing."""
+        _ = (
+            asyncio.get_running_loop()
+        )  # safety to ensure we are running in an event loop
         fileno = sock.fileno()
         _LOGGER.debug("%s: register write %s", self.config_entry.title, fileno)
         if fileno > -1:
