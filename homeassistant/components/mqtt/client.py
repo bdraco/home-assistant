@@ -93,6 +93,7 @@ INITIAL_SUBSCRIBE_COOLDOWN = 1.0
 SUBSCRIBE_COOLDOWN = 0.1
 UNSUBSCRIBE_COOLDOWN = 0.1
 TIMEOUT_ACK = 10
+CONNECT_TIMEOUT = 10
 RECONNECT_INTERVAL_SECONDS = 10
 
 SocketType = socket.socket | ssl.SSLSocket | Any
@@ -308,6 +309,12 @@ def _is_simple_match(topic: str) -> bool:
     return not ("+" in topic or "#" in topic)
 
 
+def _set_result_unless_done(future: asyncio.Future[Any], result: Any) -> None:
+    """Set the result of a future if it is not already done."""
+    if not future.done():
+        future.set_result(result)
+
+
 class EnsureJobAfterCooldown:
     """Ensure a cool down period before executing a job.
 
@@ -418,6 +425,7 @@ class MQTT:
         )
         self._misc_task: asyncio.Task | None = None
         self._reconnect_task: asyncio.Task | None = None
+        self._available_future: asyncio.Future[bool] | None = None
 
         self._max_qos: dict[str, int] = {}  # topic, max qos
         self._pending_subscriptions: dict[str, int] = {}  # topic, qos
@@ -472,7 +480,8 @@ class MQTT:
         self._mqttc.on_socket_open = self._on_socket_open
         self._mqttc.on_socket_close = self._on_socket_close
         self._mqttc.on_socket_register_write = self._on_socket_register_write
-        self._mqttc.on_socket_unregister_write = self._on_socket_unregister_write
+        # Unregister is always called in the event loop
+        self._mqttc.on_socket_unregister_write = self._async_on_socket_unregister_write
 
         # These will be called in the event loop
         self._mqttc.on_connect = self._async_mqtt_on_connect
@@ -504,6 +513,8 @@ class MQTT:
         """Handle reading data from the socket."""
         try:
             client.loop_read()
+        # This might raise BrokenPipeError if the socket is closed
+        # out from under us so we immediately move to a disconnected state
         except Exception as exc:  # pylint: disable=broad-except
             self._async_on_disconnect(0, exc)
 
@@ -511,6 +522,7 @@ class MQTT:
     def _async_start_misc_loop(self) -> None:
         """Start the misc loop."""
         if self._misc_task is None or self._misc_task.done():
+            _LOGGER.debug("%s: Starting client misc loop", self.config_entry.title)
             self._misc_task = self.config_entry.async_create_background_task(
                 self.hass, self._misc_loop(), name="mqtt misc loop"
             )
@@ -529,7 +541,9 @@ class MQTT:
     ) -> None:
         """Handle socket open."""
         loop = self.loop
-        loop.add_reader(sock.fileno(), partial(self._async_reader_callback, client))
+        fileno = sock.fileno()
+        _LOGGER.debug("%s: connection opened %s", self.config_entry.title, fileno)
+        loop.add_reader(fileno, partial(self._async_reader_callback, client))
         self._async_start_misc_loop()
 
     def _on_socket_close(
@@ -546,6 +560,7 @@ class MQTT:
     ) -> None:
         """Handle socket close."""
         fileno = sock.fileno()
+        _LOGGER.debug("%s: connection closed %s", self.config_entry.title, fileno)
         loop = self.loop
         if fileno > -1:
             loop.remove_reader(fileno)
@@ -557,6 +572,8 @@ class MQTT:
         """Handle writing data to the socket."""
         try:
             client.loop_write()
+        # This might raise BrokenPipeError if the socket is closed
+        # out from under us so we immediately move to a disconnected state
         except Exception as exc:  # pylint: disable=broad-except
             self._async_on_disconnect(0, exc)
 
@@ -567,14 +584,6 @@ class MQTT:
         loop = self.loop
         loop.call_soon_threadsafe(
             loop.add_writer, sock, partial(self._async_writer_callback, client)
-        )
-
-    def _on_socket_unregister_write(
-        self, client: mqtt.Client, userdata: Any, sock: SocketType
-    ) -> None:
-        """Unregister the socket for writing."""
-        self.loop.call_soon_threadsafe(
-            self._async_on_socket_unregister_write, client, userdata, sock
         )
 
     @callback
@@ -608,12 +617,13 @@ class MQTT:
         _raise_on_error(msg_info.rc)
         await self._wait_for_mid(msg_info.mid)
 
-    async def async_connect(self) -> None:
+    async def async_connect(self, client_available: asyncio.Future[bool]) -> None:
         """Connect to the host. Does not process messages yet."""
         # pylint: disable-next=import-outside-toplevel
         import paho.mqtt.client as mqtt
 
         result: int | None = None
+        self._available_future = client_available
         try:
             result = await self.hass.async_add_executor_job(
                 self._mqttc.connect,
@@ -623,11 +633,15 @@ class MQTT:
             )
         except OSError as err:
             _LOGGER.error("Failed to connect to MQTT server due to exception: %s", err)
-
-        if result is not None and result != 0:
-            _LOGGER.error(
-                "Failed to connect to MQTT server: %s", mqtt.error_string(result)
-            )
+            _set_result_unless_done(client_available, False)
+        finally:
+            if result is not None and result != 0:
+                if result is not None:
+                    _LOGGER.error(
+                        "Failed to connect to MQTT server: %s",
+                        mqtt.error_string(result),
+                    )
+                _set_result_unless_done(client_available, False)
 
         self._reconnect_task = self.config_entry.async_create_background_task(
             self.hass, self._reconnect_loop(), "mqtt reconnect loop"
@@ -638,7 +652,8 @@ class MQTT:
         while True:
             if not self.connected:
                 try:
-                    await self.hass.async_add_executor_job(self._mqttc.reconnect)
+                    async with self._paho_lock:
+                        await self.hass.async_add_executor_job(self._mqttc.reconnect)
                 except OSError as err:
                     _LOGGER.debug(
                         "Error re-connecting to MQTT server due to exception: %s", err
@@ -897,6 +912,9 @@ class MQTT:
             # Update subscribe cooldown period to a shorter time
             self._subscribe_debouncer.set_timeout(SUBSCRIBE_COOLDOWN)
 
+        if self._available_future:
+            _set_result_unless_done(self._available_future, True)
+
     async def _async_resubscribe(self) -> None:
         """Resubscribe on reconnect."""
         self._max_qos.clear()
@@ -915,17 +933,6 @@ class MQTT:
         )
         await self._async_perform_subscriptions()
 
-    @callback
-    def _async_mqtt_on_message(
-        self, _mqttc: mqtt.Client, _userdata: None, msg: mqtt.MQTTMessage
-    ) -> None:
-        """Message received callback."""
-        # MQTT messages tend to be high volume,
-        # and since they come in via a thread and need to be processed in the event loop,
-        # we want to avoid hass.add_job since most of the time is spent calling
-        # inspect to figure out how to run the callback.
-        self._mqtt_handle_message(msg)
-
     @lru_cache(None)  # pylint: disable=method-cache-max-size-none
     def _matching_subscriptions(self, topic: str) -> list[Subscription]:
         subscriptions: list[Subscription] = []
@@ -939,7 +946,9 @@ class MQTT:
         return subscriptions
 
     @callback
-    def _mqtt_handle_message(self, msg: mqtt.MQTTMessage) -> None:
+    def _async_mqtt_on_message(
+        self, _mqttc: mqtt.Client, _userdata: None, msg: mqtt.MQTTMessage
+    ) -> None:
         topic = msg.topic
         # msg.topic is a property that decodes the topic to a string
         # every time it is accessed. Save the result to avoid
