@@ -146,7 +146,7 @@ async def test_mqtt_disconnects_on_home_assistant_stop(
     hass.bus.fire(EVENT_HOMEASSISTANT_STOP)
     await hass.async_block_till_done()
     await hass.async_block_till_done()
-    assert mqtt_client_mock.loop_stop.call_count == 1
+    assert mqtt_client_mock.disconnect.call_count == 1
 
 
 async def test_mqtt_await_ack_at_disconnect(
