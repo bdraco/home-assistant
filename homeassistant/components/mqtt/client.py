@@ -542,6 +542,9 @@ class MQTT:
         self, client: mqtt.Client, userdata: Any, sock: SocketType
     ) -> None:
         """Handle socket close."""
+        _ = (
+            asyncio.get_running_loop()
+        )  # safety to ensure we are running in an event loop
         fileno = sock.fileno()
         _LOGGER.debug("%s: connection closed %s", self.config_entry.title, fileno)
         # If socket close is called before the connect
@@ -581,6 +584,9 @@ class MQTT:
         self, client: mqtt.Client, userdata: Any, sock: SocketType
     ) -> None:
         """Unregister the socket for writing."""
+        _ = (
+            asyncio.get_running_loop()
+        )  # safety to ensure we are running in an event loop
         fileno = sock.fileno()
         _LOGGER.debug("%s: unregister write %s", self.config_entry.title, fileno)
         if fileno > -1:
