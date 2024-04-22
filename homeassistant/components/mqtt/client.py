@@ -654,11 +654,15 @@ class MQTT:
                 self._async_connection_result(False)
 
     @callback
-    def _async_connection_result(self, connected: bool) -> None:
-        """Handle a connection result."""
+    def _async_set_available(self, connected: bool) -> None:
+        """Set the available future."""
         if self._available_future and not self._available_future.done():
             self._available_future.set_result(connected)
 
+    @callback
+    def _async_connection_result(self, connected: bool) -> None:
+        """Handle a connection result."""
+        self._async_set_available(connected)
         if connected:
             self._async_cancel_reconnect()
         elif self._should_reconnect and not self._reconnect_task:
@@ -895,6 +899,8 @@ class MQTT:
         import paho.mqtt.client as mqtt
 
         if result_code != mqtt.CONNACK_ACCEPTED:
+            self._async_set_available(False)
+
             if result_code in (
                 mqtt.CONNACK_REFUSED_BAD_USERNAME_PASSWORD,
                 mqtt.CONNACK_REFUSED_NOT_AUTHORIZED,
