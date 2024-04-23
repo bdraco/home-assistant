@@ -355,7 +355,6 @@ class HassJobWithArgs:
 def get_hassjob_callable_job_type(target: Callable[..., Any]) -> HassJobType:
     """Determine the job type from the callable."""
     # Check for partials to properly determine if coroutine function
-    _LOGGER.warning("get_hassjob_callable_job_type: %s", target)
     check_target = target
     while isinstance(check_target, functools.partial):
         check_target = check_target.func
