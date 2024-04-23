@@ -204,7 +204,7 @@ aioaseko==0.1.1
 aioasuswrt==1.4.0
 
 # homeassistant.components.husqvarna_automower
-aioautomower==2024.3.4
+aioautomower==2024.4.3
 
 # homeassistant.components.azure_devops
 aioazuredevops==2.0.0
@@ -1335,7 +1335,7 @@ motionblindsble==0.0.9
 motioneye-client==0.3.14
 
 # homeassistant.components.bang_olufsen
-mozart-api==3.2.1.150.6
+mozart-api==3.4.1.8.5
 
 # homeassistant.components.mullvad
 mullvad-api==1.0.0
@@ -1548,7 +1548,7 @@ plexauth==0.0.6
 plexwebsocket==0.0.14
 
 # homeassistant.components.plugwise
-plugwise==0.37.1
+plugwise==0.37.2
 
 # homeassistant.components.plum_lightpad
 plumlightpad==0.0.11
@@ -1839,7 +1839,7 @@ pyforked-daapd==0.1.14
 pyfreedompro==1.1.0
 
 # homeassistant.components.fritzbox
-pyfritzhome==0.6.10
+pyfritzhome==0.6.11
 
 # homeassistant.components.ifttt
 pyfttt==0.3
