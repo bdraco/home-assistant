@@ -1509,6 +1509,7 @@ class EventBus:
 
         This method must be run in the event loop.
         """
+
         if self._debug:
             _LOGGER.debug(
                 "Bus:Handling %s", _event_repr(event_type, origin, event_data)
