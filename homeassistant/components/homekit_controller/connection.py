@@ -851,7 +851,12 @@ class HKDevice:
 
     async def async_update(self, now: datetime | None = None) -> None:
         """Poll state of all entities attached to this bridge/accessory."""
-        if len(self.devices) == 1:
+        _LOGGER.warning(
+            "Polling HomeKit device: %s (%s accessories)",
+            self.unique_id,
+            len(self.entity_map.accessories),
+        )
+        if len(self.entity_map.accessories) == 1:
             # If its a single accessory, we don't need to poll if
             # we are watching all characteristics.
             unwatched = self.pollable_characteristics - self.watchable_characteristics
