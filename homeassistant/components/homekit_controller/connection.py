@@ -854,31 +854,17 @@ class HKDevice:
 
     async def async_update(self, now: datetime | None = None) -> None:
         """Poll state of all entities attached to this bridge/accessory."""
-        _LOGGER.warning(
-            "Polling HomeKit device: %s (%s accessories)",
-            self.unique_id,
-            len(self.entity_map.accessories),
-        )
-        if len(self.entity_map.accessories) == 1:
-            # If its a single accessory, we don't need to poll if
-            # we are watching all characteristics.
-            unwatched = self.pollable_characteristics - self.watchable_characteristics
-
-            if unwatched:
-                _LOGGER.warning(
-                    "Polling unwatched characteristics: %s",
-                    unwatched,
-                )
-            else:
-                _LOGGER.warning(
-                    "All characteristics are being watched, no need to poll: %s",
-                    self.unique_id,
-                )
-                if self.available and await self.async_is_reachable():
-                    _LOGGER.warning(
-                        "Device is reachable, skip polling: %s", self.unique_id
-                    )
-                    return
+        if (
+            len(self.entity_map.accessories) == 1
+            and self.available
+            and not (self.pollable_characteristics - self.watchable_characteristics)
+            and self.pairing.is_available
+            and await self.async_is_reachable()
+        ):
+            # If its a single accessory and all chars are watchable,
+            # we don't need to poll.
+            _LOGGER.debug("Accessory is reachable, skip polling: %s", self.unique_id)
+            return
 
         if not self.pollable_characteristics:
             self.async_update_available_state()
