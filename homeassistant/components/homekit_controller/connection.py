@@ -847,7 +847,10 @@ class HKDevice:
             return async_address_present(
                 self.hass, self.pairing_data["AccessoryAddress"]
             )
-        return bool(await controller.async_find(self.unique_id, timeout=timeout))
+        try:
+            return bool(await controller.async_find(self.unique_id, timeout=timeout))
+        except AccessoryNotFoundError:
+            return False
 
     async def async_update(self, now: datetime | None = None) -> None:
         """Poll state of all entities attached to this bridge/accessory."""
