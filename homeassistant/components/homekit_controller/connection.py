@@ -22,6 +22,7 @@ from aiohomekit.model import Accessories, Accessory, Transport
 from aiohomekit.model.characteristics import Characteristic, CharacteristicsTypes
 from aiohomekit.model.services import Service, ServicesTypes
 
+from homeassistant.components.bluetooth import async_address_present
 from homeassistant.components.thread.dataset_store import async_get_preferred_dataset
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_VIA_DEVICE, EVENT_HOMEASSISTANT_STARTED
@@ -839,9 +840,19 @@ class HKDevice:
         """Request an debounced update from the accessory."""
         await self._debounced_update.async_call()
 
+    async def async_is_reachable(self, timeout: float = 10.0) -> bool:
+        """Return if the accessory is reachable."""
+        controller = self.pairing.controller
+        if controller.transport_type is TransportType.BLE:
+            return async_address_present(
+                self.hass, self.pairing_data["AccessoryAddress"]
+            )
+        return bool(await controller.async_find(self.unique_id, timeout=timeout))
+
     async def async_update(self, now: datetime | None = None) -> None:
         """Poll state of all entities attached to this bridge/accessory."""
         unwatched = self.pollable_characteristics - self.watchable_characteristics
+
         if unwatched:
             _LOGGER.warning(
                 "Polling unwatched characteristics: %s",
@@ -852,6 +863,9 @@ class HKDevice:
                 "All characteristics are being watched, no need to poll: %s",
                 self.unique_id,
             )
+            if self.available and await self.async_is_reachable():
+                _LOGGER.warning("Device is reachable, skip polling: %s", self.unique_id)
+                return
 
         if not self.pollable_characteristics:
             self.async_update_available_state()
