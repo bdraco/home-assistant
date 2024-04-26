@@ -840,7 +840,7 @@ class HKDevice:
         """Request an debounced update from the accessory."""
         await self._debounced_update.async_call()
 
-    async def async_is_reachable(self, timeout: float = 10.0) -> bool:
+    async def async_is_reachable(self, timeout: float = 5.0) -> bool:
         """Return if the accessory is reachable."""
         controller = self.pairing.controller
         if controller.transport_type is TransportType.BLE:
