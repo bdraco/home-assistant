@@ -790,6 +790,7 @@ class HomeAssistant:
 
         target: target to call.
         """
+        _LOGGER.error("async_create_task with %s (%s)", target, name)
         if eager_start:
             task = create_eager_task(target, name=name, loop=self.loop)
             if task.done():
