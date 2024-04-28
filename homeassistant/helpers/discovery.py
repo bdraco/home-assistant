@@ -162,10 +162,6 @@ async def async_load_platform(
     """
     assert hass_config is not None, "You need to pass in the real hass config"
 
-    _LOGGER.warning(
-        "async_load_platform: component=%s, platform=%s", component, platform
-    )
-
     setup_success = True
 
     if component not in hass.config.components:
