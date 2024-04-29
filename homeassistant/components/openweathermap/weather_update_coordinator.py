@@ -79,7 +79,9 @@ class WeatherUpdateCoordinator(DataUpdateCoordinator):  # pylint: disable=hass-e
                 self._latitude, self._longitude
             )
         except RequestError as error:
+            _LOGGER.error("Error fetching weather data: %s", error)
             raise UpdateFailed(error) from error
+        _LOGGER.warning("Weather data fetched successfully")
         return self._convert_weather_response(weather_report)
 
     def _convert_weather_response(self, weather_report: WeatherReport):
