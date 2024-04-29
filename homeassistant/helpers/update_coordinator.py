@@ -42,6 +42,8 @@ _DataUpdateCoordinatorT = TypeVar(
     default="DataUpdateCoordinator[dict[str, Any]]",
 )
 
+_LOGGER = logging.getLogger(__name__)
+
 
 class UpdateFailed(Exception):
     """Raised when an update has failed."""
@@ -279,6 +281,12 @@ class DataUpdateCoordinator(BaseDataUpdateCoordinatorProtocol, Generic[_DataT]):
         """
         await self._async_refresh(
             log_failures=False, raise_on_auth_failed=True, raise_on_entry_error=True
+        )
+        _LOGGER.warning(
+            "First refresh for %s failed, retrying: success=%s last_exception=%s",
+            self.name,
+            self.last_update_success,
+            self.last_exception,
         )
         if self.last_update_success:
             return
