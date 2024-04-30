@@ -362,7 +362,7 @@ class SensorEntity(Entity, cached_properties=CACHED_PROPERTIES_WITH_ATTR_):
 
     @property
     @override
-    def capability_attributes(self) -> Mapping[str, Any] | None:
+    def capability_attributes(self) -> dict[str, Any] | None:
         """Return the capability attributes."""
         if state_class := self.state_class:
             return {ATTR_STATE_CLASS: state_class}
