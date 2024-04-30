@@ -521,10 +521,10 @@ NVR_DISABLED_SENSORS: tuple[ProtectSensorEntityDescription, ...] = (
     ),
 )
 
-LICENSE_PLATE_EVENT_SENSORS: tuple[ProtectSensorEventEntityDescription, ...] = (
+EVENT_SENSORS: tuple[ProtectSensorEventEntityDescription, ...] = (
     ProtectSensorEventEntityDescription(
         key="smart_obj_licenseplate",
-        name="License Plate",
+        name="License Plate Detected",
         icon="mdi:car",
         translation_key="license_plate",
         ufp_value="is_license_plate_currently_detected",
@@ -679,11 +679,11 @@ def _async_event_entities(
         if not device.feature_flags.has_smart_detect:
             continue
 
-        for event_desc in LICENSE_PLATE_EVENT_SENSORS:
+        for event_desc in EVENT_SENSORS:
             if not event_desc.has_required(device):
                 continue
 
-            entities.append(ProtectLicensePlateEventSensor(data, device, event_desc))
+            entities.append(ProtectEventSensor(data, device, event_desc))
             _LOGGER.debug(
                 "Adding sensor entity %s for %s",
                 description.name,
@@ -746,26 +746,39 @@ class ProtectNVRSensor(ProtectNVREntity, SensorEntity):
         return (self._attr_available, self._attr_native_value)
 
 
-class ProtectLicensePlateEventSensor(EventEntityMixin, SensorEntity):
-    """A UniFi Protect License Plate Device Sensor with access tokens."""
+class ProtectEventSensor(EventEntityMixin, SensorEntity):
+    """A UniFi Protect Device Sensor with access tokens."""
 
     entity_description: ProtectSensorEventEntityDescription
 
     @callback
     def _async_update_device_from_protect(self, device: ProtectModelWithId) -> None:
-        super()._async_update_device_from_protect(device)
-
+        # do not call ProtectDeviceSensor method since we want event to get value here
+        EventEntityMixin._async_update_device_from_protect(self, device)
+        event = self._event
+        entity_description = self.entity_description
+        is_on = entity_description.get_is_on(self.device, self._event)
+        is_license_plate = (
+            entity_description.ufp_event_obj == "last_license_plate_detect_event"
+        )
         if (
-            (event := self._event) is not None
-            and (metadata := event.metadata) is not None
-            and (license_plate := metadata.license_plate) is not None
+            not is_on
+            or event is None
+            or (
+                is_license_plate
+                and (event.metadata is None or event.metadata.license_plate is None)
+            )
         ):
-            self._attr_native_value = license_plate.name
+            self._attr_native_value = OBJECT_TYPE_NONE
+            self._event = None
+            self._attr_extra_state_attributes = {}
             return
 
-        self._attr_native_value = OBJECT_TYPE_NONE
-        self._event = None
-        self._attr_extra_state_attributes = {}
+        if is_license_plate:
+            # type verified above
+            self._attr_native_value = event.metadata.license_plate.name  # type: ignore[union-attr]
+        else:
+            self._attr_native_value = event.smart_detect_types[0].value
 
     @callback
     def _async_get_state_attrs(self) -> tuple[Any, ...]:
