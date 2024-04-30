@@ -4104,10 +4104,9 @@ async def async_record_states(
     if seq is None:
         seq = [-10, 15, 30]
 
-    async def set_state(entity_id, state, **kwargs):
+    def set_state(entity_id, state, **kwargs):
         """Set the state."""
         hass.states.async_set(entity_id, state, **kwargs)
-        await async_wait_recording_done(hass)
         return hass.states.get(entity_id)
 
     one = zero + timedelta(seconds=1 * 5)
@@ -4117,20 +4116,15 @@ async def async_record_states(
 
     states = {entity_id: []}
     freezer.move_to(one)
-    states[entity_id].append(
-        await set_state(entity_id, str(seq[0]), attributes=attributes)
-    )
+    states[entity_id].append(set_state(entity_id, str(seq[0]), attributes=attributes))
 
     freezer.move_to(two)
-    states[entity_id].append(
-        await set_state(entity_id, str(seq[1]), attributes=attributes)
-    )
+    states[entity_id].append(set_state(entity_id, str(seq[1]), attributes=attributes))
 
     freezer.move_to(three)
-    states[entity_id].append(
-        await set_state(entity_id, str(seq[2]), attributes=attributes)
-    )
+    states[entity_id].append(set_state(entity_id, str(seq[2]), attributes=attributes))
 
+    await async_wait_recording_done(hass)
     return four, states
 
 

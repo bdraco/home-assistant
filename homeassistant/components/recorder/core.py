@@ -150,7 +150,6 @@ SHUTDOWN_TASK = object()
 
 COMMIT_TASK = CommitTask()
 KEEP_ALIVE_TASK = KeepAliveTask()
-WAIT_TASK = WaitTask()
 ADJUST_LRU_SIZE_TASK = AdjustLRUSizeTask()
 
 DB_LOCK_TIMEOUT = 30
@@ -205,7 +204,6 @@ class Recorder(threading.Thread):
         self.async_db_ready: asyncio.Future[bool] = hass.loop.create_future()
         # Database is ready to use and all migration steps completed (used by tests)
         self.async_recorder_ready = asyncio.Event()
-        self._queue_watch = threading.Event()
         self.engine: Engine | None = None
         self.max_backlog: int = MAX_QUEUE_BACKLOG_MIN_VALUE
         self._psutil: ha_psutil.PsutilWrapper | None = None
@@ -1315,9 +1313,9 @@ class Recorder(threading.Thread):
         """Async version of block_till_done."""
         if self._queue.empty() and not self._event_session_has_pending_writes:
             return
-        event = asyncio.Event()
-        self.queue_task(SynchronizeTask(event))
-        await event.wait()
+        future = self.hass.loop.create_future()
+        self.queue_task(SynchronizeTask(future))
+        await future
 
     def block_till_done(self) -> None:
         """Block till all events processed.
@@ -1331,9 +1329,9 @@ class Recorder(threading.Thread):
         after calling this to ensure the data
         is in the database.
         """
-        self._queue_watch.clear()
-        self.queue_task(WAIT_TASK)
-        self._queue_watch.wait()
+        event = threading.Event()
+        self.queue_task(WaitTask(event))
+        event.wait()
 
     async def lock_database(self) -> bool:
         """Lock database so it can be backed up safely."""

@@ -239,10 +239,11 @@ class WaitTask(RecorderTask):
     """
 
     commit_before = False
+    event: threading.Event
 
     def run(self, instance: Recorder) -> None:
         """Handle the task."""
-        instance._queue_watch.set()  # pylint: disable=[protected-access]
+        self.event.set()  # pylint: disable=[protected-access]
 
 
 @dataclass(slots=True)
@@ -315,13 +316,13 @@ class SynchronizeTask(RecorderTask):
     """Ensure all pending data has been committed."""
 
     # commit_before is the default
-    event: asyncio.Event
+    future: asyncio.Future
 
     def run(self, instance: Recorder) -> None:
         """Handle the task."""
         # Does not use a tracked task to avoid
         # blocking shutdown if the recorder is broken
-        instance.hass.loop.call_soon_threadsafe(self.event.set)
+        instance.hass.loop.call_soon_threadsafe(self.future.set_result, None)
 
 
 @dataclass(slots=True)

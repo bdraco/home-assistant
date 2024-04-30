@@ -102,11 +102,8 @@ def trigger_db_commit(hass: HomeAssistant) -> None:
 
 async def async_wait_recording_done(hass: HomeAssistant) -> None:
     """Async wait until recording is done."""
-    await hass.async_block_till_done()
     async_trigger_db_commit(hass)
-    await hass.async_block_till_done()
     await async_recorder_block_till_done(hass)
-    await hass.async_block_till_done()
 
 
 async def async_wait_purge_done(
@@ -133,7 +130,10 @@ def async_trigger_db_commit(hass: HomeAssistant) -> None:
 
 async def async_recorder_block_till_done(hass: HomeAssistant) -> None:
     """Non blocking version of recorder.block_till_done()."""
-    await hass.async_add_executor_job(recorder.get_instance(hass).block_till_done)
+    instance = recorder.get_instance(hass)
+    future = hass.loop.create_future()
+    instance.queue_task(recorder.tasks.SynchronizeTask(future))
+    await future
 
 
 def corrupt_db_file(test_db_file):

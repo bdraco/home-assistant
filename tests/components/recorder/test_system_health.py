@@ -24,6 +24,7 @@ async def test_recorder_system_health(
         return
 
     assert await async_setup_component(hass, "system_health", {})
+    await hass.async_block_till_done()
     await async_wait_recording_done(hass)
     info = await get_system_health_info(hass, "recorder")
     instance = get_instance(hass)
