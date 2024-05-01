@@ -463,7 +463,7 @@ base36==0.1.1
 beautifulsoup4==4.12.3
 
 # homeassistant.components.zha
-bellows==0.38.2
+bellows==0.38.3
 
 # homeassistant.components.bmw_connected_drive
 bimmer-connected[china]==0.15.2
@@ -1751,7 +1751,7 @@ python-juicenet==1.1.0
 python-kasa[speedups]==0.6.2.1
 
 # homeassistant.components.matter
-python-matter-server==5.7.0
+python-matter-server==5.10.0
 
 # homeassistant.components.xiaomi_miio
 python-miio==0.5.12
