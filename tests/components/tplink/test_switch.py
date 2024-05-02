@@ -24,6 +24,7 @@ from homeassistant.setup import async_setup_component
 from homeassistant.util import dt as dt_util, slugify
 
 from . import (
+    DEVICE_ID,
     MAC_ADDRESS,
     _mocked_device,
     _mocked_strip_children,
@@ -128,7 +129,7 @@ async def test_plug_unique_id(
         await hass.async_block_till_done()
 
     entity_id = "switch.my_plug"
-    assert entity_registry.async_get(entity_id).unique_id == "aa:bb:cc:dd:ee:ff"
+    assert entity_registry.async_get(entity_id).unique_id == DEVICE_ID
 
 
 async def test_plug_update_fails(hass: HomeAssistant) -> None:
@@ -170,7 +171,7 @@ async def test_strip(hass: HomeAssistant) -> None:
         await async_setup_component(hass, tplink.DOMAIN, {tplink.DOMAIN: {}})
         await hass.async_block_till_done()
 
-    entity_id = "switch.plug0"
+    entity_id = "switch.my_strip_plug0"
     state = hass.states.get(entity_id)
     assert state.state == STATE_ON
 
@@ -187,7 +188,7 @@ async def test_strip(hass: HomeAssistant) -> None:
     feat.set_value.assert_called_once()
     feat.set_value.reset_mock()
 
-    entity_id = "switch.plug1"
+    entity_id = "switch.my_strip_plug1"
     state = hass.states.get(entity_id)
     assert state.state == STATE_OFF
 
@@ -223,7 +224,7 @@ async def test_strip_unique_ids(
         await hass.async_block_till_done()
 
     for plug_id in range(2):
-        entity_id = f"switch.plug{plug_id}"
+        entity_id = f"switch.my_strip_plug{plug_id}"
         assert (
             entity_registry.async_get(entity_id).unique_id == f"PLUG{plug_id}DEVICEID"
         )

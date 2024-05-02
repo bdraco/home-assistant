@@ -44,6 +44,7 @@ DEVICETYPES_WITH_SPECIALIZED_PLATFORMS = {
     DeviceType.Bulb,
     DeviceType.LightStrip,
     DeviceType.Dimmer,
+    DeviceType.Fan,
 }
 
 
@@ -112,11 +113,21 @@ class CoordinatedTPLinkEntity(CoordinatorEntity[TPLinkDataUpdateCoordinator], AB
         super().__init__(coordinator)
         self.device: Device = device
         self._feature = feature
+        # Prefix the device name with the parent name unless it is a hub attached device.
+        # Sensible default for child devices like strip plugs or the ks240 where the child
+        # alias makes more sense in the context of the parent.
+        # i.e. Hall Ceiling Fan & Bedroom Ceiling Fan; Child device aliases will be Ceiling Fan
+        # and Dimmer Switch for both so should be distinguished by the parent name.
+        name = (
+            f"{parent.alias} - {device.alias}"
+            if parent and parent.device_type != DeviceType.Hub
+            else device.alias
+        )
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, str(device.device_id))},
             manufacturer="TP-Link",
             model=device.model,
-            name=device.alias,
+            name=name,
             sw_version=device.hw_info["sw_ver"],
             hw_version=device.hw_info["hw_ver"],
         )

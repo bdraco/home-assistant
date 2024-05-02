@@ -140,18 +140,17 @@ async def async_setup_entry(
     data: TPLinkData = hass.data[DOMAIN][config_entry.entry_id]
     parent_coordinator = data.parent_coordinator
     device = parent_coordinator.device
+    entities: list[TPLinkSmartBulb | TPLinkSmartLightStrip] = []
     if (
         effect_module := device.modules.get(Module.LightEffect)
     ) and effect_module.has_custom_effects:
-        async_add_entities(
-            [
-                TPLinkSmartLightStrip(
-                    device,
-                    parent_coordinator,
-                    device.modules[Module.Light],
-                    effect_module,
-                )
-            ]
+        entities.append(
+            TPLinkSmartLightStrip(
+                device,
+                parent_coordinator,
+                device.modules[Module.Light],
+                effect_module,
+            )
         )
         platform = entity_platform.async_get_current_platform()
         platform.async_register_entity_service(
@@ -165,9 +164,17 @@ async def async_setup_entry(
             "async_set_sequence_effect",
         )
     elif Module.Light in device.modules:
-        async_add_entities(
-            [TPLinkSmartBulb(device, parent_coordinator, device.modules[Module.Light])]
+        entities.append(
+            TPLinkSmartBulb(device, parent_coordinator, device.modules[Module.Light])
         )
+    entities.extend(
+        TPLinkSmartBulb(
+            child, parent_coordinator, child.modules[Module.Light], parent=device
+        )
+        for child in device.children
+        if Module.Light in child.modules
+    )
+    async_add_entities(entities)
 
 
 class TPLinkSmartBulb(CoordinatedTPLinkEntity, LightEntity):
@@ -182,18 +189,24 @@ class TPLinkSmartBulb(CoordinatedTPLinkEntity, LightEntity):
         device: Device,
         coordinator: TPLinkDataUpdateCoordinator,
         light_module: Light,
+        parent: Device | None = None,
     ) -> None:
         """Initialize the switch."""
         self._light_module = light_module
         unique_id = device.mac.replace(":", "").upper()
         # For backwards compat with pyHS100
-        if device.device_type == DeviceType.Dimmer:
+        if device.device_type not in {DeviceType.LightStrip, DeviceType.Bulb}:
             # Dimmers used to use the switch format since
             # pyHS100 treated them as SmartPlug but the old code
             # created them as lights
             # https://github.com/home-assistant/core/blob/2021.9.7/homeassistant/components/tplink/common.py#L86
+            #
+            # With the 0.7 kasa release new device types are added such that the previous check here for dimmers
+            # is now a check to ensure that all device types except lightstrips and bulbs use the device_id.
             unique_id = legacy_device_id(device)
-        super().__init__(device, coordinator, unique_id=unique_id)
+        else:
+            unique_id = device.mac.replace(":", "").upper()
+        super().__init__(device, coordinator, parent=parent, unique_id=unique_id)
         modes: set[ColorMode] = {ColorMode.ONOFF}
         if light_module.is_variable_color_temp:
             modes.add(ColorMode.COLOR_TEMP)
@@ -305,7 +318,7 @@ class TPLinkSmartBulb(CoordinatedTPLinkEntity, LightEntity):
     def _async_update_attrs(self) -> None:
         """Update the entity's attributes."""
         light_module = self._light_module
-        self._attr_is_on = self.device.is_on
+        self._attr_is_on = light_module.state.light_on is True
         if light_module.is_dimmable:
             self._attr_brightness = round((light_module.brightness * 255.0) / 100.0)
         color_mode = self._determine_color_mode()
