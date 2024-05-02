@@ -153,58 +153,55 @@ class NWSWeather(CoordinatorWeatherEntity):
         self.async_on_remove(partial(self._remove_forecast_listener, "hourly"))
         self.async_on_remove(partial(self._remove_forecast_listener, "twice_daily"))
 
-        if self.forecast_coordinators["twice_daily"] is not None:
-            self.unsub_forecast["twice_daily"] = self.forecast_coordinators[
-                "twice_daily"
-            ].async_add_listener(partial(self._handle_forecast_update, "twice_daily"))
-
-        if self.forecast_coordinators["hourly"] is not None:
-            self.unsub_forecast["hourly"] = self.forecast_coordinators[
-                "hourly"
-            ].async_add_listener(partial(self._handle_forecast_update, "hourly"))
+        for forecast_type in ("twice_daily", "hourly"):
+            if (coordinator := self.forecast_coordinators[forecast_type]) is None:
+                continue
+            self.unsub_forecast[forecast_type] = coordinator.async_add_listener(
+                partial(self._handle_forecast_update, forecast_type)
+            )
 
     @property
     def native_temperature(self) -> float | None:
         """Return the current temperature."""
-        if self.nws.observation:
-            return self.nws.observation.get("temperature")
+        if observation := self.nws.observation:
+            return observation.get("temperature")
         return None
 
     @property
     def native_pressure(self) -> int | None:
         """Return the current pressure."""
-        if self.nws.observation:
-            return self.nws.observation.get("seaLevelPressure")
+        if observation := self.nws.observation:
+            return observation.get("seaLevelPressure")
         return None
 
     @property
     def humidity(self) -> float | None:
         """Return the name of the sensor."""
-        if self.nws.observation:
-            return self.nws.observation.get("relativeHumidity")
+        if observation := self.nws.observation:
+            return observation.get("relativeHumidity")
         return None
 
     @property
     def native_wind_speed(self) -> float | None:
         """Return the current windspeed."""
-        if self.nws.observation:
-            return self.nws.observation.get("windSpeed")
+        if observation := self.nws.observation:
+            return observation.get("windSpeed")
         return None
 
     @property
     def wind_bearing(self) -> int | None:
         """Return the current wind bearing (degrees)."""
-        if self.nws.observation:
-            return self.nws.observation.get("windDirection")
+        if observation := self.nws.observation:
+            return observation.get("windDirection")
         return None
 
     @property
     def condition(self) -> str | None:
         """Return current condition."""
         weather = None
-        if self.nws.observation:
-            weather = self.nws.observation.get("iconWeather")
-            time = cast(str, self.nws.observation.get("iconTime"))
+        if observation := self.nws.observation:
+            weather = observation.get("iconWeather")
+            time = cast(str, observation.get("iconTime"))
 
         if weather:
             return convert_condition(time, weather)
@@ -213,8 +210,8 @@ class NWSWeather(CoordinatorWeatherEntity):
     @property
     def native_visibility(self) -> int | None:
         """Return visibility."""
-        if self.nws.observation:
-            return self.nws.observation.get("visibility")
+        if observation := self.nws.observation:
+            return observation.get("visibility")
         return None
 
     def _forecast(
@@ -290,7 +287,7 @@ class NWSWeather(CoordinatorWeatherEntity):
         Only used by the generic entity update service.
         """
         await self.coordinator.async_request_refresh()
-        if self.forecast_coordinators["twice_daily"] is not None:
-            await self.forecast_coordinators["twice_daily"].async_request_refresh()
-        if self.forecast_coordinators["hourly"] is not None:
-            await self.forecast_coordinators["hourly"].async_request_refresh()
+
+        for forecast_type in ("twice_daily", "hourly"):
+            if (coordinator := self.forecast_coordinators[forecast_type]) is not None:
+                await coordinator.async_request_refresh()
