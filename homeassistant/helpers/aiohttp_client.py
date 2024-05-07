@@ -20,6 +20,7 @@ from homeassistant.const import APPLICATION_NAME, EVENT_HOMEASSISTANT_CLOSE, __v
 from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.loader import bind_hass
 from homeassistant.util import ssl as ssl_util
+from homeassistant.util.hass_dict import HassKey
 from homeassistant.util.json import json_loads
 
 from .backports.aiohttp_resolver import AsyncResolver
@@ -30,8 +31,12 @@ if TYPE_CHECKING:
     from aiohttp.typedefs import JSONDecoder
 
 
-DATA_CONNECTOR = "aiohttp_connector"
-DATA_CLIENTSESSION = "aiohttp_clientsession"
+DATA_CONNECTOR: HassKey[dict[tuple[bool, int], aiohttp.BaseConnector]] = HassKey(
+    "aiohttp_connector"
+)
+DATA_CLIENTSESSION: HassKey[dict[tuple[bool, int], aiohttp.ClientSession]] = HassKey(
+    "aiohttp_clientsession"
+)
 
 SERVER_SOFTWARE = (
     f"{APPLICATION_NAME}/{__version__} "
@@ -77,18 +82,14 @@ class HassClientResponse(aiohttp.ClientResponse):
 @callback
 @bind_hass
 def async_get_clientsession(
-    hass: HomeAssistant, verify_ssl: SSLContext | bool = True, family: int = 0
+    hass: HomeAssistant, verify_ssl: bool = True, family: int = 0
 ) -> aiohttp.ClientSession:
     """Return default aiohttp ClientSession.
 
     This method must be run in the event loop.
     """
     session_key = _make_key(verify_ssl, family)
-    if DATA_CLIENTSESSION not in hass.data:
-        sessions: dict[tuple[SSLContext | bool, int], aiohttp.ClientSession] = {}
-        hass.data[DATA_CLIENTSESSION] = sessions
-    else:
-        sessions = hass.data[DATA_CLIENTSESSION]
+    sessions = hass.data.setdefault(DATA_CLIENTSESSION, {})
 
     if session_key not in sessions:
         session = _async_create_clientsession(
@@ -108,7 +109,7 @@ def async_get_clientsession(
 @bind_hass
 def async_create_clientsession(
     hass: HomeAssistant,
-    verify_ssl: SSLContext | bool = True,
+    verify_ssl: bool = True,
     auto_cleanup: bool = True,
     family: int = 0,
     **kwargs: Any,
@@ -138,7 +139,7 @@ def async_create_clientsession(
 @callback
 def _async_create_clientsession(
     hass: HomeAssistant,
-    verify_ssl: SSLContext | bool = True,
+    verify_ssl: bool = True,
     auto_cleanup_method: Callable[[HomeAssistant, aiohttp.ClientSession], None]
     | None = None,
     family: int = 0,
@@ -274,35 +275,27 @@ def _async_register_default_clientsession_shutdown(
 
 
 @callback
-def _make_key(
-    verify_ssl: SSLContext | bool = True, family: int = 0
-) -> tuple[SSLContext | bool, int]:
+def _make_key(verify_ssl: bool = True, family: int = 0) -> tuple[bool, int]:
     """Make a key for connector or session pool."""
     return (verify_ssl, family)
 
 
 @callback
 def _async_get_connector(
-    hass: HomeAssistant, verify_ssl: SSLContext | bool = True, family: int = 0
+    hass: HomeAssistant, verify_ssl: bool = True, family: int = 0
 ) -> aiohttp.BaseConnector:
     """Return the connector pool for aiohttp.
 
     This method must be run in the event loop.
     """
     connector_key = _make_key(verify_ssl, family)
-    if DATA_CONNECTOR not in hass.data:
-        connectors: dict[tuple[SSLContext | bool, int], aiohttp.BaseConnector] = {}
-        hass.data[DATA_CONNECTOR] = connectors
-    else:
-        connectors = hass.data[DATA_CONNECTOR]
+    connectors = hass.data.setdefault(DATA_CONNECTOR, {})
 
     if connector_key in connectors:
         return connectors[connector_key]
 
-    if isinstance(verify_ssl, SSLContext):
-        ssl_context: SSLContext = verify_ssl
-    elif verify_ssl:
-        ssl_context = ssl_util.get_default_context()
+    if verify_ssl:
+        ssl_context: SSLContext = ssl_util.get_default_context()
     else:
         ssl_context = ssl_util.get_default_no_verify_context()
 
