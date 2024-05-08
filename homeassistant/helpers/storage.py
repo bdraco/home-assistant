@@ -12,7 +12,6 @@ from json import JSONDecodeError, JSONEncoder
 import logging
 import os
 from pathlib import Path
-import time
 from typing import Any, Generic, TypeVar
 
 from homeassistant.const import (
@@ -255,7 +254,7 @@ class Store(Generic[_T]):
         self._delay_handle: asyncio.TimerHandle | None = None
         self._unsub_final_write_listener: CALLBACK_TYPE | None = None
         self._write_lock = asyncio.Lock()
-        self._load_task: asyncio.Future[_T | None] | None = None
+        self._load_future: asyncio.Future[_T | None] | None = None
         self._encoder = encoder
         self._atomic_writes = atomic_writes
         self._read_only = read_only
@@ -277,40 +276,32 @@ class Store(Generic[_T]):
         Will ensure that when a call comes in while another one is in progress,
         the second call will wait and return the result of the first call.
         """
-        if self._load_task:
-            return await self._load_task
+        if self._load_future:
+            return await self._load_future
 
-        load_task = self.hass.async_create_background_task(
-            self._async_load(), f"Storage load {self.key}", eager_start=True
-        )
-        if not load_task.done():
-            # Only set the load task if it didn't complete immediately
-            self._load_task = load_task
-        return await load_task
+        self._load_future = self.hass.loop.create_future()
+        try:
+            result = await self._async_load()
+        except BaseException as ex:
+            self._load_future.set_exception(ex)
+            # Ensure the future is marked as retrieved
+            # since if there is no concurrent call it
+            # will otherwise never be retrieved.
+            self._load_future.exception()
+            raise
+        else:
+            self._load_future.set_result(result)
+        finally:
+            self._load_future = None
+
+        return result
 
     async def _async_load(self) -> _T | None:
         """Load the data and ensure the task is removed."""
         if STORAGE_SEMAPHORE not in self.hass.data:
-            storage_semaphore = asyncio.Semaphore(MAX_LOAD_CONCURRENTLY)
-            self.hass.data[STORAGE_SEMAPHORE] = storage_semaphore
-        else:
-            storage_semaphore = self.hass.data[STORAGE_SEMAPHORE]
-
-        start = time.monotonic()
-        if storage_semaphore.locked():
-            _LOGGER.debug("Waiting for storage semaphore for %s", self.key)
-        else:
-            _LOGGER.debug("Loading data for %s", self.key)
-
-        try:
-            async with storage_semaphore:
-                return await self._async_load_data()
-        finally:
-            self._load_task = None
-
-            _LOGGER.debug(
-                "Loaded data for %s in %s", self.key, time.monotonic() - start
-            )
+            self.hass.data[STORAGE_SEMAPHORE] = asyncio.Semaphore(MAX_LOAD_CONCURRENTLY)
+        async with self.hass.data[STORAGE_SEMAPHORE]:
+            return await self._async_load_data()
 
     async def _async_load_data(self):
         """Load the data."""
@@ -389,7 +380,6 @@ class Store(Generic[_T]):
                 raise
 
             if data == {}:
-                _LOGGER.warning("Storage file for %s is empty", self.key)
                 return None
 
         # Add minor_version if not set
@@ -554,7 +544,6 @@ class Store(Generic[_T]):
         os.makedirs(os.path.dirname(path), exist_ok=True)
 
         if "data_func" in data:
-            _LOGGER.warning("Writing data with data_func: %s", self.key)
             data["data"] = data.pop("data_func")()
 
         _LOGGER.debug("Writing data for %s to %s", self.key, path)
