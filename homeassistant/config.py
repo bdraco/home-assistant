@@ -1536,7 +1536,6 @@ async def async_process_component_config(
     if config_validator is not None and hasattr(
         config_validator, "async_validate_config"
     ):
-        _LOGGER.warning("Validating config for %s using custom validator", domain)
         try:
             return IntegrationConfigInfo(
                 await config_validator.async_validate_config(hass, config), []
@@ -1704,10 +1703,7 @@ async def async_check_ha_config_file(hass: HomeAssistant) -> str | None:
     # pylint: disable-next=import-outside-toplevel
     from .helpers import check_config
 
-    try:
-        res = await check_config.async_check_ha_config_file(hass)
-    except Exception as ex:  # pylint: disable=broad-except
-        return f"Unhandled exception while checking configuration: {ex}"
+    res = await check_config.async_check_ha_config_file(hass)
 
     if not res.errors:
         return None
