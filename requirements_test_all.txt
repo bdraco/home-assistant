@@ -362,7 +362,7 @@ aiounifi==77
 aiovlc==0.1.0
 
 # homeassistant.components.vodafone_station
-aiovodafone==0.5.4
+aiovodafone==0.6.0
 
 # homeassistant.components.waqi
 aiowaqi==3.0.1
@@ -1408,7 +1408,7 @@ pyefergy==22.1.1
 pyegps==0.2.5
 
 # homeassistant.components.enphase_envoy
-pyenphase==1.20.1
+pyenphase==1.20.3
 
 # homeassistant.components.everlights
 pyeverlights==0.1.0
@@ -1531,7 +1531,7 @@ pylitterbot==2023.5.0
 pylutron-caseta==0.20.0
 
 # homeassistant.components.lutron
-pylutron==0.2.12
+pylutron==0.2.13
 
 # homeassistant.components.mailgun
 pymailgunner==1.4
