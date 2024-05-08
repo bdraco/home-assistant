@@ -4717,7 +4717,7 @@ async def test_unhashable_unique_id(
     entries[entry.entry_id] = entry
     assert (
         "Config entry 'title' from integration test has an invalid unique_id "
-        f"'{str(unique_id)}'"
+        f"'{unique_id!s}'"
     ) in caplog.text
 
     assert entry.entry_id in entries
