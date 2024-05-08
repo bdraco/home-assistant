@@ -515,6 +515,11 @@ class ConfigEntry(Generic[_DataT]):
             integration = await loader.async_get_integration(hass, self.domain)
             self._integration_for_domain = integration
 
+        if integration.domain == self.domain:
+            assert (
+                self.setup_lock.locked()
+            ), "async_setup must be called with setup lock held"
+
         # Only store setup result as state if it was not forwarded.
         if domain_is_integration := self.domain == integration.domain:
             self._async_set_state(hass, ConfigEntryState.SETUP_IN_PROGRESS, None)
@@ -750,6 +755,11 @@ class ConfigEntry(Generic[_DataT]):
                 # entry.
                 self._async_set_state(hass, ConfigEntryState.NOT_LOADED, None)
                 return True
+
+        if integration.domain == self.domain:
+            assert (
+                self.setup_lock.locked()
+            ), "async_unload must be called with setup lock held"
 
         component = await integration.async_get_component()
 
