@@ -515,11 +515,6 @@ class ConfigEntry(Generic[_DataT]):
             integration = await loader.async_get_integration(hass, self.domain)
             self._integration_for_domain = integration
 
-        if integration.domain == self.domain:
-            assert (
-                self.setup_lock.locked()
-            ), "async_setup must be called with setup lock held"
-
         # Only store setup result as state if it was not forwarded.
         if domain_is_integration := self.domain == integration.domain:
             self._async_set_state(hass, ConfigEntryState.SETUP_IN_PROGRESS, None)
@@ -597,7 +592,7 @@ class ConfigEntry(Generic[_DataT]):
                 self.domain,
                 error_reason,
             )
-            await self._async_process_unload(hass)
+            await self._async_process_on_unload(hass)
             result = False
         except ConfigEntryAuthFailed as exc:
             message = str(exc)
@@ -614,7 +609,7 @@ class ConfigEntry(Generic[_DataT]):
                 self.domain,
                 auth_message,
             )
-            await self._async_process_unload(hass)
+            await self._async_process_on_unload(hass)
             self.async_start_reauth(hass)
             result = False
         except ConfigEntryNotReady as exc:
@@ -660,7 +655,7 @@ class ConfigEntry(Generic[_DataT]):
                     functools.partial(self._async_setup_again, hass),
                 )
 
-            await self._async_process_unload(hass)
+            await self._async_process_on_unload(hass)
             return
         # pylint: disable-next=broad-except
         except (asyncio.CancelledError, SystemExit, Exception):
@@ -756,11 +751,6 @@ class ConfigEntry(Generic[_DataT]):
                 self._async_set_state(hass, ConfigEntryState.NOT_LOADED, None)
                 return True
 
-        if integration.domain == self.domain:
-            assert (
-                self.setup_lock.locked()
-            ), "async_unload must be called with setup lock held"
-
         component = await integration.async_get_component()
 
         if domain_is_integration := self.domain == integration.domain:
@@ -783,12 +773,15 @@ class ConfigEntry(Generic[_DataT]):
 
         try:
             result = await component.async_unload_entry(hass, self)
+
             assert isinstance(result, bool)
+
+            # Only adjust state if we unloaded the component
             if domain_is_integration:
-                # Only adjust state if we unloaded the component
                 if result:
                     self._async_set_state(hass, ConfigEntryState.NOT_LOADED, None)
-                await self._async_process_unload(hass)
+
+                await self._async_process_on_unload(hass)
         except Exception as exc:
             _LOGGER.exception(
                 "Error unloading entry %s for %s", self.title, integration.domain
@@ -937,38 +930,31 @@ class ConfigEntry(Generic[_DataT]):
             self._on_unload = []
         self._on_unload.append(func)
 
-    async def _async_process_unload(self, hass: HomeAssistant) -> None:
-        """Process the on_unload callbacks and wait for pending tasks.
-
-        The entry runtime_data is cleared to avoid holding onto
-        references that are no longer needed to ensure that the
-        entry runtime_data can be garbage collected.
-        """
+    async def _async_process_on_unload(self, hass: HomeAssistant) -> None:
+        """Process the on_unload callbacks and wait for pending tasks."""
         if self._on_unload is not None:
             while self._on_unload:
                 if job := self._on_unload.pop()():
                     self.async_create_task(hass, job, eager_start=True)
 
-        if self._tasks or self._background_tasks:
-            cancel_message = f"Config entry {self.title} with {self.domain} unloading"
-            for task in self._background_tasks:
-                task.cancel(cancel_message)
+        if not self._tasks and not self._background_tasks:
+            return
 
-            _, pending = await asyncio.wait(
-                [*self._tasks, *self._background_tasks], timeout=10
+        cancel_message = f"Config entry {self.title} with {self.domain} unloading"
+        for task in self._background_tasks:
+            task.cancel(cancel_message)
+
+        _, pending = await asyncio.wait(
+            [*self._tasks, *self._background_tasks], timeout=10
+        )
+
+        for task in pending:
+            _LOGGER.warning(
+                "Unloading %s (%s) config entry. Task %s did not complete in time",
+                self.title,
+                self.domain,
+                task,
             )
-
-            for task in pending:
-                _LOGGER.warning(
-                    "Unloading %s (%s) config entry. Task %s did not complete in time",
-                    self.title,
-                    self.domain,
-                    task,
-                )
-
-        # Clear the runtime_data after unload to avoid
-        # holding onto references that are no longer needed
-        object.__setattr__(self, "runtime_data", None)
 
     @callback
     def async_start_reauth(
@@ -1626,16 +1612,15 @@ class ConfigEntries:
         if (entry := self.async_get_entry(entry_id)) is None:
             raise UnknownEntry
 
-        async with entry.setup_lock:
-            if not entry.state.recoverable:
-                unload_success = entry.state is not ConfigEntryState.FAILED_UNLOAD
-            else:
-                unload_success = await self.async_unload(entry_id)
+        if not entry.state.recoverable:
+            unload_success = entry.state is not ConfigEntryState.FAILED_UNLOAD
+        else:
+            unload_success = await self.async_unload(entry_id)
 
-            await entry.async_remove(self.hass)
+        await entry.async_remove(self.hass)
 
-            del self._entries[entry.entry_id]
-            self._async_schedule_save()
+        del self._entries[entry.entry_id]
+        self._async_schedule_save()
 
         dev_reg = device_registry.async_get(self.hass)
         ent_reg = entity_registry.async_get(self.hass)
