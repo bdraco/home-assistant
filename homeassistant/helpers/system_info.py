@@ -29,7 +29,7 @@ def is_official_image() -> bool:
 
 
 @singleton(_DATA_MAC_VER)
-async def get_mac_ver(hass: HomeAssistant) -> str:
+async def async_get_mac_ver(hass: HomeAssistant) -> str:
     """Return the macOS version."""
     return (await hass.async_add_executor_job(platform.mac_ver))[0]
 
@@ -74,7 +74,7 @@ async def async_get_system_info(hass: HomeAssistant) -> dict[str, Any]:
         info_object["user"] = None
 
     if platform.system() == "Darwin":
-        info_object["os_version"] = await get_mac_ver(hass)
+        info_object["os_version"] = await async_get_mac_ver(hass)
     elif platform.system() == "Linux":
         info_object["docker"] = is_docker_env()
 
