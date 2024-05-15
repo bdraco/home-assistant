@@ -1189,7 +1189,7 @@ openhomedevice==2.2.0
 openwebifpy==4.2.4
 
 # homeassistant.components.opower
-opower==0.4.4
+opower==0.4.5
 
 # homeassistant.components.oralb
 oralb-ble==0.17.6
@@ -1311,7 +1311,7 @@ pyCEC==0.5.2
 pyControl4==1.1.0
 
 # homeassistant.components.duotecno
-pyDuotecno==2024.3.2
+pyDuotecno==2024.5.0
 
 # homeassistant.components.electrasmart
 pyElectra==1.2.0
@@ -1405,7 +1405,7 @@ pyecoforest==0.4.0
 pyeconet==0.1.22
 
 # homeassistant.components.efergy
-pyefergy==22.1.1
+pyefergy==22.5.0
 
 # homeassistant.components.energenie_power_sockets
 pyegps==0.2.5
@@ -2228,7 +2228,7 @@ whois==0.9.27
 wiffi==1.1.2
 
 # homeassistant.components.wled
-wled==0.17.0
+wled==0.17.1
 
 # homeassistant.components.wolflink
 wolf-comm==0.0.8
@@ -2273,7 +2273,7 @@ yeelight==0.7.14
 yolink-api==0.4.4
 
 # homeassistant.components.youless
-youless-api==1.0.1
+youless-api==1.1.1
 
 # homeassistant.components.youtube
 youtubeaio==1.1.5

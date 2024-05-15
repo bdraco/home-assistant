@@ -1492,7 +1492,7 @@ openwrt-luci-rpc==1.1.17
 openwrt-ubus-rpc==0.0.2
 
 # homeassistant.components.opower
-opower==0.4.4
+opower==0.4.5
 
 # homeassistant.components.oralb
 oralb-ble==0.17.6
@@ -1658,7 +1658,7 @@ pyCEC==0.5.2
 pyControl4==1.1.0
 
 # homeassistant.components.duotecno
-pyDuotecno==2024.3.2
+pyDuotecno==2024.5.0
 
 # homeassistant.components.electrasmart
 pyElectra==1.2.0
@@ -1803,7 +1803,7 @@ pyeconet==0.1.22
 pyedimax==0.2.1
 
 # homeassistant.components.efergy
-pyefergy==22.1.1
+pyefergy==22.5.0
 
 # homeassistant.components.energenie_power_sockets
 pyegps==0.2.5
@@ -2875,7 +2875,7 @@ wiffi==1.1.2
 wirelesstagpy==0.8.1
 
 # homeassistant.components.wled
-wled==0.17.0
+wled==0.17.1
 
 # homeassistant.components.wolflink
 wolf-comm==0.0.8
@@ -2926,7 +2926,7 @@ yeelightsunflower==0.0.10
 yolink-api==0.4.4
 
 # homeassistant.components.youless
-youless-api==1.0.1
+youless-api==1.1.1
 
 # homeassistant.components.youtube
 youtubeaio==1.1.5
