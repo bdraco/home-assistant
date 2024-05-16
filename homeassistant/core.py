@@ -440,7 +440,7 @@ class HomeAssistant:
             # frame is a circular import, so we import it here
             frame.report(
                 f"calls {what} from a thread other than the event loop, "
-                "which is a non-thread-safe operation and may cause a crash. "
+                "which may cause Home Assistant to crash or data to corrupt. "
                 "For more information, see "
                 "https://developers.home-assistant.io/docs/asyncio_thread_safety/"
                 f"#{what.replace('.', '')}",
@@ -2789,14 +2789,16 @@ class ServiceRegistry:
         target = job.target
         if job.job_type is HassJobType.Coroutinefunction:
             if TYPE_CHECKING:
-                target = cast(Callable[..., Coroutine[Any, Any, _R]], target)
+                target = cast(
+                    Callable[..., Coroutine[Any, Any, ServiceResponse]], target
+                )
             return await target(service_call)
         if job.job_type is HassJobType.Callback:
             if TYPE_CHECKING:
-                target = cast(Callable[..., _R], target)
+                target = cast(Callable[..., ServiceResponse], target)
             return target(service_call)
         if TYPE_CHECKING:
-            target = cast(Callable[..., _R], target)
+            target = cast(Callable[..., ServiceResponse], target)
         return await self._hass.async_add_executor_job(target, service_call)
 
 
