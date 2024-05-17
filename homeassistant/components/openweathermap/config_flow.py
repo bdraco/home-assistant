@@ -2,15 +2,11 @@
 
 from __future__ import annotations
 
-from pyopenweathermap import OWMClient, RequestError
+from pyowm import OWM
+from pyowm.commons.exceptions import APIRequestError, UnauthorizedError
 import voluptuous as vol
 
-from homeassistant.config_entries import (
-    ConfigEntry,
-    ConfigFlow,
-    ConfigFlowResult,
-    OptionsFlow,
-)
+from homeassistant.config_entries import ConfigEntry, ConfigFlow, OptionsFlow
 from homeassistant.const import (
     CONF_API_KEY,
     CONF_LANGUAGE,
@@ -24,12 +20,12 @@ import homeassistant.helpers.config_validation as cv
 
 from .const import (
     CONFIG_FLOW_VERSION,
+    DEFAULT_FORECAST_MODE,
     DEFAULT_LANGUAGE,
     DEFAULT_NAME,
-    DEFAULT_OWM_MODE,
     DOMAIN,
+    FORECAST_MODES,
     LANGUAGES,
-    OWM_MODES,
 )
 
 
@@ -46,29 +42,27 @@ class OpenWeatherMapConfigFlow(ConfigFlow, domain=DOMAIN):
         """Get the options flow for this handler."""
         return OpenWeatherMapOptionsFlow(config_entry)
 
-    async def async_step_user(self, user_input=None) -> ConfigFlowResult:
+    async def async_step_user(self, user_input=None):
         """Handle a flow initialized by the user."""
         errors = {}
-        description_placeholders = {}
 
         if user_input is not None:
             latitude = user_input[CONF_LATITUDE]
             longitude = user_input[CONF_LONGITUDE]
-            mode = user_input[CONF_MODE]
 
             await self.async_set_unique_id(f"{latitude}-{longitude}")
             self._abort_if_unique_id_configured()
 
-            api_key_valid = None
             try:
-                owm_client = OWMClient(user_input[CONF_API_KEY], mode)
-                api_key_valid = await owm_client.validate_key()
-            except RequestError as error:
-                errors["base"] = "cannot_connect"
-                description_placeholders["error"] = str(error)
-
-            if api_key_valid is False:
+                api_online = await _is_owm_api_online(
+                    self.hass, user_input[CONF_API_KEY], latitude, longitude
+                )
+                if not api_online:
+                    errors["base"] = "invalid_api_key"
+            except UnauthorizedError:
                 errors["base"] = "invalid_api_key"
+            except APIRequestError:
+                errors["base"] = "cannot_connect"
 
             if not errors:
                 return self.async_create_entry(
@@ -85,19 +79,16 @@ class OpenWeatherMapConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Optional(
                     CONF_LONGITUDE, default=self.hass.config.longitude
                 ): cv.longitude,
-                vol.Optional(CONF_MODE, default=DEFAULT_OWM_MODE): vol.In(OWM_MODES),
+                vol.Optional(CONF_MODE, default=DEFAULT_FORECAST_MODE): vol.In(
+                    FORECAST_MODES
+                ),
                 vol.Optional(CONF_LANGUAGE, default=DEFAULT_LANGUAGE): vol.In(
                     LANGUAGES
                 ),
             }
         )
 
-        return self.async_show_form(
-            step_id="user",
-            data_schema=schema,
-            errors=errors,
-            description_placeholders=description_placeholders,
-        )
+        return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
 
 
 class OpenWeatherMapOptionsFlow(OptionsFlow):
@@ -107,7 +98,7 @@ class OpenWeatherMapOptionsFlow(OptionsFlow):
         """Initialize options flow."""
         self.config_entry = config_entry
 
-    async def async_step_init(self, user_input=None) -> ConfigFlowResult:
+    async def async_step_init(self, user_input=None):
         """Manage the options."""
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
@@ -124,9 +115,9 @@ class OpenWeatherMapOptionsFlow(OptionsFlow):
                     CONF_MODE,
                     default=self.config_entry.options.get(
                         CONF_MODE,
-                        self.config_entry.data.get(CONF_MODE, DEFAULT_OWM_MODE),
+                        self.config_entry.data.get(CONF_MODE, DEFAULT_FORECAST_MODE),
                     ),
-                ): vol.In(OWM_MODES),
+                ): vol.In(FORECAST_MODES),
                 vol.Optional(
                     CONF_LANGUAGE,
                     default=self.config_entry.options.get(
@@ -136,3 +127,8 @@ class OpenWeatherMapOptionsFlow(OptionsFlow):
                 ): vol.In(LANGUAGES),
             }
         )
+
+
+async def _is_owm_api_online(hass, api_key, lat, lon):
+    owm = OWM(api_key).weather_manager()
+    return await hass.async_add_executor_job(owm.weather_at_coords, lat, lon)

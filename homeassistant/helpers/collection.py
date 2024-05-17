@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 import asyncio
-from collections.abc import Callable, Coroutine, Iterable
+from collections.abc import Awaitable, Callable, Coroutine, Iterable
 from dataclasses import dataclass
 from functools import partial
 from itertools import groupby
@@ -21,7 +21,6 @@ from homeassistant.const import CONF_ID
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.util import slugify
-from homeassistant.util.async_ import create_eager_task
 
 from . import entity_registry
 from .entity import Entity
@@ -56,7 +55,7 @@ class CollectionChangeSet:
     item: Any
 
 
-ChangeListener = Callable[
+type ChangeListener = Callable[
     [
         # Change type
         str,
@@ -65,10 +64,10 @@ ChangeListener = Callable[
         # New or removed config
         dict,
     ],
-    Coroutine[Any, Any, None],
+    Awaitable[None],
 ]
 
-ChangeSetListener = Callable[[Iterable[CollectionChangeSet]], Coroutine[Any, Any, None]]
+type ChangeSetListener = Callable[[Iterable[CollectionChangeSet]], Awaitable[None]]
 
 
 class CollectionError(HomeAssistantError):
@@ -171,16 +170,12 @@ class ObservableCollection(ABC, Generic[_ItemT]):
         """Notify listeners of a change."""
         await asyncio.gather(
             *(
-                create_eager_task(
-                    listener(
-                        change_set.change_type, change_set.item_id, change_set.item
-                    )
-                )
+                listener(change_set.change_type, change_set.item_id, change_set.item)
                 for listener in self.listeners
                 for change_set in change_sets
             ),
             *(
-                create_eager_task(change_set_listener(change_sets))
+                change_set_listener(change_sets)
                 for change_set_listener in self.change_set_listeners
             ),
         )
@@ -495,7 +490,7 @@ class _CollectionLifeCycle(Generic[_EntityT]):
                     coros.append(self._update_entity(change_set))
 
         if coros:
-            await asyncio.gather(*(create_eager_task(coro) for coro in coros))
+            await asyncio.gather(*coros)
 
         if new_entities:
             await self.entity_component.async_add_entities(new_entities)
