@@ -7,7 +7,7 @@ from datetime import timedelta
 from functools import wraps
 import logging
 import re
-from typing import Any, Concatenate
+from typing import Any, Concatenate, ParamSpec, TypeVar
 
 from jsonrpc_base.jsonrpc import ProtocolError, TransportError
 from pykodi import CannotConnectError
@@ -70,6 +70,9 @@ from .const import (
     EVENT_TURN_OFF,
     EVENT_TURN_ON,
 )
+
+_KodiEntityT = TypeVar("_KodiEntityT", bound="KodiEntity")
+_P = ParamSpec("_P")
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -228,7 +231,7 @@ async def async_setup_entry(
     async_add_entities([entity])
 
 
-def cmd[_KodiEntityT: KodiEntity, **_P](
+def cmd(
     func: Callable[Concatenate[_KodiEntityT, _P], Awaitable[Any]],
 ) -> Callable[Concatenate[_KodiEntityT, _P], Coroutine[Any, Any, None]]:
     """Catch command exceptions."""

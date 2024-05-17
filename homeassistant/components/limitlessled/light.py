@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 import logging
-from typing import Any, Concatenate, cast
+from typing import Any, Concatenate, ParamSpec, TypeVar, cast
 
 from limitlessled import Color
 from limitlessled.bridge import Bridge
@@ -39,6 +39,9 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.util.color import color_hs_to_RGB, color_temperature_mired_to_kelvin
+
+_LimitlessLEDGroupT = TypeVar("_LimitlessLEDGroupT", bound="LimitlessLEDGroup")
+_P = ParamSpec("_P")
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -173,7 +176,7 @@ def setup_platform(
     add_entities(lights)
 
 
-def state[_LimitlessLEDGroupT: LimitlessLEDGroup, **_P](
+def state(
     new_state: bool,
 ) -> Callable[
     [Callable[Concatenate[_LimitlessLEDGroupT, int, Pipeline, _P], Any]],

@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable, Coroutine
 from dataclasses import dataclass
 from functools import wraps
-from typing import Any, Concatenate
+from typing import Any, Concatenate, ParamSpec, TypeVar
 
 from sfrbox_api.bridge import SFRBox
 from sfrbox_api.exceptions import SFRBoxError
@@ -26,10 +26,13 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import DOMAIN
 from .models import DomainData
 
+_T = TypeVar("_T")
+_P = ParamSpec("_P")
 
-def with_error_wrapping[**_P, _R](
-    func: Callable[Concatenate[SFRBoxButton, _P], Awaitable[_R]],
-) -> Callable[Concatenate[SFRBoxButton, _P], Coroutine[Any, Any, _R]]:
+
+def with_error_wrapping(
+    func: Callable[Concatenate[SFRBoxButton, _P], Awaitable[_T]],
+) -> Callable[Concatenate[SFRBoxButton, _P], Coroutine[Any, Any, _T]]:
     """Catch SFR errors."""
 
     @wraps(func)
@@ -37,7 +40,7 @@ def with_error_wrapping[**_P, _R](
         self: SFRBoxButton,
         *args: _P.args,
         **kwargs: _P.kwargs,
-    ) -> _R:
+    ) -> _T:
         """Catch SFRBoxError errors and raise HomeAssistantError."""
         try:
             return await func(self, *args, **kwargs)
