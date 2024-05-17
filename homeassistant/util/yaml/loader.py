@@ -215,7 +215,7 @@ class SafeLineLoader(PythonSafeLoader):
         )
 
 
-type LoaderType = FastSafeLoader | PythonSafeLoader
+LoaderType = FastSafeLoader | PythonSafeLoader
 
 
 def load_yaml(

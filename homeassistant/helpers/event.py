@@ -1261,7 +1261,7 @@ class TrackTemplateResultInfo:
         self.hass.async_run_hass_job(self._job, event, updates)
 
 
-type TrackTemplateResultListener = Callable[
+TrackTemplateResultListener = Callable[
     [
         Event[EventStateChangedData] | None,
         list[TrackTemplateResult],

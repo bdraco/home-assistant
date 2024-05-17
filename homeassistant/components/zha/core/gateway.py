@@ -96,7 +96,7 @@ if TYPE_CHECKING:
     from ..entity import ZhaEntity
     from .cluster_handlers import ClusterHandler
 
-    type _LogFilterType = Filter | Callable[[LogRecord], bool]
+    _LogFilterType = Filter | Callable[[LogRecord], bool]
 
 _LOGGER = logging.getLogger(__name__)
 

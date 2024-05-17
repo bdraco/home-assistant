@@ -34,7 +34,7 @@ _LOGGER = logging.getLogger(__name__)
 
 _DEVICE_SCAN = f"{DEVICE_TRACKER_DOMAIN}/device_scan"
 
-type _HostType = dict[str, Any]
+_HostType = dict[str, Any]
 
 
 def _get_hosts(

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Coroutine
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeAlias
 from unittest.mock import MagicMock
 
 from aiohttp import ClientWebSocketResponse
@@ -30,6 +30,6 @@ MqttMockHAClient = MagicMock
 """MagicMock for `homeassistant.components.mqtt.MQTT`."""
 MqttMockHAClientGenerator = Callable[..., Coroutine[Any, Any, MqttMockHAClient]]
 """MagicMock generator for `homeassistant.components.mqtt.MQTT`."""
-type RecorderInstanceGenerator = Callable[..., Coroutine[Any, Any, "Recorder"]]
+RecorderInstanceGenerator: TypeAlias = Callable[..., Coroutine[Any, Any, "Recorder"]]
 """Instance generator for `homeassistant.components.recorder.Recorder`."""
 WebSocketGenerator = Callable[..., Coroutine[Any, Any, MockHAClientWebSocket]]

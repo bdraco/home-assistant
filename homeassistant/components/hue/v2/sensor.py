@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import Any
+from typing import Any, TypeAlias
 
 from aiohue.v2 import HueBridgeV2
 from aiohue.v2.controllers.events import EventType
@@ -34,8 +34,8 @@ from ..bridge import HueBridge
 from ..const import DOMAIN
 from .entity import HueBaseEntity
 
-type SensorType = DevicePower | LightLevel | Temperature | ZigbeeConnectivity
-type ControllerType = (
+SensorType: TypeAlias = DevicePower | LightLevel | Temperature | ZigbeeConnectivity
+ControllerType: TypeAlias = (
     DevicePowerController
     | LightLevelController
     | TemperatureController

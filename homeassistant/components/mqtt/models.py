@@ -44,7 +44,7 @@ _LOGGER = logging.getLogger(__name__)
 
 ATTR_THIS = "this"
 
-type PublishPayloadType = str | bytes | int | float | None
+PublishPayloadType = str | bytes | int | float | None
 
 
 @dataclass
@@ -69,8 +69,8 @@ class ReceiveMessage:
     timestamp: float
 
 
-type AsyncMessageCallbackType = Callable[[ReceiveMessage], Coroutine[Any, Any, None]]
-type MessageCallbackType = Callable[[ReceiveMessage], None]
+AsyncMessageCallbackType = Callable[[ReceiveMessage], Coroutine[Any, Any, None]]
+MessageCallbackType = Callable[[ReceiveMessage], None]
 
 
 class SubscriptionDebugInfo(TypedDict):

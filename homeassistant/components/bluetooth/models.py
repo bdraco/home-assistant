@@ -8,5 +8,5 @@ from enum import Enum
 from home_assistant_bluetooth import BluetoothServiceInfoBleak
 
 BluetoothChange = Enum("BluetoothChange", "ADVERTISEMENT")
-type BluetoothCallback = Callable[[BluetoothServiceInfoBleak, BluetoothChange], None]
-type ProcessAdvertisementCallback = Callable[[BluetoothServiceInfoBleak], bool]
+BluetoothCallback = Callable[[BluetoothServiceInfoBleak, BluetoothChange], None]
+ProcessAdvertisementCallback = Callable[[BluetoothServiceInfoBleak], bool]

@@ -53,7 +53,7 @@ class EventLabelRegistryUpdatedData(TypedDict):
     label_id: str
 
 
-type EventLabelRegistryUpdated = Event[EventLabelRegistryUpdatedData]
+EventLabelRegistryUpdated = Event[EventLabelRegistryUpdatedData]
 
 
 @dataclass(slots=True, frozen=True, kw_only=True)

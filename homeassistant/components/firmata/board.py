@@ -30,7 +30,7 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-type FirmataPinType = int | str
+FirmataPinType = int | str
 
 
 class FirmataBoard:

@@ -55,7 +55,7 @@ class CollectionChangeSet:
     item: Any
 
 
-type ChangeListener = Callable[
+ChangeListener = Callable[
     [
         # Change type
         str,
@@ -67,7 +67,7 @@ type ChangeListener = Callable[
     Awaitable[None],
 ]
 
-type ChangeSetListener = Callable[[Iterable[CollectionChangeSet]], Awaitable[None]]
+ChangeSetListener = Callable[[Iterable[CollectionChangeSet]], Awaitable[None]]
 
 
 class CollectionError(HomeAssistantError):

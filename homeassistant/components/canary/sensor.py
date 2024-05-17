@@ -21,9 +21,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DATA_COORDINATOR, DOMAIN, MANUFACTURER
 from .coordinator import CanaryDataUpdateCoordinator
 
-type SensorTypeItem = tuple[
-    str, str | None, str | None, SensorDeviceClass | None, list[str]
-]
+SensorTypeItem = tuple[str, str | None, str | None, SensorDeviceClass | None, list[str]]
 
 SENSOR_VALUE_PRECISION: Final = 2
 ATTR_AIR_QUALITY: Final = "air_quality"

@@ -88,7 +88,7 @@ class NotifySetting:
     target: str | None = attr.ib(default=None)
 
 
-type _UsersDict = dict[str, NotifySetting]
+_UsersDict = dict[str, NotifySetting]
 
 
 @MULTI_FACTOR_AUTH_MODULES.register("notify")

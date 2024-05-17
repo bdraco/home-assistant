@@ -126,7 +126,7 @@ class SsdpServiceInfo(BaseServiceInfo):
 
 
 SsdpChange = Enum("SsdpChange", "ALIVE BYEBYE UPDATE")
-type SsdpHassJobCallback = HassJob[
+SsdpHassJobCallback = HassJob[
     [SsdpServiceInfo, SsdpChange], Coroutine[Any, Any, None] | None
 ]
 

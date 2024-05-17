@@ -14,8 +14,8 @@ class SolarForecastType(TypedDict):
     wh_hours: dict[str, float | int]
 
 
-type GetSolarForecastType = Callable[
-    [HomeAssistant, str], Awaitable[SolarForecastType | None]
+GetSolarForecastType = Callable[
+    [HomeAssistant, str], Awaitable["SolarForecastType | None"]
 ]
 
 

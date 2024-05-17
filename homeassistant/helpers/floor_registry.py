@@ -53,7 +53,7 @@ class EventFloorRegistryUpdatedData(TypedDict):
     floor_id: str
 
 
-type EventFloorRegistryUpdated = Event[EventFloorRegistryUpdatedData]
+EventFloorRegistryUpdated = Event[EventFloorRegistryUpdatedData]
 
 
 @dataclass(slots=True, kw_only=True, frozen=True)

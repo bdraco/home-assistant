@@ -33,12 +33,12 @@ from .data import (
 from .types import EnergyPlatform, GetSolarForecastType, SolarForecastType
 from .validate import async_validate
 
-type EnergyWebSocketCommandHandler = Callable[
-    [HomeAssistant, websocket_api.ActiveConnection, dict[str, Any], EnergyManager],
+EnergyWebSocketCommandHandler = Callable[
+    [HomeAssistant, websocket_api.ActiveConnection, "dict[str, Any]", "EnergyManager"],
     None,
 ]
-type AsyncEnergyWebSocketCommandHandler = Callable[
-    [HomeAssistant, websocket_api.ActiveConnection, dict[str, Any], EnergyManager],
+AsyncEnergyWebSocketCommandHandler = Callable[
+    [HomeAssistant, websocket_api.ActiveConnection, "dict[str, Any]", "EnergyManager"],
     Awaitable[None],
 ]
 

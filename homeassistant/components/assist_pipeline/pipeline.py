@@ -349,7 +349,7 @@ class PipelineEvent:
     timestamp: str = field(default_factory=lambda: dt_util.utcnow().isoformat())
 
 
-type PipelineEventCallback = Callable[[PipelineEvent], None]
+PipelineEventCallback = Callable[[PipelineEvent], None]
 
 
 @dataclass(frozen=True)

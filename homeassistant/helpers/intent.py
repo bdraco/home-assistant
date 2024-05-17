@@ -35,7 +35,7 @@ from . import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-type _SlotsType = dict[str, Any]
+_SlotsType = dict[str, Any]
 
 INTENT_TURN_OFF = "HassTurnOff"
 INTENT_TURN_ON = "HassTurnOn"

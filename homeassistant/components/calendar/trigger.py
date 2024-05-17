@@ -88,8 +88,8 @@ class Timespan:
         return f"[{self.start}, {self.end})"
 
 
-type EventFetcher = Callable[[Timespan], Awaitable[list[CalendarEvent]]]
-type QueuedEventFetcher = Callable[[Timespan], Awaitable[list[QueuedCalendarEvent]]]
+EventFetcher = Callable[[Timespan], Awaitable[list[CalendarEvent]]]
+QueuedEventFetcher = Callable[[Timespan], Awaitable[list[QueuedCalendarEvent]]]
 
 
 def get_entity(hass: HomeAssistant, entity_id: str) -> CalendarEntity:

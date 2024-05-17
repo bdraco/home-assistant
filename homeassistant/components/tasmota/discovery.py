@@ -45,7 +45,7 @@ TASMOTA_DISCOVERY_INSTANCE = "tasmota_discovery_instance"
 
 MQTT_TOPIC_URL = "https://tasmota.github.io/docs/Home-Assistant/#tasmota-integration"
 
-type SetupDeviceCallback = Callable[[TasmotaDeviceConfig, str], Awaitable[None]]
+SetupDeviceCallback = Callable[[TasmotaDeviceConfig, str], Awaitable[None]]
 
 
 def clear_discovery_hash(

@@ -49,7 +49,7 @@ SERVICE_CONFIGURE = "configure"
 STATE_CONFIGURE = "configure"
 STATE_CONFIGURED = "configured"
 
-type ConfiguratorCallback = Callable[[list[dict[str, str]]], None]
+ConfiguratorCallback = Callable[[list[dict[str, str]]], None]
 
 CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 

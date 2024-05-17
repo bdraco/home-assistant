@@ -43,7 +43,7 @@ from .const import (
 from .utils import async_dispatch_id as _ufpd, async_get_devices_by_type
 
 _LOGGER = logging.getLogger(__name__)
-type ProtectDeviceType = ProtectAdoptableDeviceModel | NVR
+ProtectDeviceType = ProtectAdoptableDeviceModel | NVR
 
 
 @callback

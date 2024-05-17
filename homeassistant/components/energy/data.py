@@ -121,7 +121,7 @@ class WaterSourceType(TypedDict):
     number_energy_price: float | None  # Price for energy ($/m³)
 
 
-type SourceType = (
+SourceType = (
     GridSourceType
     | SolarSourceType
     | BatterySourceType

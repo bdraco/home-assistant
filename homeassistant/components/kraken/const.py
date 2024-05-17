@@ -19,7 +19,7 @@ class KrakenResponseEntry(TypedDict):
     opening_price: float
 
 
-type KrakenResponse = dict[str, KrakenResponseEntry]
+KrakenResponse = dict[str, KrakenResponseEntry]
 
 
 DEFAULT_SCAN_INTERVAL = 60

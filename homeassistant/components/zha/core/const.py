@@ -245,7 +245,7 @@ ZHA_CONFIG_SCHEMAS = {
     ZHA_ALARM_OPTIONS: CONF_ZHA_ALARM_SCHEMA,
 }
 
-type _ControllerClsType = type[zigpy.application.ControllerApplication]
+_ControllerClsType = type[zigpy.application.ControllerApplication]
 
 
 class RadioType(enum.Enum):
