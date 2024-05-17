@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 import functools
 from functools import cached_property
-from typing import Any, cast
+from typing import Any, TypeVar, cast
 
 from async_upnp_client.aiohttp import AiohttpSessionRequester
 from async_upnp_client.client import UpnpRequester
@@ -42,6 +42,9 @@ from .const import (
     ROOT_OBJECT_ID,
     STREAMABLE_PROTOCOLS,
 )
+
+_DlnaDmsDeviceMethod = TypeVar("_DlnaDmsDeviceMethod", bound="DmsDeviceSource")
+_R = TypeVar("_R")
 
 
 class DlnaDmsData:
@@ -121,7 +124,7 @@ class ActionError(DlnaDmsDeviceError):
     """Error when calling a UPnP Action on the device."""
 
 
-def catch_request_errors[_DlnaDmsDeviceMethod: DmsDeviceSource, _R](
+def catch_request_errors(
     func: Callable[[_DlnaDmsDeviceMethod, str], Coroutine[Any, Any, _R]],
 ) -> Callable[[_DlnaDmsDeviceMethod, str], Coroutine[Any, Any, _R]]:
     """Catch UpnpError errors."""

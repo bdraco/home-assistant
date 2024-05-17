@@ -10,7 +10,7 @@ from http import HTTPStatus
 from ipaddress import IPv4Address, IPv6Address, ip_address
 import logging
 from socket import gethostbyaddr, herror
-from typing import Any, Concatenate, Final
+from typing import Any, Concatenate, Final, ParamSpec, TypeVar
 
 from aiohttp.web import (
     AppKey,
@@ -31,6 +31,9 @@ from homeassistant.util import dt as dt_util, yaml
 
 from .const import KEY_HASS
 from .view import HomeAssistantView
+
+_HassViewT = TypeVar("_HassViewT", bound=HomeAssistantView)
+_P = ParamSpec("_P")
 
 _LOGGER: Final = logging.getLogger(__name__)
 
@@ -88,7 +91,7 @@ async def ban_middleware(
         raise
 
 
-def log_invalid_auth[_HassViewT: HomeAssistantView, **_P](
+def log_invalid_auth(
     func: Callable[Concatenate[_HassViewT, Request, _P], Awaitable[Response]],
 ) -> Callable[Concatenate[_HassViewT, Request, _P], Coroutine[Any, Any, Response]]:
     """Decorate function to handle invalid auth or failed login attempts."""

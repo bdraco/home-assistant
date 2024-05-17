@@ -6,11 +6,16 @@ from collections.abc import Callable, Coroutine
 from functools import wraps
 import json
 import logging
-from typing import Any, Concatenate, TypeGuard
+from typing import Any, Concatenate, ParamSpec, TypeGuard, TypeVar
 
 from homeassistant.exceptions import HomeAssistantError
 
 from . import HomematicipGenericEntity
+
+_HomematicipGenericEntityT = TypeVar(
+    "_HomematicipGenericEntityT", bound=HomematicipGenericEntity
+)
+_P = ParamSpec("_P")
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -23,7 +28,7 @@ def is_error_response(response: Any) -> TypeGuard[dict[str, Any]]:
     return False
 
 
-def handle_errors[_HomematicipGenericEntityT: HomematicipGenericEntity, **_P](
+def handle_errors(
     func: Callable[
         Concatenate[_HomematicipGenericEntityT, _P], Coroutine[Any, Any, Any]
     ],

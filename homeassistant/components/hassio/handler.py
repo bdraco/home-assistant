@@ -7,7 +7,7 @@ from collections.abc import Callable, Coroutine
 from http import HTTPStatus
 import logging
 import os
-from typing import Any
+from typing import Any, ParamSpec
 
 import aiohttp
 from yarl import URL
@@ -24,6 +24,8 @@ from homeassistant.loader import bind_hass
 
 from .const import ATTR_DISCOVERY, ATTR_MESSAGE, ATTR_RESULT, DOMAIN, X_HASS_SOURCE
 
+_P = ParamSpec("_P")
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -31,7 +33,7 @@ class HassioAPIError(RuntimeError):
     """Return if a API trow a error."""
 
 
-def _api_bool[**_P](
+def _api_bool(
     funct: Callable[_P, Coroutine[Any, Any, dict[str, Any]]],
 ) -> Callable[_P, Coroutine[Any, Any, bool]]:
     """Return a boolean."""
@@ -47,7 +49,7 @@ def _api_bool[**_P](
     return _wrapper
 
 
-def api_data[**_P](
+def api_data(
     funct: Callable[_P, Coroutine[Any, Any, dict[str, Any]]],
 ) -> Callable[_P, Coroutine[Any, Any, Any]]:
     """Return data of an api."""

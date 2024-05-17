@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Coroutine
 from functools import wraps
-from typing import Any, Concatenate
+from typing import Any, Concatenate, ParamSpec, TypeVar
 
 from duotecno.unit import BaseUnit
 
@@ -47,7 +47,11 @@ class DuotecnoEntity(Entity):
         return self._unit.is_available()
 
 
-def api_call[_T: DuotecnoEntity, **_P](
+_T = TypeVar("_T", bound="DuotecnoEntity")
+_P = ParamSpec("_P")
+
+
+def api_call(
     func: Callable[Concatenate[_T, _P], Awaitable[None]],
 ) -> Callable[Concatenate[_T, _P], Coroutine[Any, Any, None]]:
     """Catch command exceptions."""

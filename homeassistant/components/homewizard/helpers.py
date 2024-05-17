@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Coroutine
-from typing import Any, Concatenate
+from typing import Any, Concatenate, ParamSpec, TypeVar
 
 from homewizard_energy.errors import DisabledError, RequestError
 
@@ -12,8 +12,11 @@ from homeassistant.exceptions import HomeAssistantError
 from .const import DOMAIN
 from .entity import HomeWizardEntity
 
+_HomeWizardEntityT = TypeVar("_HomeWizardEntityT", bound=HomeWizardEntity)
+_P = ParamSpec("_P")
 
-def homewizard_exception_handler[_HomeWizardEntityT: HomeWizardEntity, **_P](
+
+def homewizard_exception_handler(
     func: Callable[Concatenate[_HomeWizardEntityT, _P], Coroutine[Any, Any, Any]],
 ) -> Callable[Concatenate[_HomeWizardEntityT, _P], Coroutine[Any, Any, None]]:
     """Decorate HomeWizard Energy calls to handle HomeWizardEnergy exceptions.
