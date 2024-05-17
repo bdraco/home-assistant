@@ -12,7 +12,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 
-type AfterShipConfigEntry = ConfigEntry[AfterShip]
+AfterShipConfigEntry = ConfigEntry[AfterShip]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: AfterShipConfigEntry) -> bool:

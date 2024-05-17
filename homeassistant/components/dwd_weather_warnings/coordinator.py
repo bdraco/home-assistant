@@ -19,7 +19,7 @@ from .const import (
 from .exceptions import EntityNotFoundError
 from .util import get_position_data
 
-type DwdWeatherWarningsConfigEntry = ConfigEntry[DwdWeatherWarningsCoordinator]
+DwdWeatherWarningsConfigEntry = ConfigEntry["DwdWeatherWarningsCoordinator"]
 
 
 class DwdWeatherWarningsCoordinator(DataUpdateCoordinator[None]):

@@ -22,7 +22,7 @@ PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
 
 _LOGGER = logging.getLogger(__name__)
 
-type ImgwPibConfigEntry = ConfigEntry[ImgwPibData]
+ImgwPibConfigEntry = ConfigEntry["ImgwPibData"]
 
 
 @dataclass

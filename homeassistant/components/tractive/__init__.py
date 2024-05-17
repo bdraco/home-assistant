@@ -73,7 +73,7 @@ class TractiveData:
     trackables: list[Trackables]
 
 
-type TractiveConfigEntry = ConfigEntry[TractiveData]
+TractiveConfigEntry = ConfigEntry[TractiveData]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: TractiveConfigEntry) -> bool:

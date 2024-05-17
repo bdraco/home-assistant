@@ -30,7 +30,7 @@ from .coordinator import WeatherUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-type OpenweathermapConfigEntry = ConfigEntry[OpenweathermapData]
+OpenweathermapConfigEntry = ConfigEntry["OpenweathermapData"]
 
 
 @dataclass

@@ -15,7 +15,7 @@ from .const import CONF_PHONEBOOK, CONF_PREFIXES, PLATFORMS
 
 _LOGGER = logging.getLogger(__name__)
 
-type FritzBoxCallMonitorConfigEntry = ConfigEntry[FritzBoxPhonebook]
+FritzBoxCallMonitorConfigEntry = ConfigEntry[FritzBoxPhonebook]
 
 
 async def async_setup_entry(

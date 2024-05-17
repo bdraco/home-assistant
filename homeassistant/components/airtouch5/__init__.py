@@ -13,7 +13,7 @@ from .const import DOMAIN
 
 PLATFORMS: list[Platform] = [Platform.CLIMATE]
 
-type Airtouch5ConfigEntry = ConfigEntry[Airtouch5SimpleClient]
+Airtouch5ConfigEntry = ConfigEntry[Airtouch5SimpleClient]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: Airtouch5ConfigEntry) -> bool:

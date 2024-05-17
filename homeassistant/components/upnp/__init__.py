@@ -36,7 +36,7 @@ PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR]
 
 CONFIG_SCHEMA = cv.removed(DOMAIN, raise_if_present=False)
 
-type UpnpConfigEntry = ConfigEntry[UpnpDataUpdateCoordinator]
+UpnpConfigEntry = ConfigEntry[UpnpDataUpdateCoordinator]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: UpnpConfigEntry) -> bool:

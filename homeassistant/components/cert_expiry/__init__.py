@@ -11,7 +11,7 @@ from .coordinator import CertExpiryDataUpdateCoordinator
 
 PLATFORMS = [Platform.SENSOR]
 
-type CertExpiryConfigEntry = ConfigEntry[CertExpiryDataUpdateCoordinator]
+CertExpiryConfigEntry = ConfigEntry[CertExpiryDataUpdateCoordinator]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: CertExpiryConfigEntry) -> bool:

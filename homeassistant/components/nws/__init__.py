@@ -33,7 +33,7 @@ RETRY_STOP = datetime.timedelta(minutes=10)
 
 DEBOUNCE_TIME = 10 * 60  # in seconds
 
-type NWSConfigEntry = ConfigEntry[NWSData]
+NWSConfigEntry = ConfigEntry["NWSData"]
 
 
 def base_unique_id(latitude: float, longitude: float) -> str:

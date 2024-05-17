@@ -30,7 +30,7 @@ CONFIG_SCHEMA = cv.removed(DOMAIN, raise_if_present=False)
 
 _LOGGER = logging.getLogger(__name__)
 
-type NextcloudConfigEntry = ConfigEntry[NextcloudDataUpdateCoordinator]
+NextcloudConfigEntry = ConfigEntry[NextcloudDataUpdateCoordinator]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: NextcloudConfigEntry) -> bool:

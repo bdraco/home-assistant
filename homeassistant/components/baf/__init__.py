@@ -15,7 +15,7 @@ from homeassistant.exceptions import ConfigEntryNotReady
 
 from .const import QUERY_INTERVAL, RUN_TIMEOUT
 
-type BAFConfigEntry = ConfigEntry[Device]
+BAFConfigEntry = ConfigEntry[Device]
 
 
 PLATFORMS: list[Platform] = [

@@ -73,7 +73,7 @@ DEVICE_EXCEPTIONS = (
     exceptions.DeviceIdMissingError,
 )
 
-type AppleTvConfigEntry = ConfigEntry[AppleTVManager]
+AppleTvConfigEntry = ConfigEntry["AppleTVManager"]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: AppleTvConfigEntry) -> bool:

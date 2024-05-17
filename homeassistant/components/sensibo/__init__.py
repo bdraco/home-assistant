@@ -15,7 +15,7 @@ from .const import DOMAIN, LOGGER, PLATFORMS
 from .coordinator import SensiboDataUpdateCoordinator
 from .util import NoDevicesError, NoUsernameError, async_validate_api
 
-type SensiboConfigEntry = ConfigEntry[SensiboDataUpdateCoordinator]
+SensiboConfigEntry = ConfigEntry["SensiboDataUpdateCoordinator"]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: SensiboConfigEntry) -> bool:

@@ -15,7 +15,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from .const import ADVANTAGE_AIR_RETRY
 from .models import AdvantageAirData
 
-type AdvantageAirDataConfigEntry = ConfigEntry[AdvantageAirData]
+AdvantageAirDataConfigEntry = ConfigEntry[AdvantageAirData]
 
 ADVANTAGE_AIR_SYNC_INTERVAL = 15
 PLATFORMS = [

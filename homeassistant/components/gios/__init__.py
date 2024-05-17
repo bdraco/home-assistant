@@ -19,7 +19,7 @@ _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = [Platform.SENSOR]
 
-type GiosConfigEntry = ConfigEntry[GiosData]
+GiosConfigEntry = ConfigEntry["GiosData"]
 
 
 @dataclass

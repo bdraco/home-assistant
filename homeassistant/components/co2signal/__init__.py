@@ -14,7 +14,7 @@ from .coordinator import CO2SignalCoordinator
 
 PLATFORMS = [Platform.SENSOR]
 
-type CO2SignalConfigEntry = ConfigEntry[CO2SignalCoordinator]
+CO2SignalConfigEntry = ConfigEntry[CO2SignalCoordinator]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: CO2SignalConfigEntry) -> bool:

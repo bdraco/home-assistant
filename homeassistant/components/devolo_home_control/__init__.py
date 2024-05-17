@@ -20,7 +20,7 @@ from homeassistant.helpers.device_registry import DeviceEntry
 
 from .const import CONF_MYDEVOLO, DEFAULT_MYDEVOLO, GATEWAY_SERIAL_PATTERN, PLATFORMS
 
-type DevoloHomeControlConfigEntry = ConfigEntry[list[HomeControl]]
+DevoloHomeControlConfigEntry = ConfigEntry[list[HomeControl]]
 
 
 async def async_setup_entry(

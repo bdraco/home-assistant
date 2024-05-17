@@ -28,7 +28,7 @@ from .const import CONF_FUEL_TYPES, CONF_STATIONS
 
 _LOGGER = logging.getLogger(__name__)
 
-type TankerkoenigConfigEntry = ConfigEntry[TankerkoenigDataUpdateCoordinator]
+TankerkoenigConfigEntry = ConfigEntry["TankerkoenigDataUpdateCoordinator"]
 
 
 class TankerkoenigDataUpdateCoordinator(DataUpdateCoordinator[dict[str, PriceInfo]]):

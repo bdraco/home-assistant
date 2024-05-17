@@ -9,7 +9,7 @@ from homeassistant.core import HomeAssistant
 from .const import PLATFORMS
 from .coordinator import FileSizeCoordinator
 
-type FileSizeConfigEntry = ConfigEntry[FileSizeCoordinator]
+FileSizeConfigEntry = ConfigEntry[FileSizeCoordinator]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: FileSizeConfigEntry) -> bool:

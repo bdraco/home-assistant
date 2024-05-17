@@ -28,7 +28,7 @@ _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = [Platform.BUTTON, Platform.SENSOR]
 
-type NAMConfigEntry = ConfigEntry[NAMDataUpdateCoordinator]
+NAMConfigEntry = ConfigEntry[NAMDataUpdateCoordinator]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: NAMConfigEntry) -> bool:

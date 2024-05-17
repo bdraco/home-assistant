@@ -37,7 +37,7 @@ from .coordinator import HabiticaDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-type HabiticaConfigEntry = ConfigEntry[HabiticaDataUpdateCoordinator]
+HabiticaConfigEntry = ConfigEntry[HabiticaDataUpdateCoordinator]
 
 SENSORS_TYPES = ["name", "hp", "maxHealth", "mp", "maxMP", "exp", "toNextLevel", "lvl"]
 

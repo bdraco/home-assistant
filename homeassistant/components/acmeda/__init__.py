@@ -10,7 +10,7 @@ CONF_HUBS = "hubs"
 
 PLATFORMS = [Platform.COVER, Platform.SENSOR]
 
-type AcmedaConfigEntry = ConfigEntry[PulseHub]
+AcmedaConfigEntry = ConfigEntry[PulseHub]
 
 
 async def async_setup_entry(

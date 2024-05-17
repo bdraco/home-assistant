@@ -15,7 +15,7 @@ from .renault_hub import RenaultHub
 from .services import setup_services
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
-type RenaultConfigEntry = ConfigEntry[RenaultHub]
+RenaultConfigEntry = ConfigEntry[RenaultHub]
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:

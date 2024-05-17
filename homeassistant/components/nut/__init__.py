@@ -36,7 +36,7 @@ NUT_FAKE_SERIAL = ["unknown", "blank"]
 
 _LOGGER = logging.getLogger(__name__)
 
-type NutConfigEntry = ConfigEntry[NutRuntimeData]
+NutConfigEntry = ConfigEntry["NutRuntimeData"]
 
 
 @dataclass

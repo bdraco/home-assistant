@@ -35,7 +35,7 @@ from .const import (
 # Suppress logs from the library, it logs unneeded on error
 logging.getLogger("tuya_sharing").setLevel(logging.CRITICAL)
 
-type TuyaConfigEntry = ConfigEntry[HomeAssistantTuyaData]
+TuyaConfigEntry = ConfigEntry["HomeAssistantTuyaData"]
 
 
 class HomeAssistantTuyaData(NamedTuple):

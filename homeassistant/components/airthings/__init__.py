@@ -20,8 +20,9 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 SCAN_INTERVAL = timedelta(minutes=6)
 
-type AirthingsDataCoordinatorType = DataUpdateCoordinator[dict[str, AirthingsDevice]]
-type AirthingsConfigEntry = ConfigEntry[AirthingsDataCoordinatorType]
+AirthingsDataCoordinatorType = DataUpdateCoordinator[dict[str, AirthingsDevice]]
+
+AirthingsConfigEntry = ConfigEntry[AirthingsDataCoordinatorType]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: AirthingsConfigEntry) -> bool:

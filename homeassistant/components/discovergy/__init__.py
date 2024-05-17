@@ -16,7 +16,7 @@ from .coordinator import DiscovergyUpdateCoordinator
 
 PLATFORMS = [Platform.SENSOR]
 
-type DiscovergyConfigEntry = ConfigEntry[list[DiscovergyUpdateCoordinator]]
+DiscovergyConfigEntry = ConfigEntry[list[DiscovergyUpdateCoordinator]]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: DiscovergyConfigEntry) -> bool:
