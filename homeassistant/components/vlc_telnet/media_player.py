@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Coroutine
 from functools import wraps
-from typing import Any, Concatenate
+from typing import Any, Concatenate, ParamSpec, TypeVar
 
 from aiovlc.client import Client
 from aiovlc.exceptions import AuthError, CommandError, ConnectError
@@ -30,6 +30,9 @@ from .const import DEFAULT_NAME, DOMAIN, LOGGER
 
 MAX_VOLUME = 500
 
+_VlcDeviceT = TypeVar("_VlcDeviceT", bound="VlcDevice")
+_P = ParamSpec("_P")
+
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: VlcConfigEntry, async_add_entities: AddEntitiesCallback
@@ -43,7 +46,7 @@ async def async_setup_entry(
     async_add_entities([VlcDevice(entry, vlc, name, available)], True)
 
 
-def catch_vlc_errors[_VlcDeviceT: VlcDevice, **_P](
+def catch_vlc_errors(
     func: Callable[Concatenate[_VlcDeviceT, _P], Awaitable[None]],
 ) -> Callable[Concatenate[_VlcDeviceT, _P], Coroutine[Any, Any, None]]:
     """Catch VLC errors."""

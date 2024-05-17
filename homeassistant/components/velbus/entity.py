@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Coroutine
 from functools import wraps
-from typing import Any, Concatenate
+from typing import Any, Concatenate, ParamSpec, TypeVar
 
 from velbusaio.channels import Channel as VelbusChannel
 
@@ -44,7 +44,11 @@ class VelbusEntity(Entity):
         self.async_write_ha_state()
 
 
-def api_call[_T: VelbusEntity, **_P](
+_T = TypeVar("_T", bound="VelbusEntity")
+_P = ParamSpec("_P")
+
+
+def api_call(
     func: Callable[Concatenate[_T, _P], Awaitable[None]],
 ) -> Callable[Concatenate[_T, _P], Coroutine[Any, Any, None]]:
     """Catch command exceptions."""

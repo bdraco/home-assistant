@@ -6,7 +6,7 @@ from collections.abc import Callable
 from datetime import timedelta
 from http import HTTPStatus
 import logging
-from typing import Any, Concatenate
+from typing import Any, Concatenate, ParamSpec, TypeVar
 
 import requests
 from wallbox import Wallbox
@@ -64,8 +64,11 @@ CHARGER_STATUS: dict[int, ChargerStatus] = {
     210: ChargerStatus.LOCKED_CAR_CONNECTED,
 }
 
+_WallboxCoordinatorT = TypeVar("_WallboxCoordinatorT", bound="WallboxCoordinator")
+_P = ParamSpec("_P")
 
-def _require_authentication[_WallboxCoordinatorT: WallboxCoordinator, **_P](
+
+def _require_authentication(
     func: Callable[Concatenate[_WallboxCoordinatorT, _P], Any],
 ) -> Callable[Concatenate[_WallboxCoordinatorT, _P], Any]:
     """Authenticate with decorator using Wallbox API."""

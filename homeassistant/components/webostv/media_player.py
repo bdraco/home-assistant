@@ -9,7 +9,7 @@ from datetime import timedelta
 from functools import wraps
 from http import HTTPStatus
 import logging
-from typing import Any, Concatenate, cast
+from typing import Any, Concatenate, ParamSpec, TypeVar, cast
 
 from aiowebostv import WebOsClient, WebOsTvPairError
 
@@ -79,7 +79,11 @@ async def async_setup_entry(
     async_add_entities([LgWebOSMediaPlayerEntity(entry, client)])
 
 
-def cmd[_T: LgWebOSMediaPlayerEntity, **_P](
+_T = TypeVar("_T", bound="LgWebOSMediaPlayerEntity")
+_P = ParamSpec("_P")
+
+
+def cmd(
     func: Callable[Concatenate[_T, _P], Awaitable[None]],
 ) -> Callable[Concatenate[_T, _P], Coroutine[Any, Any, None]]:
     """Catch command exceptions."""
