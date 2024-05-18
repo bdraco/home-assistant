@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator, Awaitable, Callable
-from typing import Any
+from collections.abc import AsyncGenerator, Awaitable, Callable, Generator
+from typing import Any, TypeVar
 from unittest.mock import patch
 
 import pytest
@@ -24,7 +24,8 @@ CONFIG_ENTRY_DATA = {"server_url": SERVER_URL}
 
 # Typing helpers
 ComponentSetup = Callable[[], Awaitable[None]]
-type AsyncYieldFixture[_T] = AsyncGenerator[_T, None]
+_T = TypeVar("_T")
+YieldFixture = Generator[_T, None, None]
 
 
 @pytest.fixture(autouse=True)
@@ -90,7 +91,7 @@ async def rtsp_to_webrtc_client() -> None:
 @pytest.fixture
 async def setup_integration(
     hass: HomeAssistant, config_entry: MockConfigEntry
-) -> AsyncYieldFixture[ComponentSetup]:
+) -> YieldFixture[ComponentSetup]:
     """Fixture for setting up the component."""
     config_entry.add_to_hass(hass)
 

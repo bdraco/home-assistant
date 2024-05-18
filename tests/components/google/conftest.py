@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator, Awaitable, Callable, Generator
+from collections.abc import Awaitable, Callable, Generator
 import datetime
 import http
 import time
-from typing import Any
+from typing import Any, TypeVar
 from unittest.mock import Mock, mock_open, patch
 
 from aiohttp.client_exceptions import ClientError
@@ -29,7 +29,8 @@ from tests.test_util.aiohttp import AiohttpClientMocker
 
 ApiResult = Callable[[dict[str, Any]], None]
 ComponentSetup = Callable[[], Awaitable[bool]]
-type AsyncYieldFixture[_T] = AsyncGenerator[_T, None]
+_T = TypeVar("_T")
+YieldFixture = Generator[_T, None, None]
 
 
 CALENDAR_ID = "qwertyuiopasdfghjklzxcvbnm@import.calendar.google.com"
