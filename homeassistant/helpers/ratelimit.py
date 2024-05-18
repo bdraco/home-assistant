@@ -6,8 +6,11 @@ import asyncio
 from collections.abc import Callable, Hashable
 import logging
 import time
+from typing import TypeVarTuple
 
 from homeassistant.core import HomeAssistant, callback
+
+_Ts = TypeVarTuple("_Ts")
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,7 +52,7 @@ class KeyedRateLimit:
         self._rate_limit_timers.clear()
 
     @callback
-    def async_schedule_action[*_Ts](
+    def async_schedule_action(
         self,
         key: Hashable,
         rate_limit: float | None,

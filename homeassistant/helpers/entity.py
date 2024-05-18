@@ -16,7 +16,16 @@ from operator import attrgetter
 import sys
 import time
 from types import FunctionType
-from typing import TYPE_CHECKING, Any, Final, Literal, NotRequired, TypedDict, final
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Final,
+    Literal,
+    NotRequired,
+    TypedDict,
+    TypeVar,
+    final,
+)
 
 import voluptuous as vol
 
@@ -69,6 +78,8 @@ timer = time.time
 
 if TYPE_CHECKING:
     from .entity_platform import EntityPlatform
+
+_T = TypeVar("_T")
 
 _LOGGER = logging.getLogger(__name__)
 SLOW_UPDATE_WARNING = 10
@@ -1592,7 +1603,7 @@ class Entity(
             return f"<entity unknown.unknown={STATE_UNKNOWN}>"
         return f"<entity {self.entity_id}={self._stringify_state(self.available)}>"
 
-    async def async_request_call[_T](self, coro: Coroutine[Any, Any, _T]) -> _T:
+    async def async_request_call(self, coro: Coroutine[Any, Any, _T]) -> _T:
         """Process request batched."""
         if self.parallel_updates:
             await self.parallel_updates.acquire()

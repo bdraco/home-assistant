@@ -16,7 +16,7 @@ from enum import StrEnum
 from functools import cached_property
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Literal, NotRequired, TypedDict
+from typing import TYPE_CHECKING, Any, Literal, NotRequired, TypedDict, TypeVar
 
 import attr
 import voluptuous as vol
@@ -64,6 +64,8 @@ from .typing import UNDEFINED, UndefinedType
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
+
+T = TypeVar("T")
 
 DATA_REGISTRY: HassKey[EntityRegistry] = HassKey("entity_registry")
 EVENT_ENTITY_REGISTRY_UPDATED: EventType[EventEntityRegistryUpdatedData] = EventType(
@@ -850,7 +852,7 @@ class EntityRegistry(BaseRegistry):
         ):
             disabled_by = RegistryEntryDisabler.INTEGRATION
 
-        def none_if_undefined[_T](value: _T | UndefinedType) -> _T | None:
+        def none_if_undefined(value: T | UndefinedType) -> T | None:
             """Return None if value is UNDEFINED, otherwise return value."""
             return None if value is UNDEFINED else value
 

@@ -8,10 +8,14 @@ from enum import Enum
 import functools
 import inspect
 import logging
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, ParamSpec, TypeVar
+
+_ObjectT = TypeVar("_ObjectT", bound=object)
+_R = TypeVar("_R")
+_P = ParamSpec("_P")
 
 
-def deprecated_substitute[_ObjectT: object](
+def deprecated_substitute(
     substitute_name: str,
 ) -> Callable[[Callable[[_ObjectT], Any]], Callable[[_ObjectT], Any]]:
     """Help migrate properties to new names.
@@ -88,7 +92,7 @@ def get_deprecated(
     return config.get(new_name, default)
 
 
-def deprecated_class[**_P, _R](
+def deprecated_class(
     replacement: str, *, breaks_in_ha_version: str | None = None
 ) -> Callable[[Callable[_P, _R]], Callable[_P, _R]]:
     """Mark class as deprecated and provide a replacement class to be used instead.
@@ -113,7 +117,7 @@ def deprecated_class[**_P, _R](
     return deprecated_decorator
 
 
-def deprecated_function[**_P, _R](
+def deprecated_function(
     replacement: str, *, breaks_in_ha_version: str | None = None
 ) -> Callable[[Callable[_P, _R]], Callable[_P, _R]]:
     """Mark function as deprecated and provide a replacement to be used instead.
