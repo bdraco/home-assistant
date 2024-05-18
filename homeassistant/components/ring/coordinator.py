@@ -3,6 +3,7 @@
 from asyncio import TaskGroup
 from collections.abc import Callable
 import logging
+from typing import TypeVar, TypeVarTuple
 
 from ring_doorbell import AuthenticationError, Ring, RingDevices, RingError, RingTimeout
 
@@ -14,8 +15,11 @@ from .const import NOTIFICATIONS_SCAN_INTERVAL, SCAN_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
 
+_R = TypeVar("_R")
+_Ts = TypeVarTuple("_Ts")
 
-async def _call_api[*_Ts, _R](
+
+async def _call_api(
     hass: HomeAssistant, target: Callable[[*_Ts], _R], *args: *_Ts, msg_suffix: str = ""
 ) -> _R:
     try:

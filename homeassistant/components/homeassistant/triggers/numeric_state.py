@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import timedelta
 import logging
-from typing import Any
+from typing import Any, TypeVar
 
 import voluptuous as vol
 
@@ -41,8 +41,10 @@ from homeassistant.helpers.event import (
 from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
 from homeassistant.helpers.typing import ConfigType
 
+_T = TypeVar("_T", bound=dict[str, Any])
 
-def validate_above_below[_T: dict[str, Any]](value: _T) -> _T:
+
+def validate_above_below(value: _T) -> _T:
     """Validate that above and below can co-exist."""
     above = value.get(CONF_ABOVE)
     below = value.get(CONF_BELOW)

@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime, timedelta
 import logging
-from typing import Final
+from typing import Final, TypeVar
 
 from pyfronius import Fronius, FroniusError
 
@@ -38,6 +38,8 @@ from .coordinator import (
 
 _LOGGER: Final = logging.getLogger(__name__)
 PLATFORMS: Final = [Platform.SENSOR]
+
+_FroniusCoordinatorT = TypeVar("_FroniusCoordinatorT", bound=FroniusCoordinatorBase)
 
 type FroniusConfigEntry = ConfigEntry[FroniusSolarNet]
 
@@ -253,7 +255,7 @@ class FroniusSolarNet:
         return inverter_infos
 
     @staticmethod
-    async def _init_optional_coordinator[_FroniusCoordinatorT: FroniusCoordinatorBase](
+    async def _init_optional_coordinator(
         coordinator: _FroniusCoordinatorT,
     ) -> _FroniusCoordinatorT | None:
         """Initialize an update coordinator and return it if devices are found."""

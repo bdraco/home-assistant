@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING, Any, Literal, NamedTuple, cast
+from typing import TYPE_CHECKING, Any, Literal, NamedTuple, TypeVar, cast
 
 import voluptuous as vol
 import zigpy.backups
@@ -118,8 +118,11 @@ IEEE_SERVICE = "ieee_based_service"
 
 IEEE_SCHEMA = vol.All(cv.string, EUI64.convert)
 
+# typing typevar
+_T = TypeVar("_T")
 
-def _ensure_list_if_present[_T](value: _T | None) -> list[_T] | list[Any] | None:
+
+def _ensure_list_if_present(value: _T | None) -> list[_T] | list[Any] | None:
     """Wrap value in list if it is provided and not one."""
     if value is None:
         return None
