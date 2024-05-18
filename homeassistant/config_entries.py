@@ -125,6 +125,7 @@ SAVE_DELAY = 1
 DISCOVERY_COOLDOWN = 1
 
 _DataT = TypeVar("_DataT", default=Any)
+_R = TypeVar("_R")
 
 
 class ConfigEntryState(Enum):
@@ -1105,7 +1106,7 @@ class ConfigEntry(Generic[_DataT]):
         )
 
     @callback
-    def async_create_task[_R](
+    def async_create_task(
         self,
         hass: HomeAssistant,
         target: Coroutine[Any, Any, _R],
@@ -1129,7 +1130,7 @@ class ConfigEntry(Generic[_DataT]):
         return task
 
     @callback
-    def async_create_background_task[_R](
+    def async_create_background_task(
         self,
         hass: HomeAssistant,
         target: Coroutine[Any, Any, _R],

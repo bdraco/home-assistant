@@ -10,11 +10,14 @@ import random
 import re
 import string
 import threading
-from typing import Any
+from typing import Any, TypeVar
 
 import slugify as unicode_slug
 
 from .dt import as_local, utcnow
+
+_T = TypeVar("_T")
+_U = TypeVar("_U")
 
 RE_SANITIZE_FILENAME = re.compile(r"(~|\.\.|/|\\)")
 RE_SANITIZE_PATH = re.compile(r"(~|\.(\.)+)")
@@ -59,7 +62,7 @@ def repr_helper(inp: Any) -> str:
     return str(inp)
 
 
-def convert[_T, _U](
+def convert(
     value: _T | None, to_type: Callable[[_T], _U], default: _U | None = None
 ) -> _U | None:
     """Convert value to to_type, returns default if fails."""

@@ -19,7 +19,7 @@ import pathlib
 import sys
 import time
 from types import ModuleType
-from typing import TYPE_CHECKING, Any, Literal, Protocol, TypedDict, cast
+from typing import TYPE_CHECKING, Any, Literal, Protocol, TypedDict, TypeVar, cast
 
 from awesomeversion import (
     AwesomeVersion,
@@ -48,6 +48,8 @@ if TYPE_CHECKING:
     from .config_entries import ConfigEntry
     from .helpers import device_registry as dr
     from .helpers.typing import ConfigType
+
+_CallableT = TypeVar("_CallableT", bound=Callable[..., Any])
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -1572,7 +1574,7 @@ class Helpers:
         return wrapped
 
 
-def bind_hass[_CallableT: Callable[..., Any]](func: _CallableT) -> _CallableT:
+def bind_hass(func: _CallableT) -> _CallableT:
     """Decorate function to indicate that first argument is hass.
 
     The use of this decorator is discouraged, and it should not be used
