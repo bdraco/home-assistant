@@ -6,7 +6,7 @@ import asyncio
 from collections.abc import Awaitable, Callable
 import functools
 import logging
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, TypeVar
 
 from homeassistant.const import Platform
 from homeassistant.core import callback
@@ -29,6 +29,7 @@ ATTR_IN_CLUSTERS: Final[str] = "input_clusters"
 ATTR_OUT_CLUSTERS: Final[str] = "output_clusters"
 
 _LOGGER = logging.getLogger(__name__)
+CALLABLE_T = TypeVar("CALLABLE_T", bound=Callable)
 
 
 class Endpoint:
@@ -208,7 +209,7 @@ class Endpoint:
     def async_new_entity(
         self,
         platform: Platform,
-        entity_class: type,
+        entity_class: CALLABLE_T,
         unique_id: str,
         cluster_handlers: list[ClusterHandler],
         **kwargs: Any,
