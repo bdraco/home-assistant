@@ -12,7 +12,7 @@ from itertools import islice
 import logging
 import os
 import time
-from typing import TYPE_CHECKING, Any, Concatenate, NoReturn
+from typing import TYPE_CHECKING, Any, Concatenate, NoReturn, ParamSpec, TypeVar
 
 from awesomeversion import (
     AwesomeVersion,
@@ -60,6 +60,9 @@ if TYPE_CHECKING:
     from sqlite3.dbapi2 import Cursor as SQLiteCursor
 
     from . import Recorder
+
+_RecorderT = TypeVar("_RecorderT", bound="Recorder")
+_P = ParamSpec("_P")
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -625,20 +628,18 @@ def _is_retryable_error(instance: Recorder, err: OperationalError) -> bool:
     )
 
 
-type _FuncType[_T, **_P, _R] = Callable[Concatenate[_T, _P], _R]
+_FuncType = Callable[Concatenate[_RecorderT, _P], bool]
 
 
-def retryable_database_job[_RecorderT: Recorder, **_P](
+def retryable_database_job(
     description: str,
-) -> Callable[[_FuncType[_RecorderT, _P, bool]], _FuncType[_RecorderT, _P, bool]]:
+) -> Callable[[_FuncType[_RecorderT, _P]], _FuncType[_RecorderT, _P]]:
     """Try to execute a database job.
 
     The job should return True if it finished, and False if it needs to be rescheduled.
     """
 
-    def decorator(
-        job: _FuncType[_RecorderT, _P, bool],
-    ) -> _FuncType[_RecorderT, _P, bool]:
+    def decorator(job: _FuncType[_RecorderT, _P]) -> _FuncType[_RecorderT, _P]:
         @functools.wraps(job)
         def wrapper(instance: _RecorderT, *args: _P.args, **kwargs: _P.kwargs) -> bool:
             try:
@@ -663,9 +664,12 @@ def retryable_database_job[_RecorderT: Recorder, **_P](
     return decorator
 
 
-def database_job_retry_wrapper[_RecorderT: Recorder, **_P](
+_WrappedFuncType = Callable[Concatenate[_RecorderT, _P], None]
+
+
+def database_job_retry_wrapper(
     description: str, attempts: int = 5
-) -> Callable[[_FuncType[_RecorderT, _P, None]], _FuncType[_RecorderT, _P, None]]:
+) -> Callable[[_WrappedFuncType[_RecorderT, _P]], _WrappedFuncType[_RecorderT, _P]]:
     """Try to execute a database job multiple times.
 
     This wrapper handles InnoDB deadlocks and lock timeouts.
@@ -675,8 +679,8 @@ def database_job_retry_wrapper[_RecorderT: Recorder, **_P](
     """
 
     def decorator(
-        job: _FuncType[_RecorderT, _P, None],
-    ) -> _FuncType[_RecorderT, _P, None]:
+        job: _WrappedFuncType[_RecorderT, _P],
+    ) -> _WrappedFuncType[_RecorderT, _P]:
         @functools.wraps(job)
         def wrapper(instance: _RecorderT, *args: _P.args, **kwargs: _P.kwargs) -> None:
             for attempt in range(attempts):

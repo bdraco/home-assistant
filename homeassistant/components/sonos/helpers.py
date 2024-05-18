@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 import logging
-from typing import TYPE_CHECKING, Any, Concatenate, overload
+from typing import TYPE_CHECKING, Any, Concatenate, ParamSpec, TypeVar, overload
 
 from requests.exceptions import Timeout
 from soco import SoCo
@@ -26,26 +26,29 @@ UID_POSTFIX = "01400"
 
 _LOGGER = logging.getLogger(__name__)
 
-type _SonosEntitiesType = (
-    SonosSpeaker | SonosMedia | SonosEntity | SonosHouseholdCoordinator
+_T = TypeVar(
+    "_T", bound="SonosSpeaker | SonosMedia | SonosEntity | SonosHouseholdCoordinator"
 )
-type _FuncType[_T, **_P, _R] = Callable[Concatenate[_T, _P], _R]
-type _ReturnFuncType[_T, **_P, _R] = Callable[Concatenate[_T, _P], _R | None]
+_R = TypeVar("_R")
+_P = ParamSpec("_P")
+
+_FuncType = Callable[Concatenate[_T, _P], _R]
+_ReturnFuncType = Callable[Concatenate[_T, _P], _R | None]
 
 
 @overload
-def soco_error[_T: _SonosEntitiesType, **_P, _R](
+def soco_error(
     errorcodes: None = ...,
 ) -> Callable[[_FuncType[_T, _P, _R]], _FuncType[_T, _P, _R]]: ...
 
 
 @overload
-def soco_error[_T: _SonosEntitiesType, **_P, _R](
+def soco_error(
     errorcodes: list[str],
 ) -> Callable[[_FuncType[_T, _P, _R]], _ReturnFuncType[_T, _P, _R]]: ...
 
 
-def soco_error[_T: _SonosEntitiesType, **_P, _R](
+def soco_error(
     errorcodes: list[str] | None = None,
 ) -> Callable[[_FuncType[_T, _P, _R]], _ReturnFuncType[_T, _P, _R]]:
     """Filter out specified UPnP errors and raise exceptions for service calls."""
