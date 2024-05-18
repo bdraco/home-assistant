@@ -8,7 +8,7 @@ from datetime import datetime
 from functools import wraps
 import json
 import logging
-from typing import TYPE_CHECKING, Any, Concatenate
+from typing import TYPE_CHECKING, Any, Concatenate, ParamSpec, TypeVar
 
 import pychromecast
 from pychromecast.controllers.homeassistant import HomeAssistantController
@@ -85,12 +85,18 @@ APP_IDS_UNRELIABLE_MEDIA_INFO = ("Netflix",)
 
 CAST_SPLASH = "https://www.home-assistant.io/images/cast/splash.png"
 
-type _FuncType[_T, **_P, _R] = Callable[Concatenate[_T, _P], _R]
+
+_CastDeviceT = TypeVar("_CastDeviceT", bound="CastDevice")
+_R = TypeVar("_R")
+_P = ParamSpec("_P")
+
+_FuncType = Callable[Concatenate[_CastDeviceT, _P], _R]
+_ReturnFuncType = Callable[Concatenate[_CastDeviceT, _P], _R]
 
 
-def api_error[_CastDeviceT: CastDevice, **_P, _R](
+def api_error(
     func: _FuncType[_CastDeviceT, _P, _R],
-) -> _FuncType[_CastDeviceT, _P, _R]:
+) -> _ReturnFuncType[_CastDeviceT, _P, _R]:
     """Handle PyChromecastError and reraise a HomeAssistantError."""
 
     @wraps(func)

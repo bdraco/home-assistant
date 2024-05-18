@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from enum import Enum
 from functools import partial, wraps
 import logging
-from typing import Any, Concatenate
+from typing import Any, Concatenate, ParamSpec, TypeVar
 
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
@@ -28,13 +28,15 @@ from .handler import (
     async_update_addon,
 )
 
-type _FuncType[_T, **_P, _R] = Callable[Concatenate[_T, _P], Awaitable[_R]]
-type _ReturnFuncType[_T, **_P, _R] = Callable[
-    Concatenate[_T, _P], Coroutine[Any, Any, _R]
-]
+_AddonManagerT = TypeVar("_AddonManagerT", bound="AddonManager")
+_R = TypeVar("_R")
+_P = ParamSpec("_P")
+
+_FuncType = Callable[Concatenate[_AddonManagerT, _P], Awaitable[_R]]
+_ReturnFuncType = Callable[Concatenate[_AddonManagerT, _P], Coroutine[Any, Any, _R]]
 
 
-def api_error[_AddonManagerT: AddonManager, **_P, _R](
+def api_error(
     error_message: str,
 ) -> Callable[
     [_FuncType[_AddonManagerT, _P, _R]], _ReturnFuncType[_AddonManagerT, _P, _R]
