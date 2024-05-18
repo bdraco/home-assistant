@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable, Coroutine
 from functools import partial
 import logging
-from typing import Any, overload
+from typing import Any, TypeVarTuple, overload
 
 from homeassistant.core import (
     HassJob,
@@ -20,11 +20,13 @@ from homeassistant.util.logging import catch_log_exception
 # Explicit reexport of 'SignalType' for backwards compatibility
 from homeassistant.util.signal_type import SignalType as SignalType  # noqa: PLC0414
 
+_Ts = TypeVarTuple("_Ts")
+
 _LOGGER = logging.getLogger(__name__)
 DATA_DISPATCHER = "dispatcher"
 
 
-type _DispatcherDataType[*_Ts] = dict[
+_DispatcherDataType = dict[
     SignalType[*_Ts] | str,
     dict[
         Callable[[*_Ts], Any] | Callable[..., Any],
@@ -35,7 +37,7 @@ type _DispatcherDataType[*_Ts] = dict[
 
 @overload
 @bind_hass
-def dispatcher_connect[*_Ts](
+def dispatcher_connect(
     hass: HomeAssistant, signal: SignalType[*_Ts], target: Callable[[*_Ts], None]
 ) -> Callable[[], None]: ...
 
@@ -48,7 +50,7 @@ def dispatcher_connect(
 
 
 @bind_hass  # type: ignore[misc]  # workaround; exclude typing of 2 overload in func def
-def dispatcher_connect[*_Ts](
+def dispatcher_connect(
     hass: HomeAssistant,
     signal: SignalType[*_Ts],
     target: Callable[[*_Ts], None],
@@ -66,7 +68,7 @@ def dispatcher_connect[*_Ts](
 
 
 @callback
-def _async_remove_dispatcher[*_Ts](
+def _async_remove_dispatcher(
     dispatchers: _DispatcherDataType[*_Ts],
     signal: SignalType[*_Ts] | str,
     target: Callable[[*_Ts], Any] | Callable[..., Any],
@@ -88,7 +90,7 @@ def _async_remove_dispatcher[*_Ts](
 @overload
 @callback
 @bind_hass
-def async_dispatcher_connect[*_Ts](
+def async_dispatcher_connect(
     hass: HomeAssistant, signal: SignalType[*_Ts], target: Callable[[*_Ts], Any]
 ) -> Callable[[], None]: ...
 
@@ -103,7 +105,7 @@ def async_dispatcher_connect(
 
 @callback
 @bind_hass
-def async_dispatcher_connect[*_Ts](
+def async_dispatcher_connect(
     hass: HomeAssistant,
     signal: SignalType[*_Ts] | str,
     target: Callable[[*_Ts], Any] | Callable[..., Any],
@@ -130,7 +132,7 @@ def async_dispatcher_connect[*_Ts](
 
 @overload
 @bind_hass
-def dispatcher_send[*_Ts](
+def dispatcher_send(
     hass: HomeAssistant, signal: SignalType[*_Ts], *args: *_Ts
 ) -> None: ...
 
@@ -141,14 +143,12 @@ def dispatcher_send(hass: HomeAssistant, signal: str, *args: Any) -> None: ...
 
 
 @bind_hass  # type: ignore[misc]  # workaround; exclude typing of 2 overload in func def
-def dispatcher_send[*_Ts](
-    hass: HomeAssistant, signal: SignalType[*_Ts], *args: *_Ts
-) -> None:
+def dispatcher_send(hass: HomeAssistant, signal: SignalType[*_Ts], *args: *_Ts) -> None:
     """Send signal and data."""
     hass.loop.call_soon_threadsafe(async_dispatcher_send_internal, hass, signal, *args)
 
 
-def _format_err[*_Ts](
+def _format_err(
     signal: SignalType[*_Ts] | str,
     target: Callable[[*_Ts], Any] | Callable[..., Any],
     *args: Any,
@@ -162,7 +162,7 @@ def _format_err[*_Ts](
     )
 
 
-def _generate_job[*_Ts](
+def _generate_job(
     signal: SignalType[*_Ts] | str, target: Callable[[*_Ts], Any] | Callable[..., Any]
 ) -> HassJob[..., None | Coroutine[Any, Any, None]]:
     """Generate a HassJob for a signal and target."""
@@ -179,7 +179,7 @@ def _generate_job[*_Ts](
 @overload
 @callback
 @bind_hass
-def async_dispatcher_send[*_Ts](
+def async_dispatcher_send(
     hass: HomeAssistant, signal: SignalType[*_Ts], *args: *_Ts
 ) -> None: ...
 
@@ -192,7 +192,7 @@ def async_dispatcher_send(hass: HomeAssistant, signal: str, *args: Any) -> None:
 
 @callback
 @bind_hass
-def async_dispatcher_send[*_Ts](
+def async_dispatcher_send(
     hass: HomeAssistant, signal: SignalType[*_Ts] | str, *args: *_Ts
 ) -> None:
     """Send signal and data.
@@ -214,7 +214,7 @@ def async_dispatcher_send[*_Ts](
 
 @callback
 @bind_hass
-def async_dispatcher_send_internal[*_Ts](
+def async_dispatcher_send_internal(
     hass: HomeAssistant, signal: SignalType[*_Ts] | str, *args: *_Ts
 ) -> None:
     """Send signal and data.
