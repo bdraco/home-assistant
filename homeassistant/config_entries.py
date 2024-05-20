@@ -598,6 +598,8 @@ class ConfigEntry(Generic[_DataT]):
                 )
                 result = False
         except ConfigEntryError as exc:
+            if not domain_is_integration:
+                self._raise_for_exception_in_forwarded_platform(exc, integration)
             error_reason = str(exc) or "Unknown fatal config entry error"
             error_reason_translation_key = exc.translation_key
             error_reason_translation_placeholders = exc.translation_placeholders
@@ -610,6 +612,8 @@ class ConfigEntry(Generic[_DataT]):
             await self._async_process_on_unload(hass)
             result = False
         except ConfigEntryAuthFailed as exc:
+            if not domain_is_integration:
+                self._raise_for_exception_in_forwarded_platform(exc, integration)
             message = str(exc)
             auth_base_message = "could not authenticate"
             error_reason = message or auth_base_message
@@ -628,6 +632,8 @@ class ConfigEntry(Generic[_DataT]):
             self.async_start_reauth(hass)
             result = False
         except ConfigEntryNotReady as exc:
+            if not domain_is_integration:
+                self._raise_for_exception_in_forwarded_platform(exc, integration)
             message = str(exc)
             error_reason_translation_key = exc.translation_key
             error_reason_translation_placeholders = exc.translation_placeholders
@@ -704,6 +710,18 @@ class ConfigEntry(Generic[_DataT]):
                 error_reason_translation_key,
                 error_reason_translation_placeholders,
             )
+
+    @callback
+    def _raise_for_exception_in_forwarded_platform(
+        self, exc: Exception, integration: loader.Integration
+    ) -> None:
+        """Raise exception if the wrong exception is raised in a forwarded platform."""
+        report(
+            f"raises exception {type(exc)} {exc} in forwarded platform"
+            f" {integration.domain}",
+            error_if_core=True,
+            error_if_integration=True,
+        )
 
     @callback
     def _async_setup_again(self, hass: HomeAssistant, *_: Any) -> None:
