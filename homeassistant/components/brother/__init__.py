@@ -16,7 +16,7 @@ from .utils import get_snmp_engine
 
 PLATFORMS = [Platform.SENSOR]
 
-BrotherConfigEntry = ConfigEntry[BrotherDataUpdateCoordinator]
+type BrotherConfigEntry = ConfigEntry[BrotherDataUpdateCoordinator]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: BrotherConfigEntry) -> bool:
