@@ -20,6 +20,7 @@ from homeassistant.helpers import template
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.service_info.mqtt import ReceivePayloadType
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType, TemplateVarsType
+from homeassistant.util.hass_dict import HassKey
 
 if TYPE_CHECKING:
     from paho.mqtt.client import MQTTMessage
@@ -429,3 +430,7 @@ class MqttComponentConfig:
     object_id: str
     node_id: str | None
     discovery_payload: MQTTDiscoveryPayload
+
+
+DATA_MQTT: HassKey[MqttData] = HassKey("mqtt")
+DATA_MQTT_AVAILABLE: HassKey[asyncio.Future[bool]] = HassKey("mqtt_client_available")

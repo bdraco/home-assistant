@@ -40,9 +40,9 @@ from .const import (
     DOMAIN,
     SUPPORTED_COMPONENTS,
 )
-from .models import MqttComponentConfig, MqttOriginInfo, ReceiveMessage
+from .models import DATA_MQTT, MqttComponentConfig, MqttOriginInfo, ReceiveMessage
 from .schemas import DEVICE_DISCOVERY_SCHEMA, MQTT_ORIGIN_INFO_SCHEMA, SHARED_OPTIONS
-from .util import async_forward_entry_setup_and_setup_discovery, get_mqtt_data
+from .util import async_forward_entry_setup_and_setup_discovery
 
 ABBREVIATIONS_SET = set(ABBREVIATIONS)
 DEVICE_ABBREVIATIONS_SET = set(DEVICE_ABBREVIATIONS)
@@ -79,12 +79,12 @@ class MQTTDiscoveryPayload(dict[str, Any]):
 
 def clear_discovery_hash(hass: HomeAssistant, discovery_hash: tuple[str, str]) -> None:
     """Clear entry from already discovered list."""
-    get_mqtt_data(hass).discovery_already_discovered.remove(discovery_hash)
+    hass.data[DATA_MQTT].discovery_already_discovered.remove(discovery_hash)
 
 
 def set_discovery_hash(hass: HomeAssistant, discovery_hash: tuple[str, str]) -> None:
     """Add entry to already discovered list."""
-    get_mqtt_data(hass).discovery_already_discovered.add(discovery_hash)
+    hass.data[DATA_MQTT].discovery_already_discovered.add(discovery_hash)
 
 
 @callback
@@ -180,7 +180,7 @@ def _generate_device_cleanup_config(
     hass: HomeAssistant, object_id: str, node_id: str | None
 ) -> dict[str, Any]:
     """Generate a cleanup message on device cleanup."""
-    mqtt_data = get_mqtt_data(hass)
+    mqtt_data = hass.data[DATA_MQTT]
     device_discover_id: str = f"{node_id} {object_id}" if node_id else object_id
     config: dict[str, Any] = {CONF_DEVICE: {}, CONF_COMPONENTS: {}}
     comp_config = config[CONF_COMPONENTS]
@@ -265,7 +265,7 @@ async def async_start(  # noqa: C901
     hass: HomeAssistant, discovery_topic: str, config_entry: ConfigEntry
 ) -> None:
     """Start MQTT Discovery."""
-    mqtt_data = get_mqtt_data(hass)
+    mqtt_data = hass.data[DATA_MQTT]
     platform_setup_lock: dict[str, asyncio.Lock] = {}
 
     async def _async_component_setup(discovery_payload: MQTTDiscoveryPayload) -> None:
@@ -540,7 +540,7 @@ async def async_start(  # noqa: C901
 
 async def async_stop(hass: HomeAssistant) -> None:
     """Stop MQTT Discovery."""
-    mqtt_data = get_mqtt_data(hass)
+    mqtt_data = hass.data[DATA_MQTT]
     for unsub in mqtt_data.discovery_unsubscribe:
         unsub()
     mqtt_data.discovery_unsubscribe = []
