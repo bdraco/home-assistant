@@ -1073,6 +1073,7 @@ class MqttEntity(
 ):
     """Representation of an MQTT entity."""
 
+    _attr_force_update = False
     _attr_has_entity_name = True
     _attr_should_poll = False
     _default_name: str | None
@@ -1224,6 +1225,57 @@ class MqttEntity(
     @abstractmethod
     async def _subscribe_topics(self) -> None:
         """(Re)Subscribe to topics."""
+
+    @callback
+    def _attrs_have_changed(
+        self, attrs_snapshot: tuple[tuple[str, Any | UndefinedType], ...]
+    ) -> bool:
+        """Return True if attributes on entity changed or if update is forced."""
+        if self._attr_force_update:
+            return True
+        for attribute, last_value in attrs_snapshot:
+            if getattr(self, attribute, UNDEFINED) != last_value:
+                return True
+        return False
+
+    @callback
+    def _log_message(self, msg: ReceiveMessage) -> None:
+        """Log message."""
+        debug_info_entities = self.hass.data[DATA_MQTT].debug_info_entities
+        messages = debug_info_entities[self.entity_id]["subscriptions"][
+            msg.subscribed_topic
+        ]["messages"]
+        if msg not in messages:
+            messages.append(msg)
+
+    @callback
+    def _message_callback(
+        self,
+        msg_callback: MessageCallbackType,
+        attributes: set[str],
+        msg: ReceiveMessage,
+    ) -> None:
+        """Process the message callback."""
+        attrs_snapshot: tuple[tuple[str, Any | UndefinedType], ...] = tuple(
+            (attribute, getattr(self, attribute, UNDEFINED)) for attribute in attributes
+        )
+        self._log_message(msg)
+        try:
+            msg_callback(msg)
+        except MqttValueTemplateException as exc:
+            _LOGGER.warning(exc)
+            return
+        if not self._attrs_have_changed(attrs_snapshot):
+            return
+
+        self.hass.data[DATA_MQTT].state_write_requests.write_state_request(self)
+
+    @callback
+    def _make_callback_message_received(
+        self, msg_callback: MessageCallbackType, attributes: set[str]
+    ) -> MessageCallbackType:
+        """Run when new MQTT message has been received."""
+        return partial(self._message_callback, msg_callback, attributes)
 
 
 def update_device(
