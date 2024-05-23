@@ -680,11 +680,6 @@ class _ScriptRun:
             self._async_handle_timeout()
             return
 
-        if timeout == 0:
-            self._changed()
-            self._async_handle_timeout()
-            return
-
         futures, timeout_handle, timeout_future = self._async_futures_with_timeout(
             timeout
         )
@@ -1244,19 +1239,29 @@ class _ScriptRun:
 class _QueuedScriptRun(_ScriptRun):
     """Manage queued Script sequence run."""
 
+    lock_acquired = False
+
     async def async_run(self) -> None:
         """Run script."""
         # Wait for previous run, if any, to finish by attempting to acquire the script's
         # shared lock. At the same time monitor if we've been told to stop.
         try:
-            async with (
-                self._script._queue_lck,  # noqa: SLF001
-                async_interrupt.interrupt(self._stop, ScriptStoppedError, None),
-            ):
-                await super().async_run()
+            async with async_interrupt.interrupt(self._stop, ScriptStoppedError, None):
+                await self._script._queue_lck.acquire()  # noqa: SLF001
         except ScriptStoppedError as ex:
             # If we've been told to stop, then just finish up.
+            self._finish()
             raise asyncio.CancelledError from ex
+
+        self.lock_acquired = True
+        # We've acquired the lock so we can go ahead and start the run.
+        await super().async_run()
+
+    def _finish(self) -> None:
+        if self.lock_acquired:
+            self._script._queue_lck.release()  # noqa: SLF001
+            self.lock_acquired = False
+        super()._finish()
 
 
 @callback
