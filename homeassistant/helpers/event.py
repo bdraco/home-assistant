@@ -1592,12 +1592,10 @@ class _TrackTimeInterval:
         """Schedule the timer."""
         if TYPE_CHECKING:
             assert self._track_job is not None
-        loop = self.hass.loop
+        hass = self.hass
+        loop = hass.loop
         self._timer_handle = loop.call_at(
-            loop.time() + self.seconds,
-            _run_async_call_action,
-            self.hass,
-            self._track_job,
+            loop.time() + self.seconds, _run_async_call_action, hass, self._track_job
         )
 
     @callback
