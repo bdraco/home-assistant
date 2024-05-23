@@ -1,4 +1,4 @@
-"""Schemas for MQTT discovery."""
+"""Shared schemas for MQTT discovery and YAML config items."""
 
 from __future__ import annotations
 
@@ -8,12 +8,16 @@ import voluptuous as vol
 
 from homeassistant.const import (
     CONF_DEVICE,
+    CONF_ENTITY_CATEGORY,
+    CONF_ICON,
     CONF_MODEL,
     CONF_NAME,
     CONF_PLATFORM,
+    CONF_UNIQUE_ID,
     CONF_VALUE_TEMPLATE,
 )
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.entity import ENTITY_CATEGORIES_SCHEMA
 from homeassistant.helpers.typing import ConfigType
 
 from .const import (
@@ -28,10 +32,14 @@ from .const import (
     CONF_CONFIGURATION_URL,
     CONF_CONNECTIONS,
     CONF_DEPRECATED_VIA_HUB,
+    CONF_ENABLED_BY_DEFAULT,
     CONF_ENCODING,
     CONF_HW_VERSION,
     CONF_IDENTIFIERS,
+    CONF_JSON_ATTRS_TEMPLATE,
+    CONF_JSON_ATTRS_TOPIC,
     CONF_MANUFACTURER,
+    CONF_OBJECT_ID,
     CONF_ORIGIN,
     CONF_PAYLOAD_AVAILABLE,
     CONF_PAYLOAD_NOT_AVAILABLE,
@@ -149,6 +157,54 @@ MQTT_AVAILABILITY_SCHEMA = MQTT_AVAILABILITY_SINGLE_SCHEMA.extend(
     MQTT_AVAILABILITY_LIST_SCHEMA.schema
 )
 
+MQTT_ENTITY_DEVICE_INFO_SCHEMA = vol.All(
+    cv.deprecated(CONF_DEPRECATED_VIA_HUB, CONF_VIA_DEVICE),
+    vol.Schema(
+        {
+            vol.Optional(CONF_IDENTIFIERS, default=list): vol.All(
+                cv.ensure_list, [cv.string]
+            ),
+            vol.Optional(CONF_CONNECTIONS, default=list): vol.All(
+                cv.ensure_list, [vol.All(vol.Length(2), [cv.string])]
+            ),
+            vol.Optional(CONF_MANUFACTURER): cv.string,
+            vol.Optional(CONF_MODEL): cv.string,
+            vol.Optional(CONF_NAME): cv.string,
+            vol.Optional(CONF_HW_VERSION): cv.string,
+            vol.Optional(CONF_SERIAL_NUMBER): cv.string,
+            vol.Optional(CONF_SW_VERSION): cv.string,
+            vol.Optional(CONF_VIA_DEVICE): cv.string,
+            vol.Optional(CONF_SUGGESTED_AREA): cv.string,
+            vol.Optional(CONF_CONFIGURATION_URL): cv.configuration_url,
+        }
+    ),
+    validate_device_has_at_least_one_identifier,
+)
+
+
+MQTT_ORIGIN_INFO_SCHEMA = vol.All(
+    vol.Schema(
+        {
+            vol.Required(CONF_NAME): cv.string,
+            vol.Optional(CONF_SW_VERSION): cv.string,
+            vol.Optional(CONF_SUPPORT_URL): cv.configuration_url,
+        }
+    ),
+)
+
+MQTT_ENTITY_COMMON_SCHEMA = MQTT_AVAILABILITY_SCHEMA.extend(
+    {
+        vol.Optional(CONF_DEVICE): MQTT_ENTITY_DEVICE_INFO_SCHEMA,
+        vol.Optional(CONF_ORIGIN): MQTT_ORIGIN_INFO_SCHEMA,
+        vol.Optional(CONF_ENABLED_BY_DEFAULT, default=True): cv.boolean,
+        vol.Optional(CONF_ENTITY_CATEGORY): ENTITY_CATEGORIES_SCHEMA,
+        vol.Optional(CONF_ICON): cv.icon,
+        vol.Optional(CONF_JSON_ATTRS_TOPIC): valid_subscribe_topic,
+        vol.Optional(CONF_JSON_ATTRS_TEMPLATE): cv.template,
+        vol.Optional(CONF_OBJECT_ID): cv.string,
+        vol.Optional(CONF_UNIQUE_ID): cv.string,
+    }
+)
 
 COMPONENT_CONFIG_SCHEMA = vol.Schema(
     {vol.Required(CONF_PLATFORM): vol.In(SUPPORTED_COMPONENTS)}

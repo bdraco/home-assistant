@@ -422,7 +422,7 @@ class MqttData:
     tags: dict[str, dict[str, MQTTTagScanner]] = field(default_factory=dict)
 
 
-@dataclass
+@dataclass(slots=True)
 class MqttComponentConfig:
     """(component, object_id, node_id, discovery_payload)."""
 

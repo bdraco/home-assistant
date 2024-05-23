@@ -23,8 +23,8 @@ AVAILABILITY_MODES = [AVAILABILITY_ALL, AVAILABILITY_ANY, AVAILABILITY_LATEST]
 CONF_PAYLOAD_AVAILABLE = "payload_available"
 CONF_PAYLOAD_NOT_AVAILABLE = "payload_not_available"
 
-
 CONF_AVAILABILITY = "availability"
+
 CONF_AVAILABILITY_MODE = "availability_mode"
 CONF_AVAILABILITY_TEMPLATE = "availability_template"
 CONF_AVAILABILITY_TOPIC = "availability_topic"
@@ -34,6 +34,8 @@ CONF_COMMAND_TEMPLATE = "command_template"
 CONF_COMMAND_TOPIC = "command_topic"
 CONF_DISCOVERY_PREFIX = "discovery_prefix"
 CONF_ENCODING = "encoding"
+CONF_JSON_ATTRS_TOPIC = "json_attributes_topic"
+CONF_JSON_ATTRS_TEMPLATE = "json_attributes_template"
 CONF_KEEPALIVE = "keepalive"
 CONF_ORIGIN = "origin"
 CONF_QOS = ATTR_QOS
@@ -55,6 +57,7 @@ CONF_CURRENT_HUMIDITY_TEMPLATE = "current_humidity_template"
 CONF_CURRENT_HUMIDITY_TOPIC = "current_humidity_topic"
 CONF_CURRENT_TEMP_TEMPLATE = "current_temperature_template"
 CONF_CURRENT_TEMP_TOPIC = "current_temperature_topic"
+CONF_ENABLED_BY_DEFAULT = "enabled_by_default"
 CONF_MODE_COMMAND_TEMPLATE = "mode_command_template"
 CONF_MODE_COMMAND_TOPIC = "mode_command_topic"
 CONF_MODE_LIST = "modes"
@@ -182,6 +185,8 @@ RELOADABLE_PLATFORMS = [
     Platform.WATER_HEATER,
 ]
 
+TEMPLATE_ERRORS = (jinja2.TemplateError, TemplateError, TypeError, ValueError)
+
 SUPPORTED_COMPONENTS = {
     "alarm_control_panel",
     "binary_sensor",
@@ -212,5 +217,3 @@ SUPPORTED_COMPONENTS = {
     "valve",
     "water_heater",
 }
-
-TEMPLATE_ERRORS = (jinja2.TemplateError, TemplateError, TypeError, ValueError)

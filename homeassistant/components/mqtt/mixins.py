@@ -31,11 +31,7 @@ from homeassistant.const import (
     CONF_VALUE_TEMPLATE,
 )
 from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.helpers import (
-    config_validation as cv,
-    device_registry as dr,
-    entity_registry as er,
-)
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.helpers.device_registry import (
     DeviceEntry,
     DeviceInfo,
@@ -45,11 +41,7 @@ from homeassistant.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
-from homeassistant.helpers.entity import (
-    ENTITY_CATEGORIES_SCHEMA,
-    Entity,
-    async_generate_entity_id,
-)
+from homeassistant.helpers.entity import Entity, async_generate_entity_id
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import (
     async_track_device_registry_updated_event,
@@ -79,12 +71,14 @@ from .const import (
     CONF_AVAILABILITY_TOPIC,
     CONF_CONFIGURATION_URL,
     CONF_CONNECTIONS,
+    CONF_ENABLED_BY_DEFAULT,
     CONF_ENCODING,
     CONF_HW_VERSION,
     CONF_IDENTIFIERS,
+    CONF_JSON_ATTRS_TEMPLATE,
+    CONF_JSON_ATTRS_TOPIC,
     CONF_MANUFACTURER,
     CONF_OBJECT_ID,
-    CONF_ORIGIN,
     CONF_PAYLOAD_AVAILABLE,
     CONF_PAYLOAD_NOT_AVAILABLE,
     CONF_QOS,
@@ -104,7 +98,6 @@ from .discovery import (
     MQTT_DISCOVERY_DONE,
     MQTT_DISCOVERY_NEW,
     MQTT_DISCOVERY_UPDATED,
-    MQTT_ORIGIN_INFO_SCHEMA,
     MQTTDiscoveryPayload,
     clear_discovery_hash,
     set_discovery_hash,
@@ -117,21 +110,15 @@ from .models import (
     PublishPayloadType,
     ReceiveMessage,
 )
-from .schemas import MQTT_AVAILABILITY_SCHEMA, MQTT_ENTITY_DEVICE_INFO_SCHEMA
 from .subscription import (
     EntitySubscription,
     async_prepare_subscribe_topics,
     async_subscribe_topics,
     async_unsubscribe_topics,
 )
-from .util import mqtt_config_entry_enabled, valid_subscribe_topic
+from .util import mqtt_config_entry_enabled
 
 _LOGGER = logging.getLogger(__name__)
-
-CONF_ENABLED_BY_DEFAULT = "enabled_by_default"
-
-CONF_JSON_ATTRS_TOPIC = "json_attributes_topic"
-CONF_JSON_ATTRS_TEMPLATE = "json_attributes_template"
 
 MQTT_ATTRIBUTES_BLOCKED = {
     "assumed_state",
@@ -151,21 +138,6 @@ MQTT_ATTRIBUTES_BLOCKED = {
     "unique_id",
     "unit_of_measurement",
 }
-
-
-MQTT_ENTITY_COMMON_SCHEMA = MQTT_AVAILABILITY_SCHEMA.extend(
-    {
-        vol.Optional(CONF_DEVICE): MQTT_ENTITY_DEVICE_INFO_SCHEMA,
-        vol.Optional(CONF_ORIGIN): MQTT_ORIGIN_INFO_SCHEMA,
-        vol.Optional(CONF_ENABLED_BY_DEFAULT, default=True): cv.boolean,
-        vol.Optional(CONF_ENTITY_CATEGORY): ENTITY_CATEGORIES_SCHEMA,
-        vol.Optional(CONF_ICON): cv.icon,
-        vol.Optional(CONF_JSON_ATTRS_TOPIC): valid_subscribe_topic,
-        vol.Optional(CONF_JSON_ATTRS_TEMPLATE): cv.template,
-        vol.Optional(CONF_OBJECT_ID): cv.string,
-        vol.Optional(CONF_UNIQUE_ID): cv.string,
-    }
-)
 
 
 class SetupEntity(Protocol):
