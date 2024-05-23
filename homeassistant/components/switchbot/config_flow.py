@@ -8,6 +8,7 @@ from typing import Any
 from switchbot import (
     SwitchbotAccountConnectionError,
     SwitchBotAdvertisement,
+    SwitchbotApiError,
     SwitchbotAuthenticationError,
     SwitchbotLock,
     SwitchbotModel,
@@ -182,8 +183,13 @@ class SwitchbotConfigFlow(ConfigFlow, domain=DOMAIN):
                     user_input[CONF_USERNAME],
                     user_input[CONF_PASSWORD],
                 )
-            except SwitchbotAccountConnectionError as ex:
-                raise AbortFlow("cannot_connect") from ex
+            except (SwitchbotApiError, SwitchbotAccountConnectionError) as ex:
+                _LOGGER.debug(
+                    "Failed to connect to SwitchBot API: %s", ex, exc_info=True
+                )
+                raise AbortFlow(
+                    "api_error", description_placeholders={"error_detail": str(ex)}
+                ) from ex
             except SwitchbotAuthenticationError as ex:
                 _LOGGER.debug("Authentication failed: %s", ex, exc_info=True)
                 errors = {"base": "auth_failed"}
