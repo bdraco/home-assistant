@@ -859,18 +859,16 @@ class MQTT:
             raise HomeAssistantError("Topic needs to be a string!")
 
         job_type = get_hassjob_callable_job_type(msg_callback)
-
         if job_type is not HassJobType.Callback:
-            # Only wrap the callback if it is not a simple callback
-            job = HassJob(
-                catch_log_exception(
-                    msg_callback, partial(self._exception_message, msg_callback)
-                ),
-                job_type=job_type,
+            # Only wrap the callback with catch_log_exception
+            # if it is not a simple callback since we catch
+            # exceptions for simple callbacks inline for
+            # performance reasons.
+            msg_callback = catch_log_exception(
+                msg_callback, partial(self._exception_message, msg_callback)
             )
-        else:
-            job = HassJob(msg_callback, job_type=job_type)
 
+        job = HassJob(msg_callback, job_type=job_type)
         subscription = Subscription(
             topic, _matcher_for_topic(topic), job, qos, encoding
         )
@@ -1152,13 +1150,14 @@ class MQTT:
             if job.job_type is HassJobType.Callback:
                 # We do not wrap Callback jobs in catch_log_exception since
                 # its expensive and we have to do it 2x for every entity
-                target = job.target
                 try:
-                    target(receive_msg)
+                    job.target(receive_msg)
                 except Exception:  # noqa: BLE001
-                    log_exception(partial(self._exception_message, target, receive_msg))
+                    log_exception(
+                        partial(self._exception_message, job.target, receive_msg)
+                    )
             else:
-                self.hass.async_run_hass_job(subscription.job, receive_msg)
+                self.hass.async_run_hass_job(job, receive_msg)
         self._mqtt_data.state_write_requests.process_write_state_requests(msg)
 
     @callback
