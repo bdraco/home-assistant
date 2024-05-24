@@ -12,7 +12,7 @@ from functools import partial, wraps
 import logging
 from random import randint
 import time
-from typing import TYPE_CHECKING, Any, Concatenate, Generic, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, Concatenate, Generic, TypeVar
 
 from homeassistant.const import (
     EVENT_CORE_CONFIG_UPDATE,
@@ -31,6 +31,7 @@ from homeassistant.core import (
     HomeAssistant,
     State,
     callback,
+    split_entity_id,
 )
 from homeassistant.exceptions import TemplateError
 from homeassistant.loader import bind_hass
@@ -114,7 +115,7 @@ class _KeyedEventData(Generic[_TypedDictT]):
     """Class to track data for events by key."""
 
     listener: CALLBACK_TYPE
-    callbacks: defaultdict[str, dict[HassJob[[Event[_TypedDictT]], Any], Literal[True]]]
+    callbacks: defaultdict[str, list[HassJob[[Event[_TypedDictT]], Any]]]
 
 
 @dataclass(slots=True)
@@ -323,9 +324,7 @@ def async_track_state_change_event(
 @callback
 def _async_dispatch_entity_id_event(
     hass: HomeAssistant,
-    callbacks: dict[
-        str, dict[HassJob[[Event[EventStateChangedData]], Any], Literal[True]]
-    ],
+    callbacks: dict[str, list[HassJob[[Event[EventStateChangedData]], Any]]],
     event: Event[EventStateChangedData],
 ) -> None:
     """Dispatch to listeners."""
@@ -384,11 +383,11 @@ def _remove_listener(
     tracker: _KeyedEventTracker[_TypedDictT],
     keys: Iterable[str],
     job: HassJob[[Event[_TypedDictT]], Any],
-    callbacks: dict[str, dict[HassJob[[Event[_TypedDictT]], Any], Literal[True]]],
+    callbacks: dict[str, list[HassJob[[Event[_TypedDictT]], Any]]],
 ) -> None:
     """Remove listener."""
     for key in keys:
-        del callbacks[key][job]
+        callbacks[key].remove(job)
         if not callbacks[key]:
             del callbacks[key]
 
@@ -418,7 +417,7 @@ def _async_track_event(
         event_data = hass_data[tracker_key]
         callbacks = event_data.callbacks
     else:
-        callbacks = defaultdict(dict)
+        callbacks = defaultdict(list)
         listener = hass.bus.async_listen(
             tracker.event_type,
             partial(tracker.dispatcher_callable, hass, callbacks),
@@ -435,11 +434,11 @@ def _async_track_event(
         # here because this function gets called ~20000 times
         # during startup, and we want to avoid the overhead of
         # creating empty lists and throwing them away.
-        callbacks[keys][job] = True
+        callbacks[keys].append(job)
         keys = (keys,)
     else:
         for key in keys:
-            callbacks[key][job] = True
+            callbacks[key].append(job)
 
     return partial(_remove_listener, hass, tracker, keys, job, callbacks)
 
@@ -447,9 +446,7 @@ def _async_track_event(
 @callback
 def _async_dispatch_old_entity_id_or_entity_id_event(
     hass: HomeAssistant,
-    callbacks: dict[
-        str, dict[HassJob[[Event[EventEntityRegistryUpdatedData]], Any], Literal[True]]
-    ],
+    callbacks: dict[str, list[HassJob[[Event[EventEntityRegistryUpdatedData]], Any]]],
     event: Event[EventEntityRegistryUpdatedData],
 ) -> None:
     """Dispatch to listeners."""
@@ -520,9 +517,7 @@ def _async_device_registry_updated_filter(
 @callback
 def _async_dispatch_device_id_event(
     hass: HomeAssistant,
-    callbacks: dict[
-        str, dict[HassJob[[Event[EventDeviceRegistryUpdatedData]], Any], Literal[True]]
-    ],
+    callbacks: dict[str, list[HassJob[[Event[EventDeviceRegistryUpdatedData]], Any]]],
     event: Event[EventDeviceRegistryUpdatedData],
 ) -> None:
     """Dispatch to listeners."""
@@ -570,21 +565,14 @@ def _async_dispatch_domain_event(
     event: Event[EventStateChangedData],
 ) -> None:
     """Dispatch domain event listeners."""
-    if event.data["new_state"] is None:
-        domain = event.data["old_state"].domain
-    else:
-        domain = event.data["new_state"].domain
-
-    for key in (domain, MATCH_ALL):
-        if not (callback_list := callbacks.get(key)):
-            continue
-        for job in callback_list.copy():
-            try:
-                hass.async_run_hass_job(job, event)
-            except Exception:
-                _LOGGER.exception(
-                    "Error while processing event %s for domain %s", event, domain
-                )
+    domain = split_entity_id(event.data["entity_id"])[0]
+    for job in callbacks.get(domain, []) + callbacks.get(MATCH_ALL, []):
+        try:
+            hass.async_run_hass_job(job, event)
+        except Exception:
+            _LOGGER.exception(
+                "Error while processing event %s for domain %s", event, domain
+            )
 
 
 @callback
