@@ -846,6 +846,7 @@ async def test_issue_aux_property_deprecated(
     translation_placeholders_extra: dict[str, str],
     report: str,
     module: str,
+    issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test the issue is raised on deprecated auxiliary heater attributes."""
 
@@ -917,8 +918,7 @@ async def test_issue_aux_property_deprecated(
 
     assert climate_entity.state == HVACMode.HEAT
 
-    issues = ir.async_get(hass)
-    issue = issues.async_get_issue("climate", "deprecated_climate_aux_test")
+    issue = issue_registry.async_get_issue("climate", "deprecated_climate_aux_test")
     assert issue
     assert issue.issue_domain == "test"
     assert issue.issue_id == "deprecated_climate_aux_test"
@@ -977,6 +977,7 @@ async def test_no_issue_aux_property_deprecated_for_core(
     translation_placeholders_extra: dict[str, str],
     report: str,
     module: str,
+    issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test the no issue on deprecated auxiliary heater attributes for core integrations."""
 
@@ -1046,8 +1047,7 @@ async def test_no_issue_aux_property_deprecated_for_core(
 
     assert climate_entity.state == HVACMode.HEAT
 
-    issues = ir.async_get(hass)
-    issue = issues.async_get_issue("climate", "deprecated_climate_aux_test")
+    issue = issue_registry.async_get_issue("climate", "deprecated_climate_aux_test")
     assert not issue
 
     assert (
@@ -1061,6 +1061,7 @@ async def test_no_issue_no_aux_property(
     hass: HomeAssistant,
     caplog: pytest.LogCaptureFixture,
     config_flow_fixture: None,
+    issue_registry: ir.IssueRegistry,
 ) -> None:
     """Test the issue is raised on deprecated auxiliary heater attributes."""
 
@@ -1105,8 +1106,7 @@ async def test_no_issue_no_aux_property(
 
     assert climate_entity.state == HVACMode.HEAT
 
-    issues = ir.async_get(hass)
-    assert len(issues.issues) == 0
+    assert len(issue_registry.issues) == 0
 
     assert (
         "test::MockClimateEntityWithAux implements the `is_aux_heat` property or uses "
