@@ -77,7 +77,6 @@ from .const import (
 )
 from .models import (
     DATA_MQTT,
-    AsyncMessageCallbackType,
     MessageCallbackType,
     MqttData,
     PublishMessage,
@@ -184,7 +183,7 @@ async def async_publish(
 async def async_subscribe(
     hass: HomeAssistant,
     topic: str,
-    msg_callback: AsyncMessageCallbackType | MessageCallbackType,
+    msg_callback: Callable[[ReceiveMessage], Coroutine[Any, Any, None] | None],
     qos: int = DEFAULT_QOS,
     encoding: str | None = DEFAULT_ENCODING,
 ) -> CALLBACK_TYPE:
@@ -847,12 +846,17 @@ class MQTT:
 
     def _exception_message(
         self,
-        msg_callback: AsyncMessageCallbackType | MessageCallbackType,
+        msg_callback: Callable[[ReceiveMessage], Coroutine[Any, Any, None] | None],
         msg: ReceiveMessage,
     ) -> str:
         """Return a string with the exception message."""
+        # if msg_callback is a partial we return the name of the first argument
+        if isinstance(msg_callback, partial):
+            call_back_name = getattr(msg_callback.args[0], "__name__")  # type: ignore[unreachable]
+        else:
+            call_back_name = getattr(msg_callback, "__name__")
         return (
-            f"Exception in {msg_callback.__name__} when handling msg on "
+            f"Exception in {call_back_name} when handling msg on "
             f"'{msg.topic}': '{msg.payload}'"  # type: ignore[str-bytes-safe]
         )
 
@@ -860,7 +864,7 @@ class MQTT:
     def async_subscribe(
         self,
         topic: str,
-        msg_callback: AsyncMessageCallbackType | MessageCallbackType,
+        msg_callback: Callable[[ReceiveMessage], Coroutine[Any, Any, None] | None],
         qos: int,
         encoding: str | None = None,
     ) -> Callable[[], None]:
