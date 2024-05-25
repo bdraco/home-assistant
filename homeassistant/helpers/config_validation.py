@@ -126,6 +126,7 @@ EXTERNAL_URL_PROTOCOL_SCHEMA_LIST = frozenset(
 CONFIGURATION_URL_PROTOCOL_SCHEMA_LIST = frozenset(
     {UrlProtocolSchema.HOMEASSISTANT, UrlProtocolSchema.HTTP, UrlProtocolSchema.HTTPS}
 )
+_LOGGER = logging.getLogger(__name__)
 
 # Home Assistant types
 byte = vol.All(vol.Coerce(int), vol.Range(min=0, max=255))
@@ -657,6 +658,7 @@ def temperature_unit(value: Any) -> UnitOfTemperature:
 
 def template(value: Any | None) -> template_helper.Template:
     """Validate a jinja2 template."""
+    _LOGGER.warning("template: %s", value)
     if value is None:
         raise vol.Invalid("template value is None")
     if isinstance(value, (list, dict, template_helper.Template)):
