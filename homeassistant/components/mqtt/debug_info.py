@@ -69,17 +69,14 @@ def log_message(
     retain: bool,
 ) -> None:
     """Log an outgoing MQTT message."""
-    entity_info = hass.data[DATA_MQTT].debug_info_entities.setdefault(
-        entity_id, {"subscriptions": {}, "discovery_data": {}, "transmitted": {}}
+    transmitted = hass.data[DATA_MQTT].debug_info_entities[entity_id]["transmitted"]
+    if topic not in transmitted:
+        transmitted[topic] = {"messages": deque([], STORED_MESSAGES)}
+    transmitted[topic]["messages"].append(
+        TimestampedPublishMessage(
+            topic, payload, qos, retain, timestamp=time.monotonic()
+        )
     )
-    if topic not in entity_info["transmitted"]:
-        entity_info["transmitted"][topic] = {
-            "messages": deque([], STORED_MESSAGES),
-        }
-    msg = TimestampedPublishMessage(
-        topic, payload, qos, retain, timestamp=time.monotonic()
-    )
-    entity_info["transmitted"][topic]["messages"].append(msg)
 
 
 def add_subscription(
@@ -92,15 +89,15 @@ def add_subscription(
     if not entity_id:
         entity_id = getattr(message_callback, "__entity_id", None)
     if entity_id:
-        entity_info = hass.data[DATA_MQTT].debug_info_entities.setdefault(
-            entity_id, {"subscriptions": {}, "discovery_data": {}, "transmitted": {}}
-        )
-        if subscription not in entity_info["subscriptions"]:
-            entity_info["subscriptions"][subscription] = {
+        subscriptions = hass.data[DATA_MQTT].debug_info_entities[entity_id][
+            "subscriptions"
+        ]
+        if subscription not in subscriptions:
+            subscriptions[subscription] = {
                 "count": 0,
                 "messages": deque([], STORED_MESSAGES),
             }
-        entity_info["subscriptions"][subscription]["count"] += 1
+        subscriptions[subscription]["count"] += 1
 
 
 def remove_subscription(
@@ -115,19 +112,21 @@ def remove_subscription(
     if entity_id and entity_id in (
         debug_info_entities := hass.data[DATA_MQTT].debug_info_entities
     ):
-        debug_info_entities[entity_id]["subscriptions"][subscription]["count"] -= 1
-        if not debug_info_entities[entity_id]["subscriptions"][subscription]["count"]:
-            debug_info_entities[entity_id]["subscriptions"].pop(subscription)
+        subscriptions = debug_info_entities[entity_id]["subscriptions"]
+        subscriptions[subscription]["count"] -= 1
+        if not subscriptions[subscription]["count"]:
+            del subscriptions[subscription]
+        if not subscriptions:
+            del debug_info_entities[entity_id]
 
 
 def add_entity_discovery_data(
     hass: HomeAssistant, discovery_data: DiscoveryInfoType, entity_id: str
 ) -> None:
     """Add discovery data."""
-    entity_info = hass.data[DATA_MQTT].debug_info_entities.setdefault(
-        entity_id, {"subscriptions": {}, "discovery_data": {}, "transmitted": {}}
+    hass.data[DATA_MQTT].debug_info_entities[entity_id]["discovery_data"] = (
+        discovery_data
     )
-    entity_info["discovery_data"] = discovery_data
 
 
 def update_entity_discovery_data(

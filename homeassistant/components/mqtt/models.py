@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from ast import literal_eval
 import asyncio
-from collections import deque
+from collections import defaultdict, deque
 from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
 from enum import StrEnum
@@ -397,7 +397,11 @@ class MqttData:
 
     client: MQTT
     config: list[ConfigType]
-    debug_info_entities: dict[str, EntityDebugInfo] = field(default_factory=dict)
+    debug_info_entities: defaultdict[str, EntityDebugInfo] = field(
+        default_factory=lambda: defaultdict(
+            lambda: {"subscriptions": {}, "discovery_data": {}, "transmitted": {}}
+        )
+    )
     debug_info_triggers: dict[tuple[str, str], TriggerDebugInfo] = field(
         default_factory=dict
     )
