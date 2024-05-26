@@ -228,15 +228,9 @@ def _state_diff(
     if (old_attributes := old_state.attributes) != (
         new_attributes := new_state.attributes
     ):
-        try:
-            if added := new_attributes.items() - old_attributes.items():
-                additions[COMPRESSED_STATE_ATTRIBUTES] = dict(added)
-        except TypeError:
-            # If we can't compare the attributes because some attributes are unhashable,
-            # we fallback to a much slower one-by-one comparison
-            for key, value in new_attributes.items():
-                if old_attributes.get(key) != value:
-                    additions.setdefault(COMPRESSED_STATE_ATTRIBUTES, {})[key] = value
+        for key, value in new_attributes.items():
+            if old_attributes.get(key) != value:
+                additions.setdefault(COMPRESSED_STATE_ATTRIBUTES, {})[key] = value
         if removed := old_attributes.keys() - new_attributes:
             # sets are not JSON serializable by default so we convert to list
             # here if there are any values to avoid jumping into the json_encoder_default
