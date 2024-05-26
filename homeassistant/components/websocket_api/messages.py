@@ -204,8 +204,25 @@ def _state_diff(
     old_state: State, new_state: State
 ) -> dict[str, dict[str, dict[str, dict[str, str | list[str]]]]]:
     """Create a diff dict that can be used to overlay changes."""
-    additions: dict[str, Any] = defaultdict(dict)
-    diff: dict[str, dict[str, Any]] = {STATE_DIFF_ADDITIONS: additions}
+    additions: dict[str, Any]
+    diff: dict[str, dict[str, Any]]
+    if (old_attributes := old_state.attributes) != (
+        new_attributes := new_state.attributes
+    ):
+        additions = defaultdict(dict)
+        diff = {STATE_DIFF_ADDITIONS: additions}
+        for key, value in new_attributes.items():
+            if old_attributes.get(key) != value:
+                additions[COMPRESSED_STATE_ATTRIBUTES][key] = value
+        if removed := old_attributes.keys() - new_attributes:
+            # sets are not JSON serializable by default so we convert to list
+            # here if there are any values to avoid jumping into the json_encoder_default
+            # for every state diff with a removed attribute
+            diff[STATE_DIFF_REMOVALS] = {COMPRESSED_STATE_ATTRIBUTES: list(removed)}
+    else:
+        additions = {}
+        diff = {STATE_DIFF_ADDITIONS: additions}
+
     new_state_context = new_state.context
     old_state_context = old_state.context
     if old_state.state != new_state.state:
@@ -215,25 +232,17 @@ def _state_diff(
     elif old_state.last_updated != new_state.last_updated:
         additions[COMPRESSED_STATE_LAST_UPDATED] = new_state.last_updated_timestamp
     if old_state_context.parent_id != new_state_context.parent_id:
-        additions[COMPRESSED_STATE_CONTEXT]["parent_id"] = new_state_context.parent_id
+        additions[COMPRESSED_STATE_CONTEXT] = {"parent_id": new_state_context.parent_id}
     if old_state_context.user_id != new_state_context.user_id:
-        additions[COMPRESSED_STATE_CONTEXT]["user_id"] = new_state_context.user_id
+        if COMPRESSED_STATE_CONTEXT in additions:
+            additions[COMPRESSED_STATE_CONTEXT]["user_id"] = new_state_context.user_id
+        else:
+            additions[COMPRESSED_STATE_CONTEXT] = {"user_id": new_state_context.user_id}
     if old_state_context.id != new_state_context.id:
         if COMPRESSED_STATE_CONTEXT in additions:
             additions[COMPRESSED_STATE_CONTEXT]["id"] = new_state_context.id
         else:
             additions[COMPRESSED_STATE_CONTEXT] = new_state_context.id
-    if (old_attributes := old_state.attributes) != (
-        new_attributes := new_state.attributes
-    ):
-        for key, value in new_attributes.items():
-            if old_attributes.get(key) != value:
-                additions[COMPRESSED_STATE_ATTRIBUTES][key] = value
-        if removed := old_attributes.keys() - new_attributes:
-            # sets are not JSON serializable by default so we convert to list
-            # here if there are any values to avoid jumping into the json_encoder_default
-            # for every state diff with a removed attribute
-            diff[STATE_DIFF_REMOVALS] = {COMPRESSED_STATE_ATTRIBUTES: list(removed)}
     return {ENTITY_EVENT_CHANGE: {new_state.entity_id: diff}}
 
 
