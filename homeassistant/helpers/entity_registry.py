@@ -14,7 +14,7 @@ from collections import defaultdict
 from collections.abc import Callable, Container, Hashable, KeysView, Mapping
 from datetime import datetime, timedelta
 from enum import StrEnum
-from functools import cached_property
+from functools import cached_property, partialmethod
 import logging
 import time
 from typing import TYPE_CHECKING, Any, Literal, NotRequired, TypedDict
@@ -1107,59 +1107,43 @@ class EntityRegistry(BaseRegistry):
 
         return new
 
-    @callback
-    def async_update_entity(
-        self,
-        entity_id: str,
-        *,
-        aliases: set[str] | UndefinedType = UNDEFINED,
-        area_id: str | None | UndefinedType = UNDEFINED,
-        categories: dict[str, str] | UndefinedType = UNDEFINED,
-        capabilities: Mapping[str, Any] | None | UndefinedType = UNDEFINED,
-        config_entry_id: str | None | UndefinedType = UNDEFINED,
-        device_class: str | None | UndefinedType = UNDEFINED,
-        device_id: str | None | UndefinedType = UNDEFINED,
-        disabled_by: RegistryEntryDisabler | None | UndefinedType = UNDEFINED,
-        entity_category: EntityCategory | None | UndefinedType = UNDEFINED,
-        hidden_by: RegistryEntryHider | None | UndefinedType = UNDEFINED,
-        icon: str | None | UndefinedType = UNDEFINED,
-        has_entity_name: bool | UndefinedType = UNDEFINED,
-        labels: set[str] | UndefinedType = UNDEFINED,
-        name: str | None | UndefinedType = UNDEFINED,
-        new_entity_id: str | UndefinedType = UNDEFINED,
-        new_unique_id: str | UndefinedType = UNDEFINED,
-        original_device_class: str | None | UndefinedType = UNDEFINED,
-        original_icon: str | None | UndefinedType = UNDEFINED,
-        original_name: str | None | UndefinedType = UNDEFINED,
-        supported_features: int | UndefinedType = UNDEFINED,
-        translation_key: str | None | UndefinedType = UNDEFINED,
-        unit_of_measurement: str | None | UndefinedType = UNDEFINED,
-    ) -> RegistryEntry:
-        """Update properties of an entity."""
-        return self._async_update_entity(
-            entity_id,
-            aliases=aliases,
-            area_id=area_id,
-            categories=categories,
-            capabilities=capabilities,
-            config_entry_id=config_entry_id,
-            device_class=device_class,
-            device_id=device_id,
-            disabled_by=disabled_by,
-            entity_category=entity_category,
-            hidden_by=hidden_by,
-            icon=icon,
-            has_entity_name=has_entity_name,
-            labels=labels,
-            name=name,
-            new_entity_id=new_entity_id,
-            new_unique_id=new_unique_id,
-            original_device_class=original_device_class,
-            original_icon=original_icon,
-            original_name=original_name,
-            supported_features=supported_features,
-            translation_key=translation_key,
-            unit_of_measurement=unit_of_measurement,
+    if TYPE_CHECKING:
+
+        @callback
+        def async_update_entity(
+            self,
+            entity_id: str,
+            *,
+            aliases: set[str] | UndefinedType = UNDEFINED,
+            area_id: str | None | UndefinedType = UNDEFINED,
+            categories: dict[str, str] | UndefinedType = UNDEFINED,
+            capabilities: Mapping[str, Any] | None | UndefinedType = UNDEFINED,
+            config_entry_id: str | None | UndefinedType = UNDEFINED,
+            device_class: str | None | UndefinedType = UNDEFINED,
+            device_id: str | None | UndefinedType = UNDEFINED,
+            disabled_by: RegistryEntryDisabler | None | UndefinedType = UNDEFINED,
+            entity_category: EntityCategory | None | UndefinedType = UNDEFINED,
+            hidden_by: RegistryEntryHider | None | UndefinedType = UNDEFINED,
+            icon: str | None | UndefinedType = UNDEFINED,
+            has_entity_name: bool | UndefinedType = UNDEFINED,
+            labels: set[str] | UndefinedType = UNDEFINED,
+            name: str | None | UndefinedType = UNDEFINED,
+            new_entity_id: str | UndefinedType = UNDEFINED,
+            new_unique_id: str | UndefinedType = UNDEFINED,
+            original_device_class: str | None | UndefinedType = UNDEFINED,
+            original_icon: str | None | UndefinedType = UNDEFINED,
+            original_name: str | None | UndefinedType = UNDEFINED,
+            supported_features: int | UndefinedType = UNDEFINED,
+            translation_key: str | None | UndefinedType = UNDEFINED,
+            unit_of_measurement: str | None | UndefinedType = UNDEFINED,
+        ) -> RegistryEntry:
+            """Update properties of an entity."""
+    else:
+        # options and platform are not part of the public
+        # API so they are forced to UNDEFINED to prevent
+        # code from setting them externally.
+        async_update_entity = partialmethod(
+            _async_update_entity, options=UNDEFINED, platform=UNDEFINED
         )
 
     @callback
