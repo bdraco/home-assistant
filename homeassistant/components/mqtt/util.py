@@ -40,6 +40,8 @@ TEMP_DIR_NAME = f"home-assistant-{DOMAIN}"
 
 _VALID_QOS_SCHEMA = vol.All(vol.Coerce(int), vol.In([0, 1, 2]))
 
+_LOGGER = logging.getLogger(__name__)
+
 
 def platforms_from_config(config: list[ConfigType]) -> set[Platform | str]:
     """Return the platforms to be set up."""
@@ -78,7 +80,9 @@ async def async_forward_entry_setup_and_setup_discovery(
         )
     if not tasks:
         return
+    _LOGGER.warning("Setting up %s", new_platforms)
     await asyncio.gather(*tasks)
+    _LOGGER.warning("Done setting up %s", new_platforms)
     platforms_loaded.update(new_platforms)
 
 
