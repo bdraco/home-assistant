@@ -462,6 +462,7 @@ class MQTT:
             INITIAL_SUBSCRIBE_COOLDOWN, self._async_perform_subscriptions
         )
         self._misc_task: asyncio.Task | None = None
+        self._queue_task: asyncio.Task | None = None
         self._reconnect_task: asyncio.Task | None = None
         self._should_reconnect: bool = True
         self._available_future: asyncio.Future[bool] | None = None
@@ -479,6 +480,7 @@ class MQTT:
             )
         )
         self._socket_buffersize: int | None = None
+        self._incoming_queue: asyncio.Queue[mqtt.MQTTMessage] = asyncio.Queue()
 
     @callback
     def _async_ha_started(self, _hass: HomeAssistant) -> None:
@@ -644,6 +646,12 @@ class MQTT:
             self.loop.remove_reader(sock)
         if self._misc_task is not None and not self._misc_task.done():
             self._misc_task.cancel()
+        if self._queue_task is not None and not self._queue_task.done():
+            self._queue_task.cancel()
+            incoming_queue = self._incoming_queue
+            while not incoming_queue.empty():
+                incoming_queue.get_nowait()
+                incoming_queue.task_done()
 
     @callback
     def _async_writer_callback(self, client: mqtt.Client) -> None:
@@ -1040,6 +1048,11 @@ class MQTT:
             self.conf.get(CONF_PORT, DEFAULT_PORT),
             result_code,
         )
+        if self._queue_task is None or self._queue_task.done():
+            _LOGGER.debug("%s: Starting client queue loop", self.config_entry.title)
+            self._queue_task = self.config_entry.async_create_background_task(
+                self.hass, self._async_process_incoming_queue(), name="mqtt queue loop"
+            )
 
         self._async_queue_resubscribe()
         birth: dict[str, Any]
@@ -1102,6 +1115,21 @@ class MQTT:
     def _async_mqtt_on_message(
         self, _mqttc: mqtt.Client, _userdata: None, msg: mqtt.MQTTMessage
     ) -> None:
+        _LOGGER.warning("Received message on %s", msg.topic)
+        self._incoming_queue.put_nowait(msg)
+
+    async def _async_process_incoming_queue(self) -> None:
+        """Process incoming messages from the queue."""
+        incoming_queue = self._incoming_queue
+        while True:
+            _LOGGER.warning("queue running")
+            msg = await incoming_queue.get()
+            self._async_process_incoming_message(msg)
+            incoming_queue.task_done()
+
+    @callback
+    def _async_process_incoming_message(self, msg: mqtt.MQTTMessage) -> None:
+        """Process a single incoming message."""
         try:
             # msg.topic is a property that decodes the topic to a string
             # every time it is accessed. Save the result to avoid
@@ -1117,7 +1145,7 @@ class MQTT:
                 msg.payload[0:8192],
             )
             return
-        _LOGGER.debug(
+        _LOGGER.warning(
             "Received%s message on %s (qos=%s): %s",
             " retained" if msg.retain else "",
             topic,
