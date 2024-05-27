@@ -283,11 +283,19 @@ async def async_start(  # noqa: C901
         component: str, discovery_payload: MQTTDiscoveryPayload
     ) -> None:
         """Perform component set up."""
+        _LOGGER.warning("_async_component_setup %s %s", component, discovery_payload)
         async with platform_setup_lock.setdefault(component, asyncio.Lock()):
+            _LOGGER.warning(
+                "_async_component_setup GOT LOCK %s %s", component, discovery_payload
+            )
             if component not in mqtt_data.platforms_loaded:
                 await async_forward_entry_setup_and_setup_discovery(
                     hass, config_entry, {component}
                 )
+            _LOGGER.warning(
+                "_async_component_setup FINISHED %s %s", component, discovery_payload
+            )
+
         _async_add_component(discovery_payload)
 
     @callback
