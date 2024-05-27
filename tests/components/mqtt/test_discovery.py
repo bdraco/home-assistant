@@ -1167,7 +1167,9 @@ async def test_cleanup_device(
         await hass.async_block_till_done()
 
     # Verify retained discovery topic has been cleared
-    mqtt_mock.async_publish.assert_called_with(discovery_topic, "", 0, True)
+    mqtt_mock.async_publish.assert_called_once_with(
+        "homeassistant/sensor/bla/config", None, 0, True
+    )
 
 
 @pytest.mark.parametrize(
@@ -1469,9 +1471,9 @@ async def test_cleanup_device_multiple_config_entries(
     # Verify retained discovery topic has been cleared
     mqtt_mock.async_publish.assert_has_calls(
         [
-            call("homeassistant/sensor/bla/config", "", 0, True),
-            call("homeassistant/tag/bla/config", "", 0, True),
-            call("homeassistant/device_automation/bla/config", "", 0, True),
+            call("homeassistant/sensor/bla/config", None, 0, True),
+            call("homeassistant/tag/bla/config", None, 0, True),
+            call("homeassistant/device_automation/bla/config", None, 0, True),
         ],
         any_order=True,
     )
@@ -2070,11 +2072,11 @@ async def test_clear_config_topic_disabled_entity(
     # Assert all valid discovery topics are cleared
     assert mqtt_mock.async_publish.call_count == 2
     assert (
-        call("homeassistant/sensor/sbfspot_0/sbfspot_12345/config", "", 0, True)
+        call("homeassistant/sensor/sbfspot_0/sbfspot_12345/config", None, 0, True)
         in mqtt_mock.async_publish.mock_calls
     )
     assert (
-        call("homeassistant/sensor/sbfspot_0/sbfspot_12345_1/config", "", 0, True)
+        call("homeassistant/sensor/sbfspot_0/sbfspot_12345_1/config", None, 0, True)
         in mqtt_mock.async_publish.mock_calls
     )
 
