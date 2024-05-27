@@ -1126,6 +1126,12 @@ class MQTT:
             msg = await incoming_queue.get()
             self._async_process_incoming_message(msg)
             incoming_queue.task_done()
+            processed = 1
+
+            while not incoming_queue.empty() and processed < 256:
+                self._async_process_incoming_message(incoming_queue.get_nowait())
+                incoming_queue.task_done()
+                processed += 1
 
     @callback
     def _async_process_incoming_message(self, msg: mqtt.MQTTMessage) -> None:
