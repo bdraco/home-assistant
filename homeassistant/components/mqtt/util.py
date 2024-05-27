@@ -80,9 +80,9 @@ async def async_forward_entry_setup_and_setup_discovery(
         )
     if not tasks:
         return
-    _LOGGER.warning("_async_component_setup Setting up %s", new_platforms)
+    _LOGGER.warning("Setting up %s", new_platforms)
     await asyncio.gather(*tasks)
-    _LOGGER.warning("_async_component_setup Done setting up %s", new_platforms)
+    _LOGGER.warning("Done setting up %s", new_platforms)
     platforms_loaded.update(new_platforms)
 
 
