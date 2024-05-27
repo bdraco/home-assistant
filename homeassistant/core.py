@@ -736,6 +736,10 @@ class HomeAssistant:
         hassjob: HassJob to call.
         args: parameters for method to call.
         """
+        _LOGGER.error(
+            "_async_add_hass_job with %s (%s) background=%s", hassjob, args, background
+        )
+
         task: asyncio.Future[_R]
         # This code path is performance sensitive and uses
         # if TYPE_CHECKING to avoid the overhead of constructing
