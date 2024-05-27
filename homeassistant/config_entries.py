@@ -1149,8 +1149,7 @@ class ConfigEntry(Generic[_DataT]):
 
         target: target to call.
         """
-        _LOGGER.error("entry.async_create_task with %s (%s)", target, name)
-
+        # _LOGGER.error("entry.async_create_task with %s (%s)", target, name)
         task = hass.async_create_task_internal(
             target, f"{name} {self.title} {self.domain} {self.entry_id}", eager_start
         )
