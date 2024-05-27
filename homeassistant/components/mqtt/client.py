@@ -1123,15 +1123,16 @@ class MQTT:
         incoming_queue = self._incoming_queue
         while True:
             _LOGGER.warning("queue running")
-            msg = await incoming_queue.get()
-            self._async_process_incoming_message(msg)
+            self._async_process_incoming_message(await incoming_queue.get())
             incoming_queue.task_done()
             processed = 1
+            _LOGGER.warning("queue processed: %s", processed)
 
             while not incoming_queue.empty() and processed < 256:
                 self._async_process_incoming_message(incoming_queue.get_nowait())
                 incoming_queue.task_done()
                 processed += 1
+                _LOGGER.warning("queue processed: %s", processed)
 
     @callback
     def _async_process_incoming_message(self, msg: mqtt.MQTTMessage) -> None:
