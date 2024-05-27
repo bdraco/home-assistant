@@ -947,7 +947,6 @@ class MQTT:
         #
         # Since we do not know if a published value is retained we need to
         # (re)subscribe, to ensure retained messages are replayed
-
         if not self._pending_subscriptions:
             return
 
@@ -990,11 +989,22 @@ class MQTT:
 
             await self._async_wait_for_mid_or_raise(mid, result)
 
+    async def _async_perform_and_queue_resubscription(self) -> None:
+        """Perform and queue subscriptions."""
+        # Perform subscriptions first to handle any discovery
+        # subscriptions that should be sent before other topics
+        await self._async_perform_subscriptions()
+        # Queue subscriptions to be sent
+        self._async_queue_resubscribe()
+        # Actually send the subscriptions
+        await self._async_perform_subscriptions()
+
     async def _async_resubscribe_and_publish_birth_message(
         self, birth_message: PublishMessage
     ) -> None:
         """Resubscribe to all topics and publish birth message."""
-        await self._async_perform_subscriptions()
+        # Ensure that the buffer is empty before we start
+        await self._async_perform_and_queue_resubscription()
         await self._ha_started.wait()  # Wait for Home Assistant to start
         await self._discovery_cooldown()  # Wait for MQTT discovery to cool down
         # Update subscribe cooldown period to a shorter time
@@ -1050,7 +1060,6 @@ class MQTT:
             result_code,
         )
 
-        self._async_queue_resubscribe()
         birth: dict[str, Any]
         if birth := self.conf.get(CONF_BIRTH_MESSAGE, DEFAULT_BIRTH):
             birth_message = PublishMessage(**birth)
@@ -1063,7 +1072,7 @@ class MQTT:
             # Update subscribe cooldown period to a shorter time
             self.config_entry.async_create_background_task(
                 self.hass,
-                self._async_perform_subscriptions(),
+                self._async_perform_and_queue_resubscription(),
                 name="mqtt re-subscribe",
             )
             self._subscribe_debouncer.set_timeout(SUBSCRIBE_COOLDOWN)
