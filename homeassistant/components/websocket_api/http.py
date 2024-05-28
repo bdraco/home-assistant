@@ -24,6 +24,7 @@ from .auth import AUTH_REQUIRED_MESSAGE, AuthPhase
 from .const import (
     DATA_CONNECTIONS,
     MAX_PENDING_MSG,
+    PENDING_MSG_MAX_FORCE_READY,
     PENDING_MSG_PEAK,
     PENDING_MSG_PEAK_TIME,
     SIGNAL_WEBSOCKET_CONNECTED,
@@ -79,6 +80,7 @@ class WebSocketHandler:
         "_connection",
         "_message_queue",
         "_ready_future",
+        "_release_ready_queue_size",
     )
 
     def __init__(self, hass: HomeAssistant, request: web.Request) -> None:
@@ -101,6 +103,7 @@ class WebSocketHandler:
         # an asyncio.Queue.
         self._message_queue: deque[bytes] = deque()
         self._ready_future: asyncio.Future[None] | None = None
+        self._release_ready_queue_size: int = 0
 
     def __repr__(self) -> str:
         """Return the representation."""
@@ -132,7 +135,6 @@ class WebSocketHandler:
         debug = logger.debug
         is_enabled_for = logger.isEnabledFor
         logging_debug = logging.DEBUG
-        can_coalesce = self._connection and self._connection.can_coalesce
         # Exceptions if Socket disconnected or cancelled by connection handler
         try:
             while not wsock.closed:
@@ -144,14 +146,11 @@ class WebSocketHandler:
                     return
 
                 debug_enabled = is_enabled_for(logging_debug)
-                if not can_coalesce:
-                    can_coalesce = self._connection and self._connection.can_coalesce
-
-                if can_coalesce and len(message_queue) == 1:
-                    # Try to coalesce messages if we can
-                    await asyncio.sleep(0)
-
-                if not can_coalesce or len(message_queue) == 1:
+                if (
+                    not (connection := self._connection)
+                    or not connection.can_coalesce
+                    or len(message_queue) == 1
+                ):
                     message = message_queue.popleft()
                     if debug_enabled:
                         debug("%s: Sending %s", self.description, message)
@@ -215,8 +214,10 @@ class WebSocketHandler:
             self._cancel()
             return
 
-        if (ready_future := self._ready_future) and not ready_future.done():
-            ready_future.set_result(None)
+        if self._release_ready_queue_size == 0:
+            # Try to coalesce more messages to reduce the number of writes
+            self._release_ready_queue_size = queue_size_after_add
+            self._loop.call_soon(self._release_ready_future_or_reschedule)
 
         peak_checker_active = self._peak_checker_unsub is not None
 
@@ -229,6 +230,32 @@ class WebSocketHandler:
             self._peak_checker_unsub = async_call_later(
                 self._hass, PENDING_MSG_PEAK_TIME, self._check_write_peak
             )
+
+    @callback
+    def _release_ready_future_or_reschedule(self) -> None:
+        """Release the ready future or reschedule.
+
+        We will release the ready future if the queue did not grow since the
+        last time we tried to release the ready future.
+
+        If we reach PENDING_MSG_MAX_FORCE_READY, we will release the ready future
+        immediately so avoid the coalesced messages from growing too large.
+        """
+        if not (ready_future := self._ready_future) or not (
+            queue_size := len(self._message_queue)
+        ):
+            self._release_ready_queue_size = 0
+            return
+        # If we are below the max pending to force ready, and there are new messages
+        # in the queue since the last time we tried to release the ready future, we
+        # try again later so we can coalesce more messages.
+        if queue_size > self._release_ready_queue_size < PENDING_MSG_MAX_FORCE_READY:
+            self._release_ready_queue_size = queue_size
+            self._loop.call_soon(self._release_ready_future_or_reschedule)
+            return
+        self._release_ready_queue_size = 0
+        if not ready_future.done():
+            ready_future.set_result(None)
 
     @callback
     def _check_write_peak(self, _utc_time: dt.datetime) -> None:
