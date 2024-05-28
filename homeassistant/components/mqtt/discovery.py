@@ -183,17 +183,17 @@ def _generate_device_cleanup_config(
 ) -> dict[str, Any]:
     """Generate a cleanup message on device cleanup."""
     mqtt_data = hass.data[DATA_MQTT]
-    device_discover_id: str = f"{node_id} {object_id}" if node_id else object_id
+    device_node_id: str = f"{node_id} {object_id}" if node_id else object_id
     config: dict[str, Any] = {CONF_DEVICE: {}, CONF_COMPONENTS: {}}
     comp_config = config[CONF_COMPONENTS]
     for platform, discover_id in mqtt_data.discovery_already_discovered:
         ids = discover_id.split(" ")
-        comp_id = ids.pop(0)
-        component_device_discover_id = " ".join(ids)
+        component_node_id = ids.pop(0)
+        component_object_id = " ".join(ids)
         if not ids:
             continue
-        if device_discover_id == component_device_discover_id:
-            comp_config[comp_id] = {CONF_PLATFORM: platform}
+        if device_node_id == component_node_id:
+            comp_config[component_object_id] = {CONF_PLATFORM: platform}
 
     return config if comp_config else {}
 
@@ -332,8 +332,14 @@ async def async_start(  # noqa: C901
             ]
             for component_id, config in component_configs.items():
                 component = config.pop(CONF_PLATFORM)
-                component_node_id = (
-                    f"{component_id} {node_id}" if node_id else component_id
+                # The object_id in the device discovery topic is the unique identifier.
+                # It is used as node_id for the components it contains.
+                component_node_id = object_id
+                # The component_id in the discovery playload is used as object_id
+                # If we have an additional node_id in the discovery topic,
+                # we extend the component_id with it.
+                component_object_id = (
+                    f"{node_id} {component_id}" if node_id else component_id
                 )
                 _replace_all_abbreviations(config)
                 discovery_payload = MQTTDiscoveryPayload(config)
@@ -346,7 +352,10 @@ async def async_start(  # noqa: C901
                     _merge_common_options(discovery_payload, device_discovery_payload)
                 discovered_components.append(
                     MqttComponentConfig(
-                        component, object_id, component_node_id, discovery_payload
+                        component,
+                        component_object_id,
+                        component_node_id,
+                        discovery_payload,
                     )
                 )
             _LOGGER.debug(
@@ -386,7 +395,7 @@ async def async_start(  # noqa: C901
             if TOPIC_BASE in discovery_payload:
                 _replace_topic_base(discovery_payload)
 
-            # If present, the node_id will be included in the discovered object id
+            # If present, the node_id will be included in the discovery_id.
             discovery_id = f"{node_id} {object_id}" if node_id else object_id
             discovery_hash = (component, discovery_id)
 

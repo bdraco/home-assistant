@@ -52,7 +52,9 @@ from . import (
 from tests.common import MockConfigEntry, async_fire_time_changed
 
 
-async def test_light_unique_id(hass: HomeAssistant) -> None:
+async def test_light_unique_id(
+    hass: HomeAssistant, entity_registry: er.EntityRegistry
+) -> None:
     """Test a light unique id."""
     already_migrated_config_entry = MockConfigEntry(
         domain=DOMAIN, data={CONF_HOST: "127.0.0.1"}, unique_id=MAC_ADDRESS
@@ -63,8 +65,7 @@ async def test_light_unique_id(hass: HomeAssistant) -> None:
         await async_setup_component(hass, tplink.DOMAIN, {tplink.DOMAIN: {}})
         await hass.async_block_till_done()
 
-    entity_id = "light.my_light"
-    entity_registry = er.async_get(hass)
+    entity_id = "light.my_bulb"
     assert entity_registry.async_get(entity_id).unique_id == "AABBCCDDEEFF"
 
 
