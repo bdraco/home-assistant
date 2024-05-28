@@ -1205,12 +1205,6 @@ class EntityRegistry(BaseRegistry):
 
         If the domain options are set to None, they will be removed.
         """
-        _LOGGER.warning(
-            "async_update_entity_options for %s with %s to %s",
-            entity_id,
-            domain,
-            options,
-        )
         old = self.entities[entity_id]
         new_options: dict[str, Mapping] = {
             key: value for key, value in old.options.items() if key != domain
