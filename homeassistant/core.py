@@ -129,7 +129,7 @@ STOPPING_STAGE_SHUTDOWN_TIMEOUT = 20
 STOP_STAGE_SHUTDOWN_TIMEOUT = 100
 FINAL_WRITE_STAGE_SHUTDOWN_TIMEOUT = 60
 CLOSE_STAGE_SHUTDOWN_TIMEOUT = 30
-RUN_PY_SPY = False
+
 
 # Internal; not helpers.typing.UNDEFINED due to circular dependency
 _UNDEF: dict[Any, Any] = {}
@@ -737,10 +737,6 @@ class HomeAssistant:
         hassjob: HassJob to call.
         args: parameters for method to call.
         """
-        _LOGGER.error(
-            "_async_add_hass_job with %s (%s) background=%s", hassjob, args, background
-        )
-
         task: asyncio.Future[_R]
         # This code path is performance sensitive and uses
         # if TYPE_CHECKING to avoid the overhead of constructing
@@ -797,7 +793,6 @@ class HomeAssistant:
 
         target: target to call.
         """
-        _LOGGER.error("async_create_task with %s (%s)", target, name)
         # We turned on asyncio debug in April 2024 in the dev containers
         # in the hope of catching some of the issues that have been
         # reported. It will take a while to get all the issues fixed in
@@ -1110,25 +1105,6 @@ class HomeAssistant:
                     "Stopping Home Assistant before startup has completed may fail"
                 )
 
-        spy_task: asyncio.Task[None] | None = None
-        with suppress(Exception):
-            if RUN_PY_SPY:
-                proc = await asyncio.create_subprocess_exec(
-                    "/config/py_spy-0.3.14.data/scripts/py-spy",
-                    "record",
-                    "--pid",
-                    str(os.getpid()),
-                    "--rate",
-                    "1000",
-                    "--duration",
-                    "10",
-                    "--output",
-                    f"/config/www/shutdown.{time.time()}.svg",
-                )
-                spy_task = asyncio.create_task(
-                    proc.communicate(), name="shutdown py-spy"
-                )
-
         # Stage 1 - Run shutdown jobs
         try:
             async with self.timeout.async_timeout(STOPPING_STAGE_SHUTDOWN_TIMEOUT):
@@ -1246,9 +1222,6 @@ class HomeAssistant:
 
         if self._stopped is not None:
             self._stopped.set()
-
-        if spy_task:
-            await spy_task
 
     def _cancel_cancellable_timers(self) -> None:
         """Cancel timer handles marked as cancellable."""
@@ -1552,16 +1525,14 @@ class EventBus:
                 "Bus:Handling %s", _event_repr(event_type, origin, event_data)
             )
 
-        if event_type in self._listeners:
-            if event_type in EVENTS_EXCLUDED_FROM_MATCH_ALL:
-                listeners = self._listeners[event_type].copy()
-            else:
-                listeners = self._listeners[event_type] + self._match_all_listeners
+        listeners = self._listeners.get(event_type, EMPTY_LIST)
+        if event_type not in EVENTS_EXCLUDED_FROM_MATCH_ALL:
+            match_all_listeners = self._match_all_listeners
         else:
-            listeners = self._match_all_listeners.copy()
+            match_all_listeners = EMPTY_LIST
 
         event: Event[_DataT] | None = None
-        for job, event_filter in listeners:
+        for job, event_filter in listeners + match_all_listeners:
             if event_filter is not None:
                 try:
                     if event_data is None or not event_filter(event_data):
@@ -1571,7 +1542,13 @@ class EventBus:
                     continue
 
             if not event:
-                event = Event(event_type, event_data, origin, time_fired, context)
+                event = Event(
+                    event_type,
+                    event_data,
+                    origin,
+                    time_fired,
+                    context,
+                )
 
             try:
                 self._hass.async_run_hass_job(job, event)
