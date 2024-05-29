@@ -222,8 +222,8 @@ def _parse_device_payload(
     except ValueError:
         _LOGGER.warning("Unable to parse JSON %s: '%s'", object_id, payload)
         return {}
+    _replace_all_abbreviations(device_payload)
     try:
-        _replace_all_abbreviations(device_payload)
         DEVICE_DISCOVERY_SCHEMA(device_payload)
     except vol.Invalid as exc:
         _LOGGER.warning(
@@ -318,18 +318,18 @@ async def async_start(  # noqa: C901
         discovered_components: list[MqttComponentConfig] = []
         if component == CONF_DEVICE:
             # Process device based discovery message
+            # and regenate cleanup config.
             device_discovery_payload = _parse_device_payload(
                 hass, payload, object_id, node_id
             )
             if not device_discovery_payload:
                 return
-            device_config: dict[str, Any] = device_discovery_payload[CONF_DEVICE]
-            origin_config: dict[str, Any] | None = device_discovery_payload.get(
-                CONF_ORIGIN
-            )
-            component_configs: dict[str, Any] = device_discovery_payload[
-                CONF_COMPONENTS
-            ]
+            device_config: dict[str, Any]
+            origin_config: dict[str, Any] | None
+            component_configs: dict[str, dict[str, Any]]
+            device_config = device_discovery_payload[CONF_DEVICE]
+            origin_config = device_discovery_payload.get(CONF_ORIGIN)
+            component_configs = device_discovery_payload[CONF_COMPONENTS]
             for component_id, config in component_configs.items():
                 component = config.pop(CONF_PLATFORM)
                 # The object_id in the device discovery topic is the unique identifier.
@@ -342,8 +342,11 @@ async def async_start(  # noqa: C901
                     f"{node_id} {component_id}" if node_id else component_id
                 )
                 _replace_all_abbreviations(config)
-                discovery_payload = MQTTDiscoveryPayload(config)
-                if discovery_payload:
+                # We add wrapper to the discovery payload with the discovery data.
+                # If the dict is empty after removing the platform, the payload is
+                # assumed to remove the existing config and we do not want to add
+                # device or orig or shared availability attributes.
+                if discovery_payload := MQTTDiscoveryPayload(config):
                     discovery_payload.device_discovery = True
                     discovery_payload[CONF_DEVICE] = device_config
                     discovery_payload[CONF_ORIGIN] = origin_config
@@ -383,6 +386,7 @@ async def async_start(  # noqa: C901
                 MqttComponentConfig(component, object_id, node_id, discovery_payload)
             )
 
+        discovery_pending_discovered = mqtt_data.discovery_pending_discovered
         for component_config in discovered_components:
             component = component_config.component
             node_id = component_config.node_id
@@ -401,11 +405,6 @@ async def async_start(  # noqa: C901
 
             if discovery_payload:
                 # Attach MQTT topic to the payload, used for debug prints
-                setattr(
-                    discovery_payload,
-                    "__configuration_source__",
-                    f"MQTT (topic: '{topic}')",
-                )
                 discovery_data = {
                     ATTR_DISCOVERY_HASH: discovery_hash,
                     ATTR_DISCOVERY_PAYLOAD: discovery_payload,
@@ -413,10 +412,8 @@ async def async_start(  # noqa: C901
                 }
                 setattr(discovery_payload, "discovery_data", discovery_data)
 
-            if discovery_hash in mqtt_data.discovery_pending_discovered:
-                pending = mqtt_data.discovery_pending_discovered[discovery_hash][
-                    "pending"
-                ]
+            if discovery_hash in discovery_pending_discovered:
+                pending = discovery_pending_discovered[discovery_hash]["pending"]
                 pending.appendleft(discovery_payload)
                 _LOGGER.debug(
                     "Component has already been discovered: %s %s, queuing update",
