@@ -1553,13 +1553,12 @@ class EventBus:
             )
 
         if event_type in self._listeners:
-            listeners = self._listeners[event_type].copy()
-            if event_type not in EVENTS_EXCLUDED_FROM_MATCH_ALL:
-                listeners += self._match_all_listeners
-        elif event_type not in EVENTS_EXCLUDED_FROM_MATCH_ALL:
-            listeners = self._match_all_listeners.copy()
+            if event_type in EVENTS_EXCLUDED_FROM_MATCH_ALL:
+                listeners = self._listeners[event_type].copy()
+            else:
+                listeners = self._listeners[event_type] + self._match_all_listeners
         else:
-            return
+            listeners = self._match_all_listeners.copy()
 
         event: Event[_DataT] | None = None
         for job, event_filter in listeners:
