@@ -1552,14 +1552,17 @@ class EventBus:
                 "Bus:Handling %s", _event_repr(event_type, origin, event_data)
             )
 
-        listeners = self._listeners.get(event_type, EMPTY_LIST)
-        if event_type not in EVENTS_EXCLUDED_FROM_MATCH_ALL:
-            match_all_listeners = self._match_all_listeners
+        if event_type in self._listeners:
+            listeners = self._listeners[event_type].copy()
+            if event_type not in EVENTS_EXCLUDED_FROM_MATCH_ALL:
+                listeners += self._match_all_listeners
+        elif event_type not in EVENTS_EXCLUDED_FROM_MATCH_ALL:
+            listeners = self._match_all_listeners.copy()
         else:
-            match_all_listeners = EMPTY_LIST
+            return
 
         event: Event[_DataT] | None = None
-        for job, event_filter in listeners + match_all_listeners:
+        for job, event_filter in listeners:
             if event_filter is not None:
                 try:
                     if event_data is None or not event_filter(event_data):
@@ -1569,13 +1572,7 @@ class EventBus:
                     continue
 
             if not event:
-                event = Event(
-                    event_type,
-                    event_data,
-                    origin,
-                    time_fired,
-                    context,
-                )
+                event = Event(event_type, event_data, origin, time_fired, context)
 
             try:
                 self._hass.async_run_hass_job(job, event)
