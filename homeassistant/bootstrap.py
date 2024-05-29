@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections import defaultdict
 import contextlib
+import cProfile
 from functools import partial
 from itertools import chain
 import logging
@@ -15,6 +16,7 @@ import os
 import platform
 import sys
 import threading
+import time
 from time import monotonic
 from typing import TYPE_CHECKING, Any
 
@@ -47,6 +49,7 @@ from .components import (
     diagnostics as diagnostics_pre_import,  # noqa: F401
     file_upload as file_upload_pre_import,  # noqa: F401
     group as group_pre_import,  # noqa: F401
+    hardware as hardware_import,  # noqa: F401 - not named pre_import since it has requirements
     history as history_pre_import,  # noqa: F401
     http,  # not named pre_import since it has requirements
     image_upload as image_upload_import,  # noqa: F401 - not named pre_import since it has requirements
@@ -244,12 +247,31 @@ PRELOAD_STORAGE = [
     "auth_module.totp",
 ]
 
+RUN_PY_SPY_EARLY = False
+
 
 async def async_setup_hass(
     runtime_config: RuntimeConfig,
 ) -> core.HomeAssistant | None:
     """Set up Home Assistant."""
     hass = core.HomeAssistant(runtime_config.config_dir)
+
+    proc: asyncio.subprocess.Process | None = None
+    with contextlib.suppress(Exception):
+        if RUN_PY_SPY_EARLY:
+            proc = await asyncio.create_subprocess_exec(
+                "/config/py_spy-0.3.14.data/scripts/py-spy",
+                "record",
+                "--pid",
+                str(os.getpid()),
+                "--rate",
+                "1000",
+                "--duration",
+                "5",
+                "--output",
+                f"/config/www/early.{time.time()}.svg",
+            )
+            hass.async_create_background_task(proc.communicate(), name="early py-spy")
 
     async_enable_logging(
         hass,
@@ -882,6 +904,7 @@ async def _async_resolve_domains_to_setup(
     # Optimistically check if requirements are already installed
     # ahead of setting up the integrations so we can prime the cache
     # We do not wait for this since its an optimization only
+    _LOGGER.debug("Pre-checking requirements: %s", needed_requirements)
     hass.async_create_background_task(
         requirements.async_load_installed_versions(hass, needed_requirements),
         "check installed requirements",
@@ -903,6 +926,8 @@ async def _async_resolve_domains_to_setup(
     # hold the translation load lock and if anything is fast enough to
     # wait for the translation load lock, loading will be done by the
     # time it gets to it.
+    translations_to_load.update(domains_to_setup)
+    _LOGGER.debug("Pre-loading translations: %s", translations_to_load)
     hass.async_create_background_task(
         translation.async_load_integrations(hass, translations_to_load),
         "load translations",
@@ -923,10 +948,40 @@ async def _async_resolve_domains_to_setup(
     return domains_to_setup, integration_cache
 
 
+RUN_PY_SPY = False
+RUN_PY_SPY_AFTER_SETUP = False
+RUN_PROFILE = False
+ASYNCIO_DEBUG = False
+
+
 async def _async_set_up_integrations(
     hass: core.HomeAssistant, config: dict[str, Any]
 ) -> None:
     """Set up all the integrations."""
+    hass.loop.set_debug(ASYNCIO_DEBUG)
+    proc: asyncio.subprocess.Process | None = None
+    with contextlib.suppress(Exception):
+        if RUN_PY_SPY:
+            proc = await asyncio.create_subprocess_exec(
+                "/config/py_spy-0.3.14.data/scripts/py-spy",
+                "record",
+                "--pid",
+                str(os.getpid()),
+                "--rate",
+                "1000",
+                "--duration",
+                "60",
+                "--output",
+                f"/config/www/bootstrap.{time.time()}.svg",
+            )
+            hass.async_create_background_task(
+                proc.communicate(), name="bootstrap py-spy"
+            )
+
+    if RUN_PROFILE:
+        pr = cProfile.Profile()
+        pr.enable()
+
     watcher = _WatchPendingSetups(hass, _setup_started(hass))
     watcher.async_start()
 
@@ -1025,6 +1080,41 @@ async def _async_set_up_integrations(
         )
 
     watcher.async_stop()
+
+    if RUN_PROFILE:
+        pr.disable()
+        pr.create_stats()
+        file = f"bootstrap.{time.time()}.cprof"
+        pr.dump_stats(file)
+        _LOGGER.warning(file)
+
+    with contextlib.suppress(Exception):
+        if RUN_PY_SPY_AFTER_SETUP:
+            proc = await asyncio.create_subprocess_exec(
+                "/config/py_spy-0.3.14.data/scripts/py-spy",
+                "record",
+                "--pid",
+                str(os.getpid()),
+                "--rate",
+                "1000",
+                "--duration",
+                "60",
+                "--output",
+                f"/config/www/startup.{time.time()}.svg",
+            )
+            hass.async_create_background_task(proc.communicate(), name="startup py-spy")
+
+    import orjson
+
+    from .setup import _setup_times
+
+    _LOGGER.warning(
+        "Timings: %s",
+        orjson.dumps(
+            _setup_times(hass),
+            option=orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS | orjson.OPT_NON_STR_KEYS,
+        ).decode(),
+    )
 
     if _LOGGER.isEnabledFor(logging.DEBUG):
         setup_time = async_get_setup_timings(hass)

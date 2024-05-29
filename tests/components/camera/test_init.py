@@ -160,6 +160,7 @@ async def test_get_image_from_camera_with_width_height_scaled(
         )
 
     assert mock_camera.called
+
     assert image.content_type == "image/jpg"
     assert image.content == EMPTY_8_6_JPEG
 

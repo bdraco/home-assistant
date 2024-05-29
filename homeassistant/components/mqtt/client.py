@@ -631,7 +631,7 @@ class MQTT:
     ) -> None:
         """Handle socket open."""
         fileno = sock.fileno()
-        _LOGGER.debug("%s: connection opened %s", self.config_entry.title, fileno)
+        _LOGGER.warning("%s: connection opened %s", self.config_entry.title, fileno)
         if fileno > -1:
             self._increase_socket_buffer_size(sock)
             self.loop.add_reader(sock, partial(self._async_reader_callback, client))
@@ -646,7 +646,7 @@ class MQTT:
     ) -> None:
         """Handle socket close."""
         fileno = sock.fileno()
-        _LOGGER.debug("%s: connection closed %s", self.config_entry.title, fileno)
+        _LOGGER.warning("%s: connection closed %s", self.config_entry.title, fileno)
         # If socket close is called before the connect
         # result is set make sure the first connection result is set
         self._async_connection_result(False)
@@ -761,6 +761,7 @@ class MQTT:
     async def _reconnect_loop(self) -> None:
         """Reconnect to the MQTT server."""
         while True:
+            _LOGGER.warning("Reconnect loop run")
             if not self.connected:
                 try:
                     async with self._connection_lock, self._async_connect_in_executor():

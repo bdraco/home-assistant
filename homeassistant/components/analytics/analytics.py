@@ -278,7 +278,7 @@ class Analytics:
                 )
 
         if self.preferences.get(ATTR_USAGE, False):
-            payload[ATTR_CERTIFICATE] = hass.http.ssl_certificate is not None
+            payload[ATTR_CERTIFICATE] = hass.config.api and hass.config.api.use_ssl
             payload[ATTR_INTEGRATIONS] = integrations
             payload[ATTR_CUSTOM_INTEGRATIONS] = custom_integrations
             if supervisor_info is not None:

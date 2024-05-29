@@ -304,6 +304,10 @@ async def test_webhook_handle_get_config(
 
     hass_config = hass.config.as_dict()
 
+    # JSON does not support sets, so we need to test
+    # the unordered values
+    json["components"] = set(json["components"])
+
     expected_dict = {
         "latitude": hass_config["latitude"],
         "longitude": hass_config["longitude"],

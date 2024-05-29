@@ -306,6 +306,7 @@ async def _async_setup_component(
     if not await integration.resolve_dependencies():
         return False
 
+    _LOGGER.debug("Process deps %s", domain)
     # Process requirements as soon as possible, so we can import the component
     # without requiring imports to be in functions.
     try:
@@ -314,6 +315,7 @@ async def _async_setup_component(
         log_error(str(err))
         return False
 
+    _LOGGER.debug("Get comp %s", domain)
     # Some integrations fail on import because they call functions incorrectly.
     # So we do it before validating config to catch these errors.
     try:
@@ -322,6 +324,7 @@ async def _async_setup_component(
         log_error(f"Unable to import component: {err}", err)
         return False
 
+    _LOGGER.debug("async_process_component_config %s", domain)
     integration_config_info = await conf_util.async_process_component_config(
         hass, config, integration, component
     )
@@ -398,6 +401,7 @@ async def _async_setup_component(
                 return False
 
             if task:
+                _LOGGER.info("About to setup %s", domain)
                 async with hass.timeout.async_timeout(SLOW_SETUP_MAX_WAIT, domain):
                     result = await task
         except TimeoutError:
@@ -416,6 +420,7 @@ async def _async_setup_component(
             async_notify_setup_error(hass, domain, integration.documentation)
             return False
         finally:
+            _LOGGER.info("Completed setup %s", domain)
             if warn_task:
                 warn_task.cancel()
         if result is False:
@@ -429,6 +434,7 @@ async def _async_setup_component(
             return False
 
         if load_translations_task:
+            _LOGGER.info("Waiting for %s translations to be loaded", domain)
             await load_translations_task
 
     if integration.platforms_exists(("config_flow",)):

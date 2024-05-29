@@ -127,7 +127,6 @@ from .websocket_api import async_load_websocket_api
 
 _LOGGER = logging.getLogger(__name__)
 
-
 STORAGE_KEY = DOMAIN
 STORAGE_VERSION = 1
 # If new platforms are added, be sure to import them above

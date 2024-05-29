@@ -27,13 +27,19 @@ MINOR_VERSION: Final = 7
 PATCH_VERSION: Final = "0.dev0"
 __short_version__: Final = f"{MAJOR_VERSION}.{MINOR_VERSION}"
 __version__: Final = f"{__short_version__}.{PATCH_VERSION}"
-REQUIRED_PYTHON_VER: Final[tuple[int, int, int]] = (3, 12, 0)
+REQUIRED_PYTHON_VER: Final[tuple[int, int, int]] = (3, 11, 0)
 REQUIRED_NEXT_PYTHON_VER: Final[tuple[int, int, int]] = (3, 12, 0)
 # Truthy date string triggers showing related deprecation warning messages.
-REQUIRED_NEXT_PYTHON_HA_RELEASE: Final = ""
+REQUIRED_NEXT_PYTHON_HA_RELEASE: Final = "2024.4"
 
 # Format for platform files
 PLATFORM_FORMAT: Final = "{platform}.{domain}"
+
+# The maximum number of entities we expect for large installations.
+# This value is used to limit the size of the state attributes we
+# will cache in memory and the maximum number of websocket messages
+# that are expected to be pending per connection at any given time.
+TARGET_MAX_ENTITIES: Final = 6144
 
 
 class Platform(StrEnum):
