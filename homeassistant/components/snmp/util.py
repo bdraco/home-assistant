@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from functools import cache
 
+import pysnmp.hlapi.asyncio as hlapi
 from pysnmp.hlapi.asyncio import (
     CommunityData,
     ContextData,
@@ -14,8 +15,11 @@ from pysnmp.hlapi.asyncio import (
     UdpTransportTarget,
     UsmUserData,
 )
+from pysnmp.hlapi.asyncio.cmdgen import vbProcessor
 
 from homeassistant.core import HomeAssistant
+
+from .const import MAP_AUTH_PROTOCOLS, MAP_PRIV_PROTOCOLS, SNMP_VERSIONS
 
 type RequestArgsType = tuple[
     SnmpEngine,
@@ -51,6 +55,34 @@ def _create_request_cmd_args(
 ) -> RequestArgsType:
     """Create request arguments."""
     engine = snmp_engine()
-    context_data = ContextData()
-    object_type = ObjectType(ObjectIdentity(object_id))
-    return (engine, auth_data, target, context_data, object_type)
+    object_identity = ObjectIdentity(object_id)
+    mib_controller = vbProcessor.getMibViewController(engine)
+    # Actually load the MIBs from disk so we do
+    # not do it in the event loop
+    object_identity.resolveWithMib(mib_controller)
+    return (engine, auth_data, target, ContextData(), ObjectType(object_identity))
+
+
+def make_auth_data(
+    version: str,
+    community: str | None,
+    authproto: str | None,
+    authkey: str | None,
+    privproto: str | None,
+    privkey: str | None,
+    username: str | None,
+) -> CommunityData | UsmUserData:
+    """Create auth data."""
+    if version != "3":
+        return CommunityData(community, mpModel=SNMP_VERSIONS[version])
+    if not authkey or not authproto:
+        authproto = "none"
+    if not privkey or not privproto:
+        privproto = "none"
+    return UsmUserData(
+        username,
+        authKey=authkey or None,
+        privKey=privkey or None,
+        authProtocol=getattr(hlapi, MAP_AUTH_PROTOCOLS[authproto]),
+        privProtocol=getattr(hlapi, MAP_PRIV_PROTOCOLS[privproto]),
+    )
