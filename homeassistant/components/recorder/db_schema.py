@@ -480,10 +480,27 @@ class States(Base):
     @staticmethod
     def from_event(event: Event[EventStateChangedData]) -> States:
         """Create object from a state_changed event."""
-        entity_id = event.data["entity_id"]
         state = event.data["new_state"]
-        dbstate = States(
-            entity_id=entity_id,
+        # None state means the state was removed from the state machine
+        if state is None:
+            state_value = ""
+            last_updated_ts = event.time_fired_timestamp
+            last_changed_ts = None
+            last_reported_ts = None
+        else:
+            state_value = state.state
+            last_updated_ts = state.last_updated_timestamp
+            if state.last_updated == state.last_changed:
+                last_changed_ts = None
+            else:
+                last_changed_ts = state.last_changed_timestamp
+            if state.last_updated == state.last_reported:
+                last_reported_ts = None
+            else:
+                last_reported_ts = state.last_reported_timestamp
+        return States(
+            state=state_value,
+            entity_id=event.data["entity_id"],
             attributes=None,
             context_id=None,
             context_id_bin=ulid_to_bytes_or_none(event.context.id),
@@ -494,27 +511,10 @@ class States(Base):
             origin_idx=EVENT_ORIGIN_TO_IDX.get(event.origin),
             last_updated=None,
             last_changed=None,
+            last_updated_ts=last_updated_ts,
+            last_changed_ts=last_changed_ts,
+            last_reported_ts=last_reported_ts,
         )
-        # None state means the state was removed from the state machine
-        if state is None:
-            dbstate.state = ""
-            dbstate.last_updated_ts = event.time_fired_timestamp
-            dbstate.last_changed_ts = None
-            dbstate.last_reported_ts = None
-            return dbstate
-
-        dbstate.state = state.state
-        dbstate.last_updated_ts = state.last_updated_timestamp
-        if state.last_updated == state.last_changed:
-            dbstate.last_changed_ts = None
-        else:
-            dbstate.last_changed_ts = state.last_changed_timestamp
-        if state.last_updated == state.last_reported:
-            dbstate.last_reported_ts = None
-        else:
-            dbstate.last_reported_ts = state.last_reported_timestamp
-
-        return dbstate
 
     def to_native(self, validate_entity_id: bool = True) -> State | None:
         """Convert to an HA state object."""
