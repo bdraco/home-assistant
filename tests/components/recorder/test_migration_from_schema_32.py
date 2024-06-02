@@ -22,7 +22,10 @@ from homeassistant.components.recorder.db_schema import (
     StatesMeta,
 )
 from homeassistant.components.recorder.models import process_timestamp
-from homeassistant.components.recorder.queries import get_migration_changes
+from homeassistant.components.recorder.queries import (
+    get_migration_changes,
+    select_event_type_ids,
+)
 from homeassistant.components.recorder.tasks import (
     EntityIDMigrationTask,
     EntityIDPostMigrationTask,
@@ -42,7 +45,6 @@ from .common import (
     async_attach_db_engine,
     async_recorder_block_till_done,
     async_wait_recording_done,
-    select_event_type_ids,
 )
 
 from tests.typing import RecorderInstanceGenerator
