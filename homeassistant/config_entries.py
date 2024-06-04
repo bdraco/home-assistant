@@ -1210,8 +1210,8 @@ def _report_non_locked_platform_forwards(entry: ConfigEntry) -> None:
         "hass.config_entries.async_late_forward_entry_setups "
         "in a tracked task. "
         "This will stop working in Home Assistant 2025.1",
-        error_if_integration=True,
-        error_if_core=True,
+        error_if_integration=False,
+        error_if_core=False,
     )
 
 
@@ -2061,7 +2061,20 @@ class ConfigEntries:
     async def async_forward_entry_setups(
         self, entry: ConfigEntry, platforms: Iterable[Platform | str]
     ) -> None:
-        """Forward the setup of an entry to platforms."""
+        """Forward the setup of an entry to platforms.
+
+        This method should be awaited before async_setup_entry is finished
+        in each integration. This is to ensure that all platforms are loaded
+        before the entry is set up. This ensures that the config entry cannot
+        be unloaded before all platforms are loaded.
+
+        If platforms must be loaded late (after the config entry is setup),
+        use async_late_forward_entry_setup instead.
+
+        This method is more efficient than async_forward_entry_setup as
+        it can load multiple platforms at once and does not require a separate
+        import executor job for each platform.
+        """
         integration = await loader.async_get_integration(self.hass, entry.domain)
         if not integration.platforms_are_loaded(platforms):
             with async_pause_setup(self.hass, SetupPhases.WAIT_IMPORT_PLATFORMS):
@@ -2087,7 +2100,13 @@ class ConfigEntries:
     async def async_late_forward_entry_setups(
         self, entry: ConfigEntry, platforms: Iterable[Platform | str]
     ) -> None:
-        """Forward the setup of an entry to platforms after setup."""
+        """Forward the setup of an entry to platforms after setup.
+
+        If platforms must be loaded late (after the config entry is setup),
+        use this method instead of async_forward_entry_setups as it holds
+        the setup lock until the platforms are loaded to ensure that the
+        config entry cannot be unloaded while platforms are loaded.
+        """
         async with entry.setup_lock:
             if entry.state is not ConfigEntryState.LOADED:
                 raise OperationNotAllowed(
@@ -2105,9 +2124,28 @@ class ConfigEntries:
         By default an entry is setup with the component it belongs to. If that
         component also has related platforms, the component will have to
         forward the entry to be setup by that component.
+
+        This method is deprecated and will stop working in Home Assistant 2025.6.
+
+        Instead, await async_forward_entry_setups as it can load
+        multiple platforms at once and is more efficient since it
+        does not require a separate import executor job for each platform.
+
+        If platforms must be loaded late (after the config entry is setup),
+        use async_late_forward_entry_setup instead.
         """
         if non_locked_platform_forwards := not entry.setup_lock.locked():
             _report_non_locked_platform_forwards(entry)
+        else:
+            report(
+                "calls async_forward_entry_setup for "
+                f"integration, {entry.domain} with title: {entry.title} "
+                f"and entry_id: {entry.entry_id}, which is deprecated and "
+                "will stop working in Home Assistant 2025.6, "
+                "await async_forward_entry_setups instead",
+                error_if_core=False,
+                error_if_integration=False,
+            )
         return await self._async_forward_entry_setup(
             entry, domain, True, non_locked_platform_forwards
         )
@@ -2172,7 +2210,11 @@ class ConfigEntries:
     async def async_forward_entry_unload(
         self, entry: ConfigEntry, domain: Platform | str
     ) -> bool:
-        """Forward the unloading of an entry to a different component."""
+        """Forward the unloading of an entry to a different component.
+
+        Its is preferred to call async_unload_platforms instead
+        of directly calling this method.
+        """
         # It was never loaded.
         if domain not in self.hass.config.components:
             return True
