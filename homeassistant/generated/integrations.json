@@ -2924,7 +2924,7 @@
       "iot_class": "cloud_polling"
     },
     "ista_ecotrend": {
-      "name": "ista Ecotrend",
+      "name": "ista EcoTrend",
       "integration_type": "hub",
       "config_flow": true,
       "iot_class": "cloud_polling"
