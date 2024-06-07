@@ -374,7 +374,7 @@ aiowatttime==0.1.1
 aiowebostv==0.4.0
 
 # homeassistant.components.withings
-aiowithings==2.1.0
+aiowithings==3.0.1
 
 # homeassistant.components.yandex_transport
 aioymaps==1.2.2
@@ -463,7 +463,7 @@ azure-kusto-data[aio]==3.1.0
 azure-kusto-ingest==3.1.0
 
 # homeassistant.components.holiday
-babel==2.13.1
+babel==2.15.0
 
 # homeassistant.components.homekit
 base36==0.1.1
@@ -2015,7 +2015,7 @@ snapcast==2.3.6
 soco==0.30.4
 
 # homeassistant.components.solax
-solax==3.1.0
+solax==3.1.1
 
 # homeassistant.components.somfy_mylink
 somfy-mylink-synergy==1.0.6

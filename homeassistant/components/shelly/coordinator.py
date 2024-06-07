@@ -98,7 +98,6 @@ class ShellyCoordinatorBase[_DeviceT: BlockDevice | RpcDevice](
         self.device = device
         self.device_id: str | None = None
         self._pending_platforms: list[Platform] | None = None
-        self._initialize_lock = asyncio.Lock()
         device_name = device.name if device.initialized else entry.title
         interval_td = timedelta(seconds=update_interval)
         super().__init__(hass, LOGGER, name=device_name, update_interval=interval_td)
@@ -161,16 +160,8 @@ class ShellyCoordinatorBase[_DeviceT: BlockDevice | RpcDevice](
         LOGGER.debug("Stopping RPC device coordinator for %s", self.name)
         await self.shutdown()
 
-    async def _async_device_initialize(self) -> bool:
-        """Initialize a Shelly device."""
-        async with self._initialize_lock:
-            return await self._async_device_initialize_locked()
-
-    async def _async_device_initialize_locked(self) -> bool:
-        """Initialize a shelly device while holding the lock."""
-        assert self._initialize_lock.locked(), "The initialize lock must be held"
-        if self.device.initialized:
-            return True
+    async def _async_device_connect_task(self) -> bool:
+        """Connect to a Shelly device task."""
         LOGGER.debug("Connecting to Shelly Device - %s", self.name)
         try:
             await self.device.initialize()
@@ -383,7 +374,7 @@ class ShellyBlockCoordinator(ShellyCoordinatorBase[BlockDevice]):
         if update_type is BlockUpdateType.ONLINE:
             self.entry.async_create_background_task(
                 self.hass,
-                self._async_device_initialize(),
+                self._async_device_connect_task(),
                 "block device online",
                 eager_start=True,
             )
@@ -595,11 +586,13 @@ class ShellyRpcCoordinator(ShellyCoordinatorBase[RpcDevice]):
             raise UpdateFailed(
                 f"Sleeping device did not update within {self.sleep_period} seconds interval"
             )
-        if self.device.connected:
-            return
 
-        if not await self._async_device_initialize():
-            raise UpdateFailed("Device reconnect error")
+        async with self._connection_lock:
+            if self.device.connected:  # Already connected
+                return
+
+            if not await self._async_device_connect_task():
+                raise UpdateFailed("Device reconnect error")
 
     async def _async_disconnected(self, reconnect: bool) -> None:
         """Handle device disconnected."""
@@ -670,7 +663,7 @@ class ShellyRpcCoordinator(ShellyCoordinatorBase[RpcDevice]):
         if update_type is RpcUpdateType.ONLINE:
             self.entry.async_create_background_task(
                 self.hass,
-                self._async_device_initialize(),
+                self._async_device_connect_task(),
                 "rpc device online",
                 eager_start=True,
             )
