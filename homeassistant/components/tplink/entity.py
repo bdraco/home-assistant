@@ -118,11 +118,10 @@ class CoordinatedTPLinkEntity(CoordinatorEntity[TPLinkDataUpdateCoordinator], AB
         # alias makes more sense in the context of the parent.
         # i.e. Hall Ceiling Fan & Bedroom Ceiling Fan; Child device aliases will be Ceiling Fan
         # and Dimmer Switch for both so should be distinguished by the parent name.
-        name = (
-            f"{parent.alias} - {device.alias}"
-            if parent and parent.device_type != DeviceType.Hub
-            else device.alias
-        )
+        if parent and parent.device_type != DeviceType.Hub:
+            name = f"{parent.alias} - {device.alias}"
+        else:
+            name = device.alias
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, str(device.device_id))},
             manufacturer="TP-Link",

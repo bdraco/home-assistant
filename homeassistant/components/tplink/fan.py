@@ -79,11 +79,12 @@ class TPLinkFan(CoordinatedTPLinkEntity, FanEntity):
         **kwargs: Any,
     ) -> None:
         """Turn on the fan."""
-        value_in_range = (
-            math.ceil(percentage_to_ranged_value(SPEED_RANGE, percentage))
-            if percentage is not None
-            else SPEED_RANGE[1]
-        )
+        if percentage is not None:
+            value_in_range = math.ceil(
+                percentage_to_ranged_value(SPEED_RANGE, percentage)
+            )
+        else:
+            value_in_range = SPEED_RANGE[1]
         await self.fan_module.set_fan_speed_level(value_in_range)
 
     @async_refresh_after
@@ -101,11 +102,10 @@ class TPLinkFan(CoordinatedTPLinkEntity, FanEntity):
         """Update the entity's attributes."""
         fan_speed = self.fan_module.fan_speed_level
         self._attr_is_on = fan_speed != 0
-        self._attr_percentage = (
-            ranged_value_to_percentage(SPEED_RANGE, fan_speed)
-            if self._attr_is_on
-            else None
-        )
+        if self._attr_is_on:
+            self._attr_percentage = ranged_value_to_percentage(SPEED_RANGE, fan_speed)
+        else:
+            self._attr_percentage = None
 
     @callback
     def _handle_coordinator_update(self) -> None:
