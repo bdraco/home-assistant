@@ -66,9 +66,10 @@ class TPLinkFan(CoordinatedTPLinkEntity, FanEntity):
         parent: Device | None = None,
     ) -> None:
         """Initialize the fan."""
+        super().__init__(
+            device, coordinator, parent=parent, unique_id=legacy_device_id(device)
+        )
         self.fan_module = fan_module
-        self._attr_unique_id = legacy_device_id(device)
-        super().__init__(device, coordinator, parent=parent)
         self._async_update_attrs()
 
     @async_refresh_after
