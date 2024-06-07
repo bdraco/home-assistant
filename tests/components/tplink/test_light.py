@@ -31,6 +31,7 @@ from homeassistant.components.light import (
     ATTR_TRANSITION,
     ATTR_XY_COLOR,
     DOMAIN as LIGHT_DOMAIN,
+    EFFECT_OFF,
 )
 from homeassistant.components.tplink.const import DOMAIN
 from homeassistant.config_entries import SOURCE_REAUTH
@@ -42,6 +43,7 @@ from homeassistant.setup import async_setup_component
 import homeassistant.util.dt as dt_util
 
 from . import (
+    DEVICE_ID,
     MAC_ADDRESS,
     _mocked_device,
     _patch_connect,
@@ -52,8 +54,19 @@ from . import (
 from tests.common import MockConfigEntry, async_fire_time_changed
 
 
+@pytest.mark.parametrize(
+    ("device_type", "expected_unique_id"),
+    [
+        pytest.param(DeviceType.Dimmer, DEVICE_ID, id="Dimmer"),
+        pytest.param(DeviceType.Bulb, MAC_ADDRESS.replace(":", "").upper(), id="Bulb"),
+        pytest.param(
+            DeviceType.LightStrip, MAC_ADDRESS.replace(":", "").upper(), id="LightStrip"
+        ),
+        pytest.param(DeviceType.WallSwitch, DEVICE_ID, id="WallSwitch"),
+    ],
+)
 async def test_light_unique_id(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    hass: HomeAssistant, device_type, expected_unique_id
 ) -> None:
     """Test a light unique id."""
     already_migrated_config_entry = MockConfigEntry(
@@ -61,29 +74,14 @@ async def test_light_unique_id(
     )
     already_migrated_config_entry.add_to_hass(hass)
     light = _mocked_device(modules=[Module.Light], alias="my_light")
-    with _patch_discovery(device=light), _patch_connect(device=light):
-        await async_setup_component(hass, tplink.DOMAIN, {tplink.DOMAIN: {}})
-        await hass.async_block_till_done()
-
-    entity_id = "light.my_bulb"
-    assert entity_registry.async_get(entity_id).unique_id == "AABBCCDDEEFF"
-
-
-async def test_dimmer_unique_id(hass: HomeAssistant) -> None:
-    """Test a light unique id."""
-    already_migrated_config_entry = MockConfigEntry(
-        domain=DOMAIN, data={CONF_HOST: "127.0.0.1"}, unique_id=MAC_ADDRESS
-    )
-    already_migrated_config_entry.add_to_hass(hass)
-    light = _mocked_device(modules=[Module.Light], alias="my_light")
-    light.device_type = DeviceType.Dimmer
+    light.device_type = device_type
     with _patch_discovery(device=light), _patch_connect(device=light):
         await async_setup_component(hass, tplink.DOMAIN, {tplink.DOMAIN: {}})
         await hass.async_block_till_done()
 
     entity_id = "light.my_light"
     entity_registry = er.async_get(hass)
-    assert entity_registry.async_get(entity_id).unique_id == "aa:bb:cc:dd:ee:ff"
+    assert entity_registry.async_get(entity_id).unique_id == expected_unique_id
 
 
 @pytest.mark.parametrize(
@@ -422,7 +420,7 @@ async def test_off_at_start_light(hass: HomeAssistant) -> None:
     light.is_color = False
     light.is_variable_color_temp = False
     light.is_dimmable = False
-    device.is_on = False
+    light.state = LightState(light_on=False)
 
     with _patch_discovery(device=device), _patch_connect(device=device):
         await async_setup_component(hass, tplink.DOMAIN, {tplink.DOMAIN: {}})
@@ -445,7 +443,7 @@ async def test_dimmer_turn_on_fix(hass: HomeAssistant) -> None:
     device = _mocked_device(modules=[Module.Light], alias="my_light")
     light = device.modules[Module.Light]
     device.device_type = DeviceType.Dimmer
-    device.is_on = False
+    light.state = LightState(light_on=False)
 
     with _patch_discovery(device=device), _patch_connect(device=device):
         await async_setup_component(hass, tplink.DOMAIN, {tplink.DOMAIN: {}})
@@ -529,10 +527,9 @@ async def test_smart_strip_effects(hass: HomeAssistant) -> None:
 
     state = hass.states.get(entity_id)
     assert state.state == STATE_ON
-    assert state.attributes[ATTR_EFFECT] is None
+    assert state.attributes[ATTR_EFFECT] == EFFECT_OFF
 
-    device.is_off = True
-    device.is_on = False
+    light.state = LightState(light_on=False)
     async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=20))
     await hass.async_block_till_done()
 
@@ -549,8 +546,7 @@ async def test_smart_strip_effects(hass: HomeAssistant) -> None:
     light.set_state.assert_called_once()
     light.set_state.reset_mock()
 
-    device.is_off = False
-    device.is_on = True
+    light.state = LightState(light_on=True)
     light_effect.effect_list = None
     async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=30))
     await hass.async_block_till_done()
@@ -651,8 +647,7 @@ async def test_smart_strip_custom_random_effect(hass: HomeAssistant) -> None:
     state = hass.states.get(entity_id)
     assert state.state == STATE_ON
 
-    device.is_off = True
-    device.is_on = False
+    light.state = LightState(light_on=False)
     light_effect.effect = LightEffect.LIGHT_EFFECTS_OFF
     async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=20))
     await hass.async_block_till_done()

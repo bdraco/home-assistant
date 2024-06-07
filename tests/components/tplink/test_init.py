@@ -274,7 +274,7 @@ async def test_plug_auth_fails(hass: HomeAssistant) -> None:
         domain=DOMAIN, data={CONF_HOST: "127.0.0.1"}, unique_id=MAC_ADDRESS
     )
     config_entry.add_to_hass(hass)
-    device = _mocked_device(alias="my_plug")
+    device = _mocked_device(alias="my_plug", features=["state"])
     with _patch_discovery(device=device), _patch_connect(device=device):
         await async_setup_component(hass, tplink.DOMAIN, {tplink.DOMAIN: {}})
         await hass.async_block_till_done()
