@@ -2125,17 +2125,17 @@ def _sorted_statistics_to_dict(  # noqa: C901
         if convert:
             if convert_key_map is None:
                 convert_key_map = (
-                    ("start", start_ts_idx, False),
-                    *((key, field_map[key], key in _CONVERT_KEYS) for key in types),
+                    ("start", start_ts_idx, True),
+                    *((key, field_map[key], key not in _CONVERT_KEYS) for key in types),
                 )
             results = [
                 {
-                    key: None
+                    key: db_row[idx]
+                    if no_convert
+                    else None
                     if (value := db_row[idx]) is None
                     else convert(value)
-                    if should_convert
-                    else value
-                    for key, idx, should_convert in convert_key_map
+                    for key, idx, no_convert in convert_key_map
                 }
                 for db_row in db_rows
             ]
