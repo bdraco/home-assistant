@@ -27,7 +27,7 @@ from yalexs_ble import YaleXSBLEDiscovery
 
 from homeassistant.config_entries import SOURCE_INTEGRATION_DISCOVERY, ConfigEntry
 from homeassistant.const import CONF_PASSWORD, EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
+from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryNotReady,
@@ -69,7 +69,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: AugustConfigEntry) -> bool:
     """Unload a config entry."""
-    entry.runtime_data.async_stop()
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
@@ -140,7 +139,7 @@ class AugustData(SubscriberMixin):
         self._doorbells_by_id: dict[str, Doorbell] = {}
         self._locks_by_id: dict[str, Lock] = {}
         self._house_ids: set[str] = set()
-        self._pubnub_unsub: CALLBACK_TYPE | None = None
+        self._pubnub_unsub: Callable[[], Coroutine[Any, Any, None]] | None = None
 
     @property
     def brand(self) -> str:
@@ -179,6 +178,7 @@ class AugustData(SubscriberMixin):
         self._config_entry.async_on_unload(
             self._hass.bus.async_listen(EVENT_HOMEASSISTANT_STOP, self.async_stop)
         )
+        self._config_entry.async_on_unload(self.async_stop)
         await self.activity_stream.async_setup()
 
         pubnub.subscribe(self.async_pubnub_message)
@@ -236,11 +236,10 @@ class AugustData(SubscriberMixin):
             self.async_signal_device_id_update(device.device_id)
             activity_stream.async_schedule_house_id_refresh(device.house_id)
 
-    @callback
-    def async_stop(self, event: Event | None = None) -> None:
+    async def async_stop(self, event: Event | None = None) -> None:
         """Stop the subscriptions."""
         if self._pubnub_unsub:
-            self._pubnub_unsub()
+            await self._pubnub_unsub()
         self.activity_stream.async_stop()
 
     @property
