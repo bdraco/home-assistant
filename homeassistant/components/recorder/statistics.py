@@ -2050,13 +2050,13 @@ def _fast_build_sum_list(
 def _fast_build_non_converted_list(
     db_rows: list[Row],
     table_duration_seconds: float,
-    key_map: dict[str, int],
+    key_map: tuple[tuple[str, int], ...],
 ) -> list[StatisticsRow]:
     """Build a list of statistics without unit conversion."""
     return [
         {
             key: db_row[idx] + table_duration_seconds if key == "end" else db_row[idx]
-            for key, idx in key_map.items()
+            for key, idx in key_map
         }
         for db_row in db_rows
     ]
@@ -2068,7 +2068,7 @@ _CONVERT_KEYS = {"mean", "min", "max", "state", "sum"}
 def _fast_build_converted_list(
     db_rows: list[Row],
     table_duration_seconds: float,
-    key_map: dict[str, int],
+    key_map: tuple[tuple[str, int], ...],
     convert: Callable[[float], float],
 ) -> list[StatisticsRow]:
     """Build a list of statistics with unit conversion."""
@@ -2082,7 +2082,7 @@ def _fast_build_converted_list(
             else convert(value)
             if key in convert_keys
             else value
-            for key, idx in key_map.items()
+            for key, idx in key_map
         }
         for db_row in db_rows
     ]
@@ -2129,8 +2129,11 @@ def _sorted_statistics_to_dict(  # noqa: C901
     # Figure out which fields we need to extract from the SQL result
     # and which indices they have in the result so we can avoid the overhead
     # of doing a dict lookup for each row
-    key_map = {"start": start_ts_idx, "end": start_ts_idx}
-    key_map.update({key: field_map[key] for key in types})
+    key_map = (
+        ("start", start_ts_idx),
+        ("end", start_ts_idx),
+        *((key, field_map[key]) for key in types),
+    )
     sum_idx = field_map["sum"] if "sum" in types else None
     sum_only = len(types) == 1 and sum_idx is not None
     # Append all statistic entries, and optionally do unit conversion
