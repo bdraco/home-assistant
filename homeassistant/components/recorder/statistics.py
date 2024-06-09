@@ -2127,9 +2127,9 @@ def _sorted_statistics_to_dict(  # noqa: C901
             continue
 
         if convert:
-            stats = [
+            results = [
                 {
-                    None
+                    key: None
                     if (value := db_row[idx]) is None
                     else convert(value)
                     if key in convert_keys
@@ -2139,12 +2139,12 @@ def _sorted_statistics_to_dict(  # noqa: C901
                 for db_row in db_rows
             ]
         else:
-            stats = [{key: db_row[idx] for key, idx in key_map} for db_row in db_rows]
+            results = [{key: db_row[idx] for key, idx in key_map} for db_row in db_rows]
 
-        for row in stats:
+        for row in results:
             row["end"] += table_duration_seconds
 
-        result[statistic_id] = stats
+        result[statistic_id] = results
 
     return result
 
