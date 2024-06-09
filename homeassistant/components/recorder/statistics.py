@@ -2021,7 +2021,7 @@ def _statistics_at_time(
 
 
 def _fast_build_sum_list(
-    stats_list: list[Row],
+    db_rows: list[Row],
     table_duration_seconds: float,
     start_ts_idx: int,
     sum_idx: int,
@@ -2035,7 +2035,7 @@ def _fast_build_sum_list(
                 "end": start_ts + table_duration_seconds,
                 "sum": None if (v := db_row[sum_idx]) is None else convert(v),
             }
-            for db_row in stats_list
+            for db_row in db_rows
         ]
     return [
         {
@@ -2043,38 +2043,37 @@ def _fast_build_sum_list(
             "end": start_ts + table_duration_seconds,
             "sum": db_row[sum_idx],
         }
-        for db_row in stats_list
+        for db_row in db_rows
     ]
 
 
 def _fast_build_non_converted_list(
-    stats_list: list[Row],
+    db_rows: list[Row],
     table_duration_seconds: float,
     key_map: dict[str, int],
 ) -> list[StatisticsRow]:
     """Build a list of statistics without unit conversion."""
-    result: list[StatisticsRow] = [
+    return [
         {
             key: db_row[idx] + table_duration_seconds if key == "end" else db_row[idx]
             for key, idx in key_map.items()
         }
-        for db_row in stats_list
+        for db_row in db_rows
     ]
-    return result
 
 
 _CONVERT_KEYS = {"mean", "min", "max", "state", "sum"}
 
 
 def _fast_build_converted_list(
-    stats_list: list[Row],
+    db_rows: list[Row],
     table_duration_seconds: float,
     key_map: dict[str, int],
     convert: Callable[[float], float],
 ) -> list[StatisticsRow]:
     """Build a list of statistics with unit conversion."""
     convert_keys = _CONVERT_KEYS
-    result: list[StatisticsRow] = [
+    return [
         {
             key: db_row[idx] + table_duration_seconds
             if key == "end"
@@ -2085,9 +2084,8 @@ def _fast_build_converted_list(
             else value
             for key, idx in key_map.items()
         }
-        for db_row in stats_list
+        for db_row in db_rows
     ]
-    return result
 
 
 def _sorted_statistics_to_dict(  # noqa: C901
@@ -2137,7 +2135,7 @@ def _sorted_statistics_to_dict(  # noqa: C901
     sum_only = len(types) == 1 and sum_idx is not None
     # Append all statistic entries, and optionally do unit conversion
     table_duration_seconds = table.duration.total_seconds()
-    for meta_id, stats_list in stats_by_meta_id.items():
+    for meta_id, db_rows in stats_by_meta_id.items():
         metadata_by_id = metadata[meta_id]
         statistic_id = metadata_by_id["statistic_id"]
         if convert_units:
@@ -2150,7 +2148,6 @@ def _sorted_statistics_to_dict(  # noqa: C901
         else:
             convert = None
 
-        build_args = (stats_list, table_duration_seconds)
         if sum_only:
             # This function is extremely flexible and can handle all types of
             # statistics, but in practice we only ever use a few combinations.
@@ -2158,15 +2155,19 @@ def _sorted_statistics_to_dict(  # noqa: C901
             # For energy, we only need sum statistics, so we can optimize
             # this path to avoid the overhead of the more generic function.
             assert sum_idx is not None
-            result[statistic_id] = _fast_build_sum_list(
-                *build_args, start_ts_idx, sum_idx, convert
+            stats = _fast_build_sum_list(
+                db_rows, table_duration_seconds, start_ts_idx, sum_idx, convert
             )
         elif convert:
-            result[statistic_id] = _fast_build_converted_list(
-                *build_args, key_map, _CONVERT_KEYS, convert
+            stats = _fast_build_converted_list(
+                db_rows, table_duration_seconds, key_map, _CONVERT_KEYS, convert
             )
         else:
-            result[statistic_id] = _fast_build_non_converted_list(*build_args, key_map)
+            stats = _fast_build_non_converted_list(
+                db_rows, table_duration_seconds, key_map
+            )
+
+        result[statistic_id] = stats
 
     return result
 
