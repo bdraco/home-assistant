@@ -2091,11 +2091,7 @@ def _sorted_statistics_to_dict(  # noqa: C901
     # Figure out which fields we need to extract from the SQL result
     # and which indices they have in the result so we can avoid the overhead
     # of doing a dict lookup for each row
-    key_map = (
-        ("start", start_ts_idx),
-        ("end", start_ts_idx),
-        *((key, field_map[key]) for key in types),
-    )
+    key_map = (("start", start_ts_idx), *((key, field_map[key]) for key in types))
     convert_keys = _CONVERT_KEYS
     sum_idx = field_map["sum"] if "sum" in types else None
     sum_only = len(types) == 1 and sum_idx is not None
@@ -2142,7 +2138,7 @@ def _sorted_statistics_to_dict(  # noqa: C901
             results = [{key: db_row[idx] for key, idx in key_map} for db_row in db_rows]
 
         for row in results:
-            row["end"] += table_duration_seconds
+            row["end"] = row["start"] + table_duration_seconds
 
         result[statistic_id] = results
 
