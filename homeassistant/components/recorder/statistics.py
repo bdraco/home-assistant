@@ -2069,7 +2069,7 @@ def _sorted_statistics_to_dict(  # noqa: C901
     # Identify metadata IDs for which no data was available at the requested start time
     field_map: dict[str, int] = {key: idx for idx, key in enumerate(stats[0]._fields)}
     if "last_reset_ts" in field_map:
-        field_map["last_reset"] = field_map["last_reset_ts"]
+        field_map["last_reset"] = field_map.pop("last_reset_ts")
     metadata_id_idx = field_map["metadata_id"]
     start_ts_idx = field_map["start_ts"]
     stats_by_meta_id: dict[int, list[Row]] = {}
