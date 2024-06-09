@@ -2023,9 +2023,9 @@ def _statistics_at_time(
 def _fast_build_sum_list(
     db_rows: list[Row],
     table_duration_seconds: float,
+    convert: Callable[[float | None], float | None] | None,
     start_ts_idx: int,
     sum_idx: int,
-    convert: Callable | None,
 ) -> list[StatisticsRow]:
     """Build a list of sum statistics."""
     if convert:
@@ -2118,7 +2118,7 @@ def _sorted_statistics_to_dict(  # noqa: C901
             # this path to avoid the overhead of the more generic function.
             assert sum_idx is not None
             result[statistic_id] = _fast_build_sum_list(
-                db_rows, table_duration_seconds, start_ts_idx, sum_idx, convert
+                db_rows, table_duration_seconds, convert, start_ts_idx, sum_idx
             )
             continue
 
