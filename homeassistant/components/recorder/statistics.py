@@ -2132,9 +2132,9 @@ def _sorted_statistics_to_dict(  # noqa: C901
                 {
                     key: db_row[idx]
                     if no_convert
-                    else None
-                    if (value := db_row[idx]) is None
                     else convert(value)
+                    if (value := db_row[idx]) is not None
+                    else None
                     for key, idx, no_convert in convert_key_map
                 }
                 for db_row in db_rows
