@@ -2160,7 +2160,7 @@ def _sorted_statistics_to_dict(  # noqa: C901
             )
         elif convert:
             stats = _fast_build_converted_list(
-                db_rows, table_duration_seconds, key_map, _CONVERT_KEYS, convert
+                db_rows, table_duration_seconds, key_map, convert
             )
         else:
             stats = _fast_build_non_converted_list(
