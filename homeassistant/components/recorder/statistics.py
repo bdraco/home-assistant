@@ -242,7 +242,7 @@ def _get_statistic_to_display_unit_converter(
     state_unit: str | None,
     requested_units: dict[str, str] | None,
     allow_none: bool = True,
-) -> Callable[[float | None], float | None] | None:
+) -> Callable[[float], float] | Callable[[float | None], float | None] | None:
     """Prepare a converter from the statistics unit to display unit."""
     if (converter := STATISTIC_UNIT_TO_UNIT_CONVERTER.get(statistic_unit)) is None:
         return None
@@ -2017,7 +2017,7 @@ def _statistics_at_time(
 def _fast_build_sum_list(
     db_rows: list[Row],
     table_duration_seconds: float,
-    convert: Callable[[float | None], float | None] | None,
+    convert: Callable[[float], float] | Callable[[float | None], float | None] | None,
     start_ts_idx: int,
     sum_idx: int,
 ) -> list[StatisticsRow]:
@@ -2114,6 +2114,13 @@ def _sorted_statistics_to_dict(  # noqa: C901
             )
             continue
 
+        #
+        # The below loop is a red hot path for energy, and every
+        # optimization counts in here.
+        #
+        # Specifically, we want to avoid function calls,
+        # attribute lookups, and dict lookups as much as possible.
+        #
         if convert:
             if convert_key_map is None:
                 convert_key_map = (
@@ -2142,7 +2149,10 @@ def _sorted_statistics_to_dict(  # noqa: C901
         for row in results:
             row["end"] = row["start"] + table_duration_seconds
 
-        result[statistic_id] = results
+        if TYPE_CHECKING:
+            result[statistic_id] = cast(list[StatisticsRow], results)
+        else:
+            result[statistic_id] = results
 
     return result
 
