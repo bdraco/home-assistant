@@ -2050,71 +2050,43 @@ def _fast_build_sum_list(
 def _fast_build_non_converted_list(
     stats_list: list[Row],
     table_duration_seconds: float,
-    start_ts_idx: int,
-    mean_idx: int | None,
-    min_idx: int | None,
-    max_idx: int | None,
-    last_reset_ts_idx: int | None,
-    state_idx: int | None,
-    sum_idx: int | None,
+    key_map: dict[str, int],
 ) -> list[StatisticsRow]:
     """Build a list of statistics without unit conversion."""
-    result: list[StatisticsRow] = []
-    ent_results_append = result.append
-    for db_row in stats_list:
-        row: StatisticsRow = {
-            "start": (start_ts := db_row[start_ts_idx]),
-            "end": start_ts + table_duration_seconds,
+    result: list[StatisticsRow] = [
+        {
+            key: db_row[idx] + table_duration_seconds if key == "end" else db_row[idx]
+            for key, idx in key_map.items()
         }
-        if last_reset_ts_idx is not None:
-            row["last_reset"] = db_row[last_reset_ts_idx]
-        if mean_idx is not None:
-            row["mean"] = db_row[mean_idx]
-        if min_idx is not None:
-            row["min"] = db_row[min_idx]
-        if max_idx is not None:
-            row["max"] = db_row[max_idx]
-        if state_idx is not None:
-            row["state"] = db_row[state_idx]
-        if sum_idx is not None:
-            row["sum"] = db_row[sum_idx]
-        ent_results_append(row)
+        for db_row in stats_list
+    ]
     return result
+
+
+_CONVERT_KEYS = {"mean", "min", "max", "state", "sum"}
 
 
 def _fast_build_converted_list(
     stats_list: list[Row],
     table_duration_seconds: float,
-    start_ts_idx: int,
-    mean_idx: int | None,
-    min_idx: int | None,
-    max_idx: int | None,
-    last_reset_ts_idx: int | None,
-    state_idx: int | None,
-    sum_idx: int | None,
+    key_map: dict[str, int],
     convert: Callable[[float], float],
 ) -> list[StatisticsRow]:
     """Build a list of statistics with unit conversion."""
-    result: list[StatisticsRow] = []
-    ent_results_append = result.append
-    for db_row in stats_list:
-        row: StatisticsRow = {
-            "start": (start_ts := db_row[start_ts_idx]),
-            "end": start_ts + table_duration_seconds,
+    convert_keys = _CONVERT_KEYS
+    result: list[StatisticsRow] = [
+        {
+            key: db_row[idx] + table_duration_seconds
+            if key == "end"
+            else None
+            if (value := db_row[idx]) is None
+            else convert(value)
+            if key in convert_keys
+            else value
+            for key, idx in key_map.items()
         }
-        if last_reset_ts_idx is not None:
-            row["last_reset"] = db_row[last_reset_ts_idx]
-        if mean_idx is not None:
-            row["mean"] = None if (v := db_row[mean_idx]) is None else convert(v)
-        if min_idx is not None:
-            row["min"] = None if (v := db_row[min_idx]) is None else convert(v)
-        if max_idx is not None:
-            row["max"] = None if (v := db_row[max_idx]) is None else convert(v)
-        if state_idx is not None:
-            row["state"] = None if (v := db_row[state_idx]) is None else convert(v)
-        if sum_idx is not None:
-            row["sum"] = None if (v := db_row[sum_idx]) is None else convert(v)
-        ent_results_append(row)
+        for db_row in stats_list
+    ]
     return result
 
 
@@ -2136,6 +2108,8 @@ def _sorted_statistics_to_dict(  # noqa: C901
     metadata = dict(_metadata.values())
     # Identify metadata IDs for which no data was available at the requested start time
     field_map: dict[str, int] = {key: idx for idx, key in enumerate(stats[0]._fields)}
+    if "last_reset_ts" in field_map:
+        field_map["last_reset"] = field_map["last_reset_ts"]
     metadata_id_idx = field_map["metadata_id"]
     start_ts_idx = field_map["start_ts"]
     stats_by_meta_id: dict[int, list[Row]] = {}
@@ -2157,14 +2131,10 @@ def _sorted_statistics_to_dict(  # noqa: C901
     # Figure out which fields we need to extract from the SQL result
     # and which indices they have in the result so we can avoid the overhead
     # of doing a dict lookup for each row
-    mean_idx = field_map["mean"] if "mean" in types else None
-    min_idx = field_map["min"] if "min" in types else None
-    max_idx = field_map["max"] if "max" in types else None
-    last_reset_ts_idx = field_map["last_reset_ts"] if "last_reset" in types else None
-    state_idx = field_map["state"] if "state" in types else None
+    key_map = {"start": start_ts_idx, "end": start_ts_idx}
+    key_map.update({key: field_map[key] for key in types})
     sum_idx = field_map["sum"] if "sum" in types else None
     sum_only = len(types) == 1 and sum_idx is not None
-    row_idxes = (mean_idx, min_idx, max_idx, last_reset_ts_idx, state_idx, sum_idx)
     # Append all statistic entries, and optionally do unit conversion
     table_duration_seconds = table.duration.total_seconds()
     for meta_id, stats_list in stats_by_meta_id.items():
@@ -2180,7 +2150,7 @@ def _sorted_statistics_to_dict(  # noqa: C901
         else:
             convert = None
 
-        build_args = (stats_list, table_duration_seconds, start_ts_idx)
+        build_args = (stats_list, table_duration_seconds)
         if sum_only:
             # This function is extremely flexible and can handle all types of
             # statistics, but in practice we only ever use a few combinations.
@@ -2188,16 +2158,15 @@ def _sorted_statistics_to_dict(  # noqa: C901
             # For energy, we only need sum statistics, so we can optimize
             # this path to avoid the overhead of the more generic function.
             assert sum_idx is not None
-            result[statistic_id] = _fast_build_sum_list(*build_args, sum_idx, convert)
+            result[statistic_id] = _fast_build_sum_list(
+                *build_args, start_ts_idx, sum_idx, convert
+            )
         elif convert:
             result[statistic_id] = _fast_build_converted_list(
-                *build_args, *row_idxes, convert
+                *build_args, key_map, _CONVERT_KEYS, convert
             )
         else:
-            result[statistic_id] = _fast_build_non_converted_list(
-                *build_args,
-                *row_idxes,
-            )
+            result[statistic_id] = _fast_build_non_converted_list(*build_args, key_map)
 
     return result
 
