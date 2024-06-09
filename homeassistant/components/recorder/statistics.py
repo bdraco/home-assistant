@@ -2013,7 +2013,7 @@ def _statistics_at_time(
     return cast(Sequence[Row], execute_stmt_lambda_element(session, stmt))
 
 
-def _build_sum_converted_list(
+def _build_sum_converted_stats(
     db_rows: list[Row],
     table_duration_seconds: float,
     start_ts_idx: int,
@@ -2031,7 +2031,7 @@ def _build_sum_converted_list(
     ]
 
 
-def _build_sum_list(
+def _build_sum_stats(
     db_rows: list[Row],
     table_duration_seconds: float,
     start_ts_idx: int,
@@ -2048,7 +2048,7 @@ def _build_sum_list(
     ]
 
 
-def _build_non_converted_list(
+def _build_stats(
     db_rows: list[Row],
     table_duration_seconds: float,
     start_ts_idx: int,
@@ -2083,7 +2083,7 @@ def _build_non_converted_list(
     return result
 
 
-def _build_converted_list(
+def _build_converted_stats(
     db_rows: list[Row],
     table_duration_seconds: float,
     start_ts_idx: int,
@@ -2119,7 +2119,7 @@ def _build_converted_list(
     return result
 
 
-def _sorted_statistics_to_dict(  # noqa: C901
+def _sorted_statistics_to_dict(
     hass: HomeAssistant,
     stats: Sequence[Row[Any]],
     statistic_ids: set[str] | None,
@@ -2190,22 +2190,15 @@ def _sorted_statistics_to_dict(  # noqa: C901
             # this path to avoid the overhead of the more generic function.
             assert sum_idx is not None
             if convert:
-                result[statistic_id] = _build_sum_converted_list(
-                    *build_args, sum_idx, convert
-                )
+                _stats = _build_sum_converted_stats(*build_args, sum_idx, convert)
             else:
-                result[statistic_id] = _build_sum_list(*build_args, sum_idx)
-            continue
-
-        if convert:
-            result[statistic_id] = _build_converted_list(
-                *build_args, *row_idxes, convert
-            )
+                _stats = _build_sum_stats(*build_args, sum_idx)
+        elif convert:
+            _stats = _build_converted_stats(*build_args, *row_idxes, convert)
         else:
-            result[statistic_id] = _build_non_converted_list(
-                *build_args,
-                *row_idxes,
-            )
+            _stats = _build_stats(*build_args, *row_idxes)
+
+        result[statistic_id] = _stats
 
     return result
 
