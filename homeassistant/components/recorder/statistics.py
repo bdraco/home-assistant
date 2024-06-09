@@ -2091,8 +2091,8 @@ def _sorted_statistics_to_dict(  # noqa: C901
     # Figure out which fields we need to extract from the SQL result
     # and which indices they have in the result so we can avoid the overhead
     # of doing a dict lookup for each row
-    key_map = (("start", start_ts_idx), *((key, field_map[key]) for key in types))
-    convert_keys = _CONVERT_KEYS
+    convert_key_map: tuple[tuple[str, int, bool], ...] | None = None
+    key_map: tuple[tuple[str, int], ...] | None = None
     sum_idx = field_map["sum"] if "sum" in types else None
     sum_only = len(types) == 1 and sum_idx is not None
     # Append all statistic entries, and optionally do unit conversion
@@ -2123,18 +2123,28 @@ def _sorted_statistics_to_dict(  # noqa: C901
             continue
 
         if convert:
+            if convert_key_map is None:
+                convert_key_map = (
+                    ("start", start_ts_idx, False),
+                    *((key, field_map[key], key in _CONVERT_KEYS) for key in types),
+                )
             results = [
                 {
                     key: None
                     if (value := db_row[idx]) is None
                     else convert(value)
-                    if key in convert_keys
+                    if should_convert
                     else value
-                    for key, idx in key_map
+                    for key, idx, should_convert in convert_key_map
                 }
                 for db_row in db_rows
             ]
         else:
+            if key_map is None:
+                key_map = (
+                    ("start", start_ts_idx),
+                    *((key, field_map[key]) for key in types),
+                )
             results = [{key: db_row[idx] for key, idx in key_map} for db_row in db_rows]
 
         for row in results:
