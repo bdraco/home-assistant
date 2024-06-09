@@ -2121,13 +2121,11 @@ def _build_converted_stats(
 
 def _sorted_statistics_to_dict(
     hass: HomeAssistant,
-    session: Session,
     stats: Sequence[Row[Any]],
     statistic_ids: set[str] | None,
     _metadata: dict[str, tuple[int, StatisticMetaData]],
     convert_units: bool,
     table: type[StatisticsBase],
-    start_time: datetime | None,
     units: dict[str, str] | None,
     types: set[Literal["last_reset", "max", "mean", "min", "state", "sum"]],
 ) -> dict[str, list[StatisticsRow]]:
