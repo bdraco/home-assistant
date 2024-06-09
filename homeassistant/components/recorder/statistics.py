@@ -2121,11 +2121,13 @@ def _build_converted_stats(
 
 def _sorted_statistics_to_dict(
     hass: HomeAssistant,
+    session: Session,
     stats: Sequence[Row[Any]],
     statistic_ids: set[str] | None,
     _metadata: dict[str, tuple[int, StatisticMetaData]],
     convert_units: bool,
     table: type[StatisticsBase],
+    start_time: datetime | None,
     units: dict[str, str] | None,
     types: set[Literal["last_reset", "max", "mean", "min", "state", "sum"]],
 ) -> dict[str, list[StatisticsRow]]:
@@ -2135,8 +2137,6 @@ def _sorted_statistics_to_dict(
     metadata = dict(_metadata.values())
     # Identify metadata IDs for which no data was available at the requested start time
     field_map: dict[str, int] = {key: idx for idx, key in enumerate(stats[0]._fields)}
-    if "last_reset_ts" in field_map:
-        field_map["last_reset"] = field_map.pop("last_reset_ts")
     metadata_id_idx = field_map["metadata_id"]
     start_ts_idx = field_map["start_ts"]
     stats_by_meta_id: dict[int, list[Row]] = {}
