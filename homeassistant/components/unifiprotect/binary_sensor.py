@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-from typing import Any
 
 from uiprotect.data import (
     NVR,
@@ -706,6 +705,7 @@ class ProtectDeviceBinarySensor(ProtectDeviceEntity, BinarySensorEntity):
 
     device: Camera | Light | Sensor
     entity_description: ProtectBinaryEntityDescription
+    _state_attrs = ("_attr_available", "_attr_is_on", "_attr_device_class")
 
     @callback
     def _async_update_device_from_protect(self, device: ProtectModelWithId) -> None:
@@ -721,22 +721,13 @@ class ProtectDeviceBinarySensor(ProtectDeviceEntity, BinarySensorEntity):
         else:
             self._attr_device_class = self.entity_description.device_class
 
-    @callback
-    def _async_get_state_attrs(self) -> tuple[Any, ...]:
-        """Retrieve data that goes into the current state of the entity.
-
-        Called before and after updating entity and state is only written if there
-        is a change.
-        """
-
-        return (self._attr_available, self._attr_is_on, self._attr_device_class)
-
 
 class ProtectDiskBinarySensor(ProtectNVREntity, BinarySensorEntity):
     """A UniFi Protect NVR Disk Binary Sensor."""
 
     _disk: UOSDisk
     entity_description: ProtectBinaryEntityDescription
+    _state_attrs = ("_attr_available", "_attr_is_on")
 
     def __init__(
         self,
@@ -775,21 +766,12 @@ class ProtectDiskBinarySensor(ProtectNVREntity, BinarySensorEntity):
 
         self._attr_is_on = not self._disk.is_healthy
 
-    @callback
-    def _async_get_state_attrs(self) -> tuple[Any, ...]:
-        """Retrieve data that goes into the current state of the entity.
-
-        Called before and after updating entity and state is only written if there
-        is a change.
-        """
-
-        return (self._attr_available, self._attr_is_on)
-
 
 class ProtectEventBinarySensor(EventEntityMixin, BinarySensorEntity):
     """A UniFi Protect Device Binary Sensor for events."""
 
     entity_description: ProtectBinaryEventEntityDescription
+    _state_attrs = ("_attr_available", "_attr_is_on", "_attr_extra_state_attributes")
 
     @callback
     def _async_update_device_from_protect(self, device: ProtectModelWithId) -> None:
@@ -799,17 +781,3 @@ class ProtectEventBinarySensor(EventEntityMixin, BinarySensorEntity):
         if not is_on:
             self._event = None
             self._attr_extra_state_attributes = {}
-
-    @callback
-    def _async_get_state_attrs(self) -> tuple[Any, ...]:
-        """Retrieve data that goes into the current state of the entity.
-
-        Called before and after updating entity and state is only written if there
-        is a change.
-        """
-
-        return (
-            self._attr_available,
-            self._attr_is_on,
-            self._attr_extra_state_attributes,
-        )
