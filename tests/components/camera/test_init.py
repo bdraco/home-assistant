@@ -6,6 +6,7 @@ from types import ModuleType
 from unittest.mock import AsyncMock, Mock, PropertyMock, mock_open, patch
 
 import pytest
+from typing_extensions import Generator
 
 from homeassistant.components import camera
 from homeassistant.components.camera.const import (
@@ -13,7 +14,7 @@ from homeassistant.components.camera.const import (
     PREF_ORIENTATION,
     PREF_PRELOAD_STREAM,
 )
-from homeassistant.components.websocket_api.const import TYPE_RESULT
+from homeassistant.components.websocket_api import TYPE_RESULT
 from homeassistant.config import async_process_ha_core_config
 from homeassistant.const import (
     ATTR_ENTITY_ID,
@@ -41,7 +42,7 @@ WEBRTC_OFFER = "v=0\r\n"
 
 
 @pytest.fixture(name="mock_stream")
-def mock_stream_fixture(hass):
+def mock_stream_fixture(hass: HomeAssistant) -> None:
     """Initialize a demo camera platform with streaming."""
     assert hass.loop.run_until_complete(
         async_setup_component(hass, "stream", {"stream": {}})
@@ -49,7 +50,7 @@ def mock_stream_fixture(hass):
 
 
 @pytest.fixture(name="image_mock_url")
-async def image_mock_url_fixture(hass):
+async def image_mock_url_fixture(hass: HomeAssistant) -> None:
     """Fixture for get_image tests."""
     await async_setup_component(
         hass, camera.DOMAIN, {camera.DOMAIN: {"platform": "demo"}}
@@ -58,7 +59,7 @@ async def image_mock_url_fixture(hass):
 
 
 @pytest.fixture(name="mock_stream_source")
-async def mock_stream_source_fixture():
+def mock_stream_source_fixture() -> Generator[AsyncMock]:
     """Fixture to create an RTSP stream source."""
     with patch(
         "homeassistant.components.camera.Camera.stream_source",
@@ -68,7 +69,7 @@ async def mock_stream_source_fixture():
 
 
 @pytest.fixture(name="mock_hls_stream_source")
-async def mock_hls_stream_source_fixture():
+async def mock_hls_stream_source_fixture() -> Generator[AsyncMock]:
     """Fixture to create an HLS stream source."""
     with patch(
         "homeassistant.components.camera.Camera.stream_source",
@@ -85,7 +86,7 @@ async def provide_web_rtc_answer(stream_source: str, offer: str, stream_id: str)
 
 
 @pytest.fixture(name="mock_rtsp_to_web_rtc")
-async def mock_rtsp_to_web_rtc_fixture(hass):
+def mock_rtsp_to_web_rtc_fixture(hass: HomeAssistant) -> Generator[Mock]:
     """Fixture that registers a mock rtsp to web_rtc provider."""
     mock_provider = Mock(side_effect=provide_web_rtc_answer)
     unsub = camera.async_register_rtsp_to_web_rtc_provider(
@@ -95,7 +96,8 @@ async def mock_rtsp_to_web_rtc_fixture(hass):
     unsub()
 
 
-async def test_get_image_from_camera(hass: HomeAssistant, image_mock_url) -> None:
+@pytest.mark.usefixtures("image_mock_url")
+async def test_get_image_from_camera(hass: HomeAssistant) -> None:
     """Grab an image from camera entity."""
 
     with patch(
@@ -109,9 +111,8 @@ async def test_get_image_from_camera(hass: HomeAssistant, image_mock_url) -> Non
     assert image.content == b"Test"
 
 
-async def test_get_image_from_camera_with_width_height(
-    hass: HomeAssistant, image_mock_url
-) -> None:
+@pytest.mark.usefixtures("image_mock_url")
+async def test_get_image_from_camera_with_width_height(hass: HomeAssistant) -> None:
     """Grab an image from camera entity with width and height."""
 
     turbo_jpeg = mock_turbo_jpeg(
@@ -136,8 +137,9 @@ async def test_get_image_from_camera_with_width_height(
     assert image.content == b"Test"
 
 
+@pytest.mark.usefixtures("image_mock_url")
 async def test_get_image_from_camera_with_width_height_scaled(
-    hass: HomeAssistant, image_mock_url
+    hass: HomeAssistant,
 ) -> None:
     """Grab an image from camera entity with width and height and scale it."""
 
@@ -165,9 +167,8 @@ async def test_get_image_from_camera_with_width_height_scaled(
     assert image.content == EMPTY_8_6_JPEG
 
 
-async def test_get_image_from_camera_not_jpeg(
-    hass: HomeAssistant, image_mock_url
-) -> None:
+@pytest.mark.usefixtures("image_mock_url")
+async def test_get_image_from_camera_not_jpeg(hass: HomeAssistant) -> None:
     """Grab an image from camera entity that we cannot scale."""
 
     turbo_jpeg = mock_turbo_jpeg(
@@ -193,8 +194,9 @@ async def test_get_image_from_camera_not_jpeg(
     assert image.content == b"png"
 
 
+@pytest.mark.usefixtures("mock_camera")
 async def test_get_stream_source_from_camera(
-    hass: HomeAssistant, mock_camera, mock_stream_source
+    hass: HomeAssistant, mock_stream_source: AsyncMock
 ) -> None:
     """Fetch stream source from camera entity."""
 
@@ -204,9 +206,8 @@ async def test_get_stream_source_from_camera(
     assert stream_source == STREAM_SOURCE
 
 
-async def test_get_image_without_exists_camera(
-    hass: HomeAssistant, image_mock_url
-) -> None:
+@pytest.mark.usefixtures("image_mock_url")
+async def test_get_image_without_exists_camera(hass: HomeAssistant) -> None:
     """Try to get image without exists camera."""
     with (
         patch(
@@ -218,7 +219,8 @@ async def test_get_image_without_exists_camera(
         await camera.async_get_image(hass, "camera.demo_camera")
 
 
-async def test_get_image_with_timeout(hass: HomeAssistant, image_mock_url) -> None:
+@pytest.mark.usefixtures("image_mock_url")
+async def test_get_image_with_timeout(hass: HomeAssistant) -> None:
     """Try to get image with timeout."""
     with (
         patch(
@@ -230,7 +232,8 @@ async def test_get_image_with_timeout(hass: HomeAssistant, image_mock_url) -> No
         await camera.async_get_image(hass, "camera.demo_camera")
 
 
-async def test_get_image_fails(hass: HomeAssistant, image_mock_url) -> None:
+@pytest.mark.usefixtures("image_mock_url")
+async def test_get_image_fails(hass: HomeAssistant) -> None:
     """Try to get image with timeout."""
     with (
         patch(
@@ -242,7 +245,8 @@ async def test_get_image_fails(hass: HomeAssistant, image_mock_url) -> None:
         await camera.async_get_image(hass, "camera.demo_camera")
 
 
-async def test_snapshot_service(hass: HomeAssistant, mock_camera) -> None:
+@pytest.mark.usefixtures("mock_camera")
+async def test_snapshot_service(hass: HomeAssistant) -> None:
     """Test snapshot service."""
     mopen = mock_open()
 
@@ -269,9 +273,8 @@ async def test_snapshot_service(hass: HomeAssistant, mock_camera) -> None:
         assert mock_write.mock_calls[0][1][0] == b"Test"
 
 
-async def test_snapshot_service_not_allowed_path(
-    hass: HomeAssistant, mock_camera
-) -> None:
+@pytest.mark.usefixtures("mock_camera")
+async def test_snapshot_service_not_allowed_path(hass: HomeAssistant) -> None:
     """Test snapshot service with a not allowed path."""
     mopen = mock_open()
 
@@ -293,8 +296,9 @@ async def test_snapshot_service_not_allowed_path(
         )
 
 
+@pytest.mark.usefixtures("mock_camera", "mock_stream")
 async def test_websocket_stream_no_source(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, mock_camera, mock_stream
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
 ) -> None:
     """Test camera/stream websocket command with camera with no source."""
     await async_setup_component(hass, "camera", {})
@@ -312,8 +316,9 @@ async def test_websocket_stream_no_source(
     assert not msg["success"]
 
 
+@pytest.mark.usefixtures("mock_camera", "mock_stream")
 async def test_websocket_camera_stream(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, mock_camera, mock_stream
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
 ) -> None:
     """Test camera/stream websocket command."""
     await async_setup_component(hass, "camera", {})
@@ -343,8 +348,9 @@ async def test_websocket_camera_stream(
         assert msg["result"]["url"][-13:] == "playlist.m3u8"
 
 
+@pytest.mark.usefixtures("mock_camera")
 async def test_websocket_get_prefs(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, mock_camera
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
 ) -> None:
     """Test get camera preferences websocket command."""
     await async_setup_component(hass, "camera", {})
@@ -360,8 +366,9 @@ async def test_websocket_get_prefs(
     assert msg["success"]
 
 
+@pytest.mark.usefixtures("mock_camera")
 async def test_websocket_update_preload_prefs(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, mock_camera
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
 ) -> None:
     """Test updating camera preferences."""
 
@@ -397,11 +404,11 @@ async def test_websocket_update_preload_prefs(
     assert msg["result"][PREF_PRELOAD_STREAM] is True
 
 
+@pytest.mark.usefixtures("mock_camera")
 async def test_websocket_update_orientation_prefs(
     hass: HomeAssistant,
     hass_ws_client: WebSocketGenerator,
     entity_registry: er.EntityRegistry,
-    mock_camera,
 ) -> None:
     """Test updating camera preferences."""
     await async_setup_component(hass, "homeassistant", {})
@@ -455,9 +462,8 @@ async def test_websocket_update_orientation_prefs(
     assert msg["result"]["orientation"] == camera.Orientation.ROTATE_180
 
 
-async def test_play_stream_service_no_source(
-    hass: HomeAssistant, mock_camera, mock_stream
-) -> None:
+@pytest.mark.usefixtures("mock_camera", "mock_stream")
+async def test_play_stream_service_no_source(hass: HomeAssistant) -> None:
     """Test camera play_stream service."""
     data = {
         ATTR_ENTITY_ID: "camera.demo_camera",
@@ -470,9 +476,8 @@ async def test_play_stream_service_no_source(
         )
 
 
-async def test_handle_play_stream_service(
-    hass: HomeAssistant, mock_camera, mock_stream
-) -> None:
+@pytest.mark.usefixtures("mock_camera", "mock_stream")
+async def test_handle_play_stream_service(hass: HomeAssistant) -> None:
     """Test camera play_stream service."""
     await async_process_ha_core_config(
         hass,
@@ -503,7 +508,8 @@ async def test_handle_play_stream_service(
         assert mock_request_stream.called
 
 
-async def test_no_preload_stream(hass: HomeAssistant, mock_stream) -> None:
+@pytest.mark.usefixtures("mock_stream")
+async def test_no_preload_stream(hass: HomeAssistant) -> None:
     """Test camera preload preference."""
     demo_settings = camera.DynamicStreamSettings()
     with (
@@ -526,7 +532,8 @@ async def test_no_preload_stream(hass: HomeAssistant, mock_stream) -> None:
         assert not mock_request_stream.called
 
 
-async def test_preload_stream(hass: HomeAssistant, mock_stream) -> None:
+@pytest.mark.usefixtures("mock_stream")
+async def test_preload_stream(hass: HomeAssistant) -> None:
     """Test camera preload preference."""
     demo_settings = camera.DynamicStreamSettings(preload_stream=True)
     with (
@@ -550,7 +557,8 @@ async def test_preload_stream(hass: HomeAssistant, mock_stream) -> None:
         assert mock_create_stream.called
 
 
-async def test_record_service_invalid_path(hass: HomeAssistant, mock_camera) -> None:
+@pytest.mark.usefixtures("mock_camera")
+async def test_record_service_invalid_path(hass: HomeAssistant) -> None:
     """Test record service with invalid path."""
     with (
         patch.object(hass.config, "is_allowed_path", return_value=False),
@@ -568,7 +576,8 @@ async def test_record_service_invalid_path(hass: HomeAssistant, mock_camera) -> 
         )
 
 
-async def test_record_service(hass: HomeAssistant, mock_camera, mock_stream) -> None:
+@pytest.mark.usefixtures("mock_camera", "mock_stream")
+async def test_record_service(hass: HomeAssistant) -> None:
     """Test record service."""
     with (
         patch(
@@ -592,9 +601,8 @@ async def test_record_service(hass: HomeAssistant, mock_camera, mock_stream) -> 
         assert mock_record.called
 
 
-async def test_camera_proxy_stream(
-    hass: HomeAssistant, mock_camera, hass_client: ClientSessionGenerator
-) -> None:
+@pytest.mark.usefixtures("mock_camera")
+async def test_camera_proxy_stream(hass_client: ClientSessionGenerator) -> None:
     """Test record service."""
 
     client = await hass_client()
@@ -612,10 +620,9 @@ async def test_camera_proxy_stream(
             assert response.status == HTTPStatus.BAD_GATEWAY
 
 
+@pytest.mark.usefixtures("mock_camera_web_rtc")
 async def test_websocket_web_rtc_offer(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
-    mock_camera_web_rtc,
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
 ) -> None:
     """Test initiating a WebRTC stream with offer and answer."""
     client = await hass_ws_client(hass)
@@ -635,10 +642,9 @@ async def test_websocket_web_rtc_offer(
     assert response["result"]["answer"] == WEBRTC_ANSWER
 
 
+@pytest.mark.usefixtures("mock_camera_web_rtc")
 async def test_websocket_web_rtc_offer_invalid_entity(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
-    mock_camera_web_rtc,
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
 ) -> None:
     """Test WebRTC with a camera entity that does not exist."""
     client = await hass_ws_client(hass)
@@ -657,10 +663,9 @@ async def test_websocket_web_rtc_offer_invalid_entity(
     assert not response["success"]
 
 
+@pytest.mark.usefixtures("mock_camera_web_rtc")
 async def test_websocket_web_rtc_offer_missing_offer(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
-    mock_camera_web_rtc,
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
 ) -> None:
     """Test WebRTC stream with missing required fields."""
     client = await hass_ws_client(hass)
@@ -679,10 +684,9 @@ async def test_websocket_web_rtc_offer_missing_offer(
     assert response["error"]["code"] == "invalid_format"
 
 
+@pytest.mark.usefixtures("mock_camera_web_rtc")
 async def test_websocket_web_rtc_offer_failure(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
-    mock_camera_web_rtc,
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
 ) -> None:
     """Test WebRTC stream that fails handling the offer."""
     client = await hass_ws_client(hass)
@@ -708,10 +712,9 @@ async def test_websocket_web_rtc_offer_failure(
     assert response["error"]["message"] == "offer failed"
 
 
+@pytest.mark.usefixtures("mock_camera_web_rtc")
 async def test_websocket_web_rtc_offer_timeout(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
-    mock_camera_web_rtc,
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
 ) -> None:
     """Test WebRTC stream with timeout handling the offer."""
     client = await hass_ws_client(hass)
@@ -737,10 +740,9 @@ async def test_websocket_web_rtc_offer_timeout(
     assert response["error"]["message"] == "Timeout handling WebRTC offer"
 
 
+@pytest.mark.usefixtures("mock_camera")
 async def test_websocket_web_rtc_offer_invalid_stream_type(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
-    mock_camera,
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
 ) -> None:
     """Test WebRTC initiating for a camera with a different stream_type."""
     client = await hass_ws_client(hass)
@@ -760,17 +762,17 @@ async def test_websocket_web_rtc_offer_invalid_stream_type(
     assert response["error"]["code"] == "web_rtc_offer_failed"
 
 
-async def test_state_streaming(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, mock_camera
-) -> None:
+@pytest.mark.usefixtures("mock_camera")
+async def test_state_streaming(hass: HomeAssistant) -> None:
     """Camera state."""
     demo_camera = hass.states.get("camera.demo_camera")
     assert demo_camera is not None
     assert demo_camera.state == camera.STATE_STREAMING
 
 
+@pytest.mark.usefixtures("mock_camera", "mock_stream")
 async def test_stream_unavailable(
-    hass: HomeAssistant, hass_ws_client: WebSocketGenerator, mock_camera, mock_stream
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
 ) -> None:
     """Camera state."""
     await async_setup_component(hass, "camera", {})
@@ -821,12 +823,11 @@ async def test_stream_unavailable(
     assert demo_camera.state == camera.STATE_STREAMING
 
 
+@pytest.mark.usefixtures("mock_camera", "mock_stream_source")
 async def test_rtsp_to_web_rtc_offer(
     hass: HomeAssistant,
     hass_ws_client: WebSocketGenerator,
-    mock_camera,
-    mock_stream_source,
-    mock_rtsp_to_web_rtc,
+    mock_rtsp_to_web_rtc: Mock,
 ) -> None:
     """Test creating a web_rtc offer from an rstp provider."""
     client = await hass_ws_client(hass)
@@ -849,12 +850,13 @@ async def test_rtsp_to_web_rtc_offer(
     assert mock_rtsp_to_web_rtc.called
 
 
+@pytest.mark.usefixtures(
+    "mock_camera",
+    "mock_hls_stream_source",  # Not an RTSP stream source
+    "mock_rtsp_to_web_rtc",
+)
 async def test_unsupported_rtsp_to_web_rtc_stream_type(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
-    mock_camera,
-    mock_hls_stream_source,  # Not an RTSP stream source
-    mock_rtsp_to_web_rtc,
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
 ) -> None:
     """Test rtsp-to-webrtc is not registered for non-RTSP streams."""
     client = await hass_ws_client(hass)
@@ -874,11 +876,9 @@ async def test_unsupported_rtsp_to_web_rtc_stream_type(
     assert not response["success"]
 
 
+@pytest.mark.usefixtures("mock_camera", "mock_stream_source")
 async def test_rtsp_to_web_rtc_provider_unregistered(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
-    mock_camera,
-    mock_stream_source,
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
 ) -> None:
     """Test creating a web_rtc offer from an rstp provider."""
     mock_provider = Mock(side_effect=provide_web_rtc_answer)
@@ -925,11 +925,9 @@ async def test_rtsp_to_web_rtc_provider_unregistered(
     assert not mock_provider.called
 
 
+@pytest.mark.usefixtures("mock_camera", "mock_stream_source")
 async def test_rtsp_to_web_rtc_offer_not_accepted(
-    hass: HomeAssistant,
-    hass_ws_client: WebSocketGenerator,
-    mock_camera,
-    mock_stream_source,
+    hass: HomeAssistant, hass_ws_client: WebSocketGenerator
 ) -> None:
     """Test a provider that can't satisfy the rtsp to webrtc offer."""
 
@@ -963,10 +961,9 @@ async def test_rtsp_to_web_rtc_offer_not_accepted(
     unsub()
 
 
+@pytest.mark.usefixtures("mock_camera")
 async def test_use_stream_for_stills(
-    hass: HomeAssistant,
-    hass_client: ClientSessionGenerator,
-    mock_camera,
+    hass: HomeAssistant, hass_client: ClientSessionGenerator
 ) -> None:
     """Test that the component can grab images from stream."""
 
@@ -1081,9 +1078,8 @@ def test_deprecated_supported_features_ints(caplog: pytest.LogCaptureFixture) ->
     assert "is using deprecated supported features values" not in caplog.text
 
 
-async def test_entity_picture_url_changes_on_token_update(
-    hass: HomeAssistant, mock_camera
-) -> None:
+@pytest.mark.usefixtures("mock_camera")
+async def test_entity_picture_url_changes_on_token_update(hass: HomeAssistant) -> None:
     """Test the token is rotated and entity entity picture cache is cleared."""
     await async_setup_component(hass, "camera", {})
     await hass.async_block_till_done()
