@@ -363,7 +363,6 @@ class ProtectSelects(ProtectDeviceEntity, SelectEntity):
 
     device: Camera | Light | Viewer
     entity_description: ProtectSelectEntityDescription
-    _state_attrs = ("_attr_available", "_attr_options", "_attr_current_option")
 
     def __init__(
         self,
@@ -424,3 +423,13 @@ class ProtectSelects(ProtectDeviceEntity, SelectEntity):
         if self.entity_description.ufp_enum_type is not None:
             unifi_value = self.entity_description.ufp_enum_type(unifi_value)
         await self.entity_description.ufp_set(self.device, unifi_value)
+
+    @callback
+    def _async_get_state_attrs(self) -> tuple[Any, ...]:
+        """Retrieve data that goes into the current state of the entity.
+
+        Called before and after updating entity and state is only written if there
+        is a change.
+        """
+
+        return (self._attr_available, self._attr_options, self._attr_current_option)
