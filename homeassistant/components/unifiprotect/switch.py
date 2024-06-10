@@ -521,6 +521,7 @@ class ProtectSwitch(ProtectDeviceEntity, SwitchEntity):
     """A UniFi Protect Switch."""
 
     entity_description: ProtectSwitchEntityDescription
+    _state_attrs = ("_attr_available", "_attr_is_on")
 
     def __init__(
         self,
@@ -544,16 +545,6 @@ class ProtectSwitch(ProtectDeviceEntity, SwitchEntity):
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the device off."""
         await self.entity_description.ufp_set(self.device, False)
-
-    @callback
-    def _async_get_state_attrs(self) -> tuple[Any, ...]:
-        """Retrieve data that goes into the current state of the entity.
-
-        Called before and after updating entity and state is only written if there
-        is a change.
-        """
-
-        return (self._attr_available, self._attr_is_on)
 
 
 class ProtectNVRSwitch(ProtectNVREntity, SwitchEntity):
