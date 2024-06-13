@@ -108,6 +108,9 @@ def raise_for_blocking_call(
         )
 
 
+_depth = [0]
+
+
 def protect_loop[**_P, _R](
     func: Callable[_P, _R],
     loop_thread_id: int,
@@ -119,15 +122,19 @@ def protect_loop[**_P, _R](
 
     @functools.wraps(func)
     def protected_loop_func(*args: _P.args, **kwargs: _P.kwargs) -> _R:
-        if threading.get_ident() == loop_thread_id:
-            raise_for_blocking_call(
-                func,
-                strict=strict,
-                strict_core=strict_core,
-                check_allowed=check_allowed,
-                args=args,
-                kwargs=kwargs,
-            )
+        if threading.get_ident() == loop_thread_id and _depth[0] == 0:
+            try:
+                _depth[0] += 1
+                raise_for_blocking_call(
+                    func,
+                    strict=strict,
+                    strict_core=strict_core,
+                    check_allowed=check_allowed,
+                    args=args,
+                    kwargs=kwargs,
+                )
+            finally:
+                _depth[0] -= 1
         return func(*args, **kwargs)
 
     return protected_loop_func
