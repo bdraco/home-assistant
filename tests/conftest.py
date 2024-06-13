@@ -35,6 +35,8 @@ import requests_mock
 from syrupy.assertion import SnapshotAssertion
 from typing_extensions import AsyncGenerator, Generator
 
+from homeassistant import block_async_io
+
 # Setup patching if dt_util time functions before any other Home Assistant imports
 from . import patch_time  # noqa: F401, isort:skip
 
@@ -100,7 +102,6 @@ pytest.register_assert_rewrite("tests.common")
 from .common import (  # noqa: E402, isort:skip
     CLIENT_ID,
     INSTANCES,
-    disable_block_async_io,
     MockConfigEntry,
     MockUser,
     async_fire_mqtt_message,
@@ -1818,7 +1819,12 @@ def snapshot(snapshot: SnapshotAssertion) -> SnapshotAssertion:
 
 
 @pytest.fixture
-def disable_block_async_io_after() -> Generator[Any, Any, None]:
-    """Disable the block async io context manager."""
+def disable_block_async_io() -> Generator[Any, Any, None]:
+    """Fixture to disable the loop protection from block_async_io."""
     yield
-    disable_block_async_io()
+    calls = block_async_io._BLOCKED_CALLS.calls
+    for blocking_call in calls:
+        setattr(
+            blocking_call.object, blocking_call.function, blocking_call.original_func
+        )
+    calls.clear()
