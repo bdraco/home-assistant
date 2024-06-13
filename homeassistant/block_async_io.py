@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import glob
 from http.client import HTTPConnection
 import importlib
+import logging
 import os
 import sys
 import threading
@@ -18,6 +19,7 @@ from .util.loop import protect_loop
 
 _IN_TESTS = "unittest" in sys.modules
 
+_LOGGER = logging.getLogger(__name__)
 ALLOWED_FILE_PREFIXES = ("/proc",)
 
 
@@ -52,6 +54,7 @@ def _check_stat_call_allowed(mapped_args: dict[str, Any]) -> bool:
     # If the file is in /proc we can ignore it.
     args = mapped_args["args"]
     path = args[0] if type(args[0]) is str else str(args[0])  # noqa: E721
+    _LOGGER.warning("Checking if %s is allowed", path)
     return path.startswith(ALLOWED_FILE_PREFIXES)
 
 
