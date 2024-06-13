@@ -48,24 +48,6 @@ def _check_sleep_call_allowed(mapped_args: dict[str, Any]) -> bool:
     return False
 
 
-def _check_stat_call_allowed(mapped_args: dict[str, Any]) -> bool:
-    # If the file is in /proc we can ignore it.
-    args = mapped_args["args"]
-    path = args[0] if type(args[0]) is str else str(args[0])  # noqa: E721
-    return path.startswith(ALLOWED_FILE_PREFIXES)
-
-
-#    frame = get_current_frame(0)
-#    while frame.f_back:
-#        print(['frame', frame])
-#        frame = frame.f_back
-#
-#    return False
-#    with suppress((ValueError,AttributeError)):
-#        return get_current_frame(1).f_code.co_code.co_name == "raise_for_blocking_call"
-#   return False
-
-
 @dataclass(slots=True, frozen=True)
 class BlockingCall:
     """Class to hold information about a blocking call."""
@@ -157,15 +139,6 @@ _BLOCKING_CALLS: tuple[BlockingCall, ...] = (
         object=importlib,
         function="import_module",
         check_allowed=_check_import_call_allowed,
-        strict=False,
-        strict_core=False,
-        skip_for_tests=True,
-    ),
-    BlockingCall(
-        original_func=os.stat,
-        object=os,
-        function="stat",
-        check_allowed=_check_stat_call_allowed,
         strict=False,
         strict_core=False,
         skip_for_tests=True,
