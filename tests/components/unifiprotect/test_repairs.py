@@ -366,7 +366,7 @@ async def test_rtsp_writable_fix_when_not_setup(
     hass_client: ClientSessionGenerator,
     hass_ws_client: WebSocketGenerator,
 ) -> None:
-    """Test RTSP disabled warning if the integration is no longer setup."""
+    """Test RTSP disabled warning if the integration is no longer set up."""
 
     for channel in doorbell.channels:
         channel.is_rtsp_enabled = False
@@ -394,7 +394,7 @@ async def test_rtsp_writable_fix_when_not_setup(
     assert issue is not None
 
     # Unload the integration to ensure the fix flow still works
-    # if the integration is no longer setup
+    # if the integration is no longer set up
     await hass.config_entries.async_unload(ufp.entry.entry_id)
     await hass.async_block_till_done()
 
