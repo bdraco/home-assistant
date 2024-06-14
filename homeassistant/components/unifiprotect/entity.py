@@ -162,6 +162,8 @@ class BaseProtectEntity(Entity):
 
     _attr_should_poll = False
 
+    _state_attrs: tuple[str, ...] = ("_attr_available",)
+
     def __init__(
         self,
         data: ProtectData,
@@ -234,23 +236,19 @@ class BaseProtectEntity(Entity):
         )
 
     @callback
-    def _async_get_state_attrs(self) -> tuple[Any, ...]:
-        """Retrieve data that goes into the current state of the entity.
-
-        Called before and after updating entity and state is only written if there
-        is a change.
-        """
-
-        return (self._attr_available,)
-
-    @callback
     def _async_updated_event(self, device: ProtectAdoptableDeviceModel | NVR) -> None:
         """When device is updated from Protect."""
-
-        previous_attrs = self._async_get_state_attrs()
+        previous_attrs = tuple(
+            (attr, getattr(self, attr)) for attr in self._state_attrs
+        )
         self._async_update_device_from_protect(device)
-        current_attrs = self._async_get_state_attrs()
-        if previous_attrs != current_attrs:
+        changed = False
+        for attr, previous_value in previous_attrs:
+            if previous_value != getattr(self, attr):
+                changed = True
+                break
+
+        if changed:
             if _LOGGER.isEnabledFor(logging.DEBUG):
                 device_name = device.name or ""
                 if hasattr(self, "entity_description") and self.entity_description.name:
@@ -261,7 +259,7 @@ class BaseProtectEntity(Entity):
                     device_name,
                     device.mac,
                     previous_attrs,
-                    current_attrs,
+                    tuple((getattr(self, attr)) for attr in self._state_attrs),
                 )
             self.async_write_ha_state()
 
