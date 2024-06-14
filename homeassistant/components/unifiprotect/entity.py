@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
+from functools import partial
 import logging
+from operator import attrgetter
 from typing import TYPE_CHECKING, Any
 
 from uiprotect.data import (
@@ -196,6 +198,9 @@ class BaseProtectEntity(Entity):
         self._attr_attribution = DEFAULT_ATTRIBUTION
         self._async_set_device_info()
         self._async_update_device_from_protect(device)
+        self._state_getters = tuple(
+            partial(attrgetter(attr), self) for attr in self._state_attrs
+        )
 
     async def async_update(self) -> None:
         """Update the entity.
@@ -238,13 +243,11 @@ class BaseProtectEntity(Entity):
     @callback
     def _async_updated_event(self, device: ProtectAdoptableDeviceModel | NVR) -> None:
         """When device is updated from Protect."""
-        previous_attrs = tuple(
-            (attr, getattr(self, attr)) for attr in self._state_attrs
-        )
+        previous_attrs = [(getter, getter()) for getter in self._state_getters]
         self._async_update_device_from_protect(device)
         changed = False
-        for attr, previous_value in previous_attrs:
-            if previous_value != getattr(self, attr):
+        for getter, previous_value in previous_attrs:
+            if previous_value != getter():
                 changed = True
                 break
 
