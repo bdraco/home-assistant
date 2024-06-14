@@ -243,11 +243,11 @@ class BaseProtectEntity(Entity):
     @callback
     def _async_updated_event(self, device: ProtectAdoptableDeviceModel | NVR) -> None:
         """When device is updated from Protect."""
-        previous_attrs = [(getter, getter()) for getter in self._state_getters]
+        previous_attrs = [getter() for getter in self._state_getters]
         self._async_update_device_from_protect(device)
         changed = False
-        for getter, previous_value in previous_attrs:
-            if previous_value != getter():
+        for idx, getter in enumerate(self._state_getters):
+            if previous_attrs[idx] != getter():
                 changed = True
                 break
 
