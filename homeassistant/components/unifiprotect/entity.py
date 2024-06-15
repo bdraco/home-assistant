@@ -163,6 +163,7 @@ class BaseProtectEntity(Entity):
     device: ProtectAdoptableDeviceModel | NVR
 
     _attr_should_poll = False
+    _state_attrs: tuple[str, ...] = ("_attr_available",)
 
     _state_attrs: tuple[str, ...] = ("_attr_available",)
 
