@@ -40,7 +40,10 @@ class ProtectEntityDescription(EntityDescription, Generic[T]):
     ufp_perm: PermRequired | None = None
 
     def get_ufp_value(self, obj: T) -> Any:
-        """Return value from UniFi Protect device."""
+        """Return value from UniFi Protect device.
+
+        May be overridden by ufp_value or ufp_value_fn.
+        """
         # ufp_value or ufp_value_fn is required, the
         # RuntimeError is to catch any issues in the code
         # with new descriptions.
@@ -49,22 +52,21 @@ class ProtectEntityDescription(EntityDescription, Generic[T]):
         )
 
     def has_required(self, obj: T) -> bool:
-        """Return if required field is set."""
+        """Return if required field is set.
+
+        May be overridden by ufp_required_field.
+        """
         return True
 
     def get_ufp_enabled(self, obj: T) -> bool:
-        """Return if entity is enabled."""
+        """Return if entity is enabled.
+
+        May be overridden by ufp_enabled.
+        """
         return True
 
     def __post_init__(self) -> None:
-        """Pre-convert strings to tuples for faster get_nested_attr.
-
-        get_ufp_value/has_required/get_ufp_enabled are overridden based
-        on what is defined in the dataclass so they only have to be
-        worked out once.
-        """
-        # Setter to be able to mutate the frozen dataclass methods
-        # but not the data itself.
+        """Override get_ufp_value, has_required, and get_ufp_enabled if required."""
         _setter = partial(object.__setattr__, self)
         if (_ufp_value := self.ufp_value) is not None:
             ufp_value = tuple(_ufp_value.split("."))
