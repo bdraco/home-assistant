@@ -204,7 +204,7 @@ aioaseko==0.1.1
 aioasuswrt==1.4.0
 
 # homeassistant.components.husqvarna_automower
-aioautomower==2024.6.0
+aioautomower==2024.6.1
 
 # homeassistant.components.azure_devops
 aioazuredevops==2.1.1
@@ -1263,7 +1263,7 @@ linear-garage-door==0.2.9
 linode-api==4.1.9b1
 
 # homeassistant.components.lamarzocco
-lmcloud==1.1.11
+lmcloud==1.1.13
 
 # homeassistant.components.google_maps
 locationsharinglib==5.0.1
@@ -1800,7 +1800,7 @@ pydiscovergy==3.0.1
 pydoods==1.0.2
 
 # homeassistant.components.hydrawise
-pydrawise==2024.6.3
+pydrawise==2024.6.4
 
 # homeassistant.components.android_ip_webcam
 pydroid-ipcam==2.0.0
@@ -2601,6 +2601,9 @@ soco==0.30.4
 # homeassistant.components.solaredge_local
 solaredge-local==0.2.3
 
+# homeassistant.components.solarlog
+solarlog_cli==0.1.5
+
 # homeassistant.components.solax
 solax==3.1.1
 
@@ -2660,9 +2663,6 @@ stringcase==1.2.0
 
 # homeassistant.components.subaru
 subarulink==0.7.11
-
-# homeassistant.components.solarlog
-sunwatcher==0.2.1
 
 # homeassistant.components.sunweg
 sunweg==3.0.1
@@ -2912,7 +2912,7 @@ wyoming==1.5.4
 xbox-webapi==2.0.11
 
 # homeassistant.components.xiaomi_ble
-xiaomi-ble==0.29.0
+xiaomi-ble==0.30.0
 
 # homeassistant.components.knx
 xknx==2.12.2
