@@ -5,7 +5,6 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from functools import partial
-import logging
 from typing import Any
 
 from uiprotect.data import (
@@ -32,7 +31,6 @@ from .entity import (
 )
 from .models import PermRequired, ProtectEntityDescription, ProtectSetableKeysMixin, T
 
-_LOGGER = logging.getLogger(__name__)
 ATTR_PREV_MIC = "prev_mic_level"
 ATTR_PREV_RECORD = "prev_record_mode"
 
@@ -476,11 +474,12 @@ class ProtectBaseSwitch(BaseProtectEntity, SwitchEntity):
     """Base class for UniFi Protect Switch."""
 
     entity_description: ProtectSwitchEntityDescription
-    _state_attrs = ("_attr_available", "_attr_is_on")
+    _state_attrs = ("available", "is_on")
 
     def _async_update_device_from_protect(self, device: ProtectModelWithId) -> None:
         super()._async_update_device_from_protect(device)
-        self._attr_is_on = self.entity_description.get_ufp_value(self.device) is True
+        if self.is_on != (on := self.entity_description.get_ufp_value(device) is True):
+            self._attr_is_on = on
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the device on."""

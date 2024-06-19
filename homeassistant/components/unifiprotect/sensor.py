@@ -718,7 +718,7 @@ class BaseProtectSensor(BaseProtectEntity, SensorEntity):
     """A UniFi Protect Sensor Entity."""
 
     entity_description: ProtectSensorEntityDescription
-    _state_attrs = ("_attr_available", "_attr_native_value")
+    _state_attrs = ("available", "native_value")
 
     def _async_update_device_from_protect(self, device: ProtectModelWithId) -> None:
         super()._async_update_device_from_protect(device)

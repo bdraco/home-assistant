@@ -253,7 +253,7 @@ class ProtectNumbers(ProtectDeviceEntity, NumberEntity):
 
     device: Camera | Light
     entity_description: ProtectNumberEntityDescription
-    _state_attrs = ("_attr_available", "_attr_native_value")
+    _state_attrs = ("available", "native_value")
 
     def __init__(
         self,

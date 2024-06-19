@@ -86,7 +86,7 @@ class ProtectDeviceText(ProtectDeviceEntity, TextEntity):
     """A Ubiquiti UniFi Protect Sensor."""
 
     entity_description: ProtectTextEntityDescription
-    _state_attrs = ("_attr_available", "_attr_native_value")
+    _state_attrs = ("available", "native_value")
 
     @callback
     def _async_update_device_from_protect(self, device: ProtectModelWithId) -> None:

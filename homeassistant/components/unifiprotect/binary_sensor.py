@@ -629,23 +629,19 @@ class ProtectDeviceBinarySensor(ProtectDeviceEntity, BinarySensorEntity):
 
     device: Camera | Light | Sensor
     entity_description: ProtectBinaryEntityDescription
-    _state_attrs: tuple[str, ...] = ("_attr_available", "_attr_is_on")
+    _state_attrs: tuple[str, ...] = ("available", "is_on")
 
-    @callback
     def _async_update_device_from_protect(self, device: ProtectModelWithId) -> None:
         super()._async_update_device_from_protect(device)
-        self._attr_is_on = self.entity_description.get_ufp_value(self.device)
+        if self.is_on != (on := self.entity_description.get_ufp_value(device) is True):
+            self._attr_is_on = on
 
 
 class MountableProtectDeviceBinarySensor(ProtectDeviceBinarySensor):
     """A UniFi Protect Device Binary Sensor that can change device class at runtime."""
 
     device: Sensor
-    _state_attrs: tuple[str, ...] = (
-        "_attr_available",
-        "_attr_is_on",
-        "_attr_device_class",
-    )
+    _state_attrs = ("available", "is_on", "device_class")
 
     @callback
     def _async_update_device_from_protect(self, device: ProtectModelWithId) -> None:
@@ -661,7 +657,7 @@ class ProtectDiskBinarySensor(ProtectNVREntity, BinarySensorEntity):
 
     _disk: UOSDisk
     entity_description: ProtectBinaryEntityDescription
-    _state_attrs = ("_attr_available", "_attr_is_on")
+    _state_attrs = ("available", "is_on")
 
     def __init__(
         self,
@@ -704,7 +700,7 @@ class ProtectEventBinarySensor(EventEntityMixin, BinarySensorEntity):
     """A UniFi Protect Device Binary Sensor for events."""
 
     entity_description: ProtectBinaryEventEntityDescription
-    _state_attrs = ("_attr_available", "_attr_is_on", "_attr_extra_state_attributes")
+    _state_attrs = ("available", "is_on", "extra_state_attributes")
 
     @callback
     def _async_update_device_from_protect(self, device: ProtectModelWithId) -> None:

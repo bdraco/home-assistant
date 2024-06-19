@@ -63,7 +63,7 @@ class ProtectLight(ProtectDeviceEntity, LightEntity):
     _attr_icon = "mdi:spotlight-beam"
     _attr_color_mode = ColorMode.BRIGHTNESS
     _attr_supported_color_modes = {ColorMode.BRIGHTNESS}
-    _state_attrs = ("_attr_available", "_attr_is_on", "_attr_brightness")
+    _state_attrs = ("available", "is_on", "brightness")
 
     @callback
     def _async_update_device_from_protect(self, device: ProtectModelWithId) -> None:

@@ -163,7 +163,7 @@ class BaseProtectEntity(Entity):
 
     _attr_should_poll = False
     _attr_attribution = DEFAULT_ATTRIBUTION
-    _state_attrs: tuple[str, ...] = ("_attr_available",)
+    _state_attrs: tuple[str, ...] = ("available",)
     _attr_has_entity_name = True
     _async_get_ufp_enabled: Callable[[ProtectAdoptableDeviceModel], bool] | None = None
 
@@ -222,7 +222,7 @@ class BaseProtectEntity(Entity):
             self.device = device
 
         async_get_ufp_enabled = self._async_get_ufp_enabled
-        self._attr_available = (
+        is_available = (
             last_update_success
             and (
                 device.state is StateType.CONNECTED
@@ -230,6 +230,8 @@ class BaseProtectEntity(Entity):
             )
             and (not async_get_ufp_enabled or async_get_ufp_enabled(device))
         )
+        if self.available != is_available:
+            self._attr_available = is_available
 
     @callback
     def _async_updated_event(self, device: ProtectAdoptableDeviceModel | NVR) -> None:

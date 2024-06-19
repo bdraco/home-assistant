@@ -74,7 +74,7 @@ class ProtectMediaPlayer(ProtectDeviceEntity, MediaPlayerEntity):
         | MediaPlayerEntityFeature.BROWSE_MEDIA
     )
     _attr_media_content_type = MediaType.MUSIC
-    _state_attrs = ("_attr_available", "_attr_state", "_attr_volume_level")
+    _state_attrs = ("available", "state", "volume_level")
 
     @callback
     def _async_update_device_from_protect(self, device: ProtectModelWithId) -> None:

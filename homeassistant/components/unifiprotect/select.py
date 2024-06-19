@@ -358,7 +358,7 @@ class ProtectSelects(ProtectDeviceEntity, SelectEntity):
 
     device: Camera | Light | Viewer
     entity_description: ProtectSelectEntityDescription
-    _state_attrs = ("_attr_available", "_attr_options", "_attr_current_option")
+    _state_attrs = ("available", "options", "current_option")
 
     def __init__(
         self,
