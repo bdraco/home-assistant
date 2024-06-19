@@ -316,7 +316,7 @@ class EventEntityMixin(ProtectDeviceEntity):
     def _async_update_device_from_protect(self, device: ProtectModelWithId) -> None:
         if (event := self.entity_description.get_event_obj(device)) is None:
             self._attr_extra_state_attributes = _EMPTY_EVENT_ATTRS
-        elif self._event != event:
+        elif not self._event or self._event.id != event.id:
             self._attr_extra_state_attributes = {
                 ATTR_EVENT_ID: event.id,
                 ATTR_EVENT_SCORE: event.score,
