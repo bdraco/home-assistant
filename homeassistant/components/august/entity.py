@@ -81,7 +81,7 @@ class AugustEntityMixin(Entity):
             )
         )
         self.async_on_remove(
-            self._data.activity_stream.async_subscribe_device_id(
+            self._stream.async_subscribe_device_id(
                 self._device_id, self._update_from_data_and_write_state
             )
         )
