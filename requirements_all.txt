@@ -410,7 +410,7 @@ aiowithings==3.0.1
 aioymaps==1.2.2
 
 # homeassistant.components.airgradient
-airgradient==0.5.0
+airgradient==0.6.0
 
 # homeassistant.components.airly
 airly==1.1.0
@@ -1572,7 +1572,7 @@ plexauth==0.0.6
 plexwebsocket==0.0.14
 
 # homeassistant.components.plugwise
-plugwise==0.37.3
+plugwise==0.37.4.1
 
 # homeassistant.components.plum_lightpad
 plumlightpad==0.0.11
@@ -2939,7 +2939,7 @@ yalesmartalarmclient==0.3.9
 yalexs-ble==2.4.2
 
 # homeassistant.components.august
-yalexs==6.3.0
+yalexs==6.4.0
 
 # homeassistant.components.yeelight
 yeelight==0.7.14
