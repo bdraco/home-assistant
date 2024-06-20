@@ -8,13 +8,15 @@ from enum import Enum
 from functools import partial
 import logging
 from operator import attrgetter
-from typing import Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from uiprotect.data import (
     NVR,
     Event,
+    ModelType,
     ProtectAdoptableDeviceModel,
     SmartDetectObjectType,
+    WSSubscriptionMessage as WSMsg,
 )
 
 from homeassistant.helpers.entity import EntityDescription
@@ -89,6 +91,24 @@ class ProtectEventMixin(ProtectEntityDescription[T]):
     def get_event_obj(self, obj: T) -> Event | None:
         """Return value from UniFi Protect device."""
         return None
+
+    def smart_event_is_detected(self, event: Event) -> bool:
+        """Determine if a smart event is detected."""
+        return (
+            not (obj_type := self.ufp_obj_type) or obj_type in event.smart_detect_types
+        )
+
+    def wsmsg_is_end(self, msg: WSMsg | None) -> bool:
+        """Determine if the websocket message is the end of an event."""
+        if (
+            not msg
+            or (new_obj := msg.new_obj) is None
+            or new_obj.model is not ModelType.EVENT
+        ):
+            return False
+        if TYPE_CHECKING:
+            assert isinstance(new_obj, Event)
+        return bool(new_obj.end)
 
     def __post_init__(self) -> None:
         """Override get_event_obj if ufp_event_obj is set."""
