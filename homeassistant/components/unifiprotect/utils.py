@@ -45,34 +45,17 @@ if TYPE_CHECKING:
 _SENTINEL = object()
 
 
-def get_nested_attr(attrs: tuple[str, ...], obj: Any) -> Any:
+def get_nested_attr(obj: Any, attrs: tuple[str, ...]) -> Any:
     """Fetch a nested attribute."""
-    value = obj
-    for key in attrs:
-        if (value := getattr(value, key, _SENTINEL)) is _SENTINEL:
-            return None
+    if len(attrs) == 1:
+        value = getattr(obj, attrs[0], None)
+    else:
+        value = obj
+        for key in attrs:
+            if (value := getattr(value, key, _SENTINEL)) is _SENTINEL:
+                return None
+
     return value.value if isinstance(value, Enum) else value
-
-
-def get_nested_attr_as_bool(attrs: tuple[str, ...], obj: Any) -> bool:
-    """Fetch a nested attribute as a bool."""
-    value = obj
-    for key in attrs:
-        if (value := getattr(value, key, _SENTINEL)) is _SENTINEL:
-            return None
-    return bool(value.value if isinstance(value, Enum) else value)
-
-
-def get_top_level_attr(attr: str, obj: Any) -> Any:
-    """Fetch a top level attribute."""
-    value = getattr(obj, attr)
-    return value.value if isinstance(value, Enum) else value
-
-
-def get_top_level_attr_as_bool(attr: str, obj: Any) -> Any:
-    """Fetch a top level attribute as a bool."""
-    value = getattr(obj, attr)
-    return bool(value.value if isinstance(value, Enum) else value)
 
 
 @callback

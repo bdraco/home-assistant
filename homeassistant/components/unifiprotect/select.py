@@ -25,6 +25,7 @@ from uiprotect.data import (
     RecordingMode,
     Sensor,
     Viewer,
+    WSSubscriptionMessage,
 )
 
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
@@ -358,7 +359,7 @@ class ProtectSelects(ProtectDeviceEntity, SelectEntity):
 
     device: Camera | Light | Viewer
     entity_description: ProtectSelectEntityDescription
-    _state_attrs = ("available", "options", "current_option")
+    _state_attrs = ("_attr_available", "_attr_options", "_attr_current_option")
 
     def __init__(
         self,
@@ -371,8 +372,10 @@ class ProtectSelects(ProtectDeviceEntity, SelectEntity):
         super().__init__(data, device, description)
 
     @callback
-    def _async_update_device_from_protect(self, device: ProtectModelWithId) -> None:
-        super()._async_update_device_from_protect(device)
+    def _async_protect_update(
+        self, device: ProtectModelWithId, msg: WSSubscriptionMessage | None
+    ) -> None:
+        super()._async_protect_update(device, msg)
         entity_description = self.entity_description
         # entities with categories are not exposed for voice
         # and safe to update dynamically

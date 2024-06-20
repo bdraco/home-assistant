@@ -6,7 +6,7 @@ from collections.abc import Callable, Sequence
 from functools import partial
 import logging
 from operator import attrgetter
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from uiprotect.data import (
     NVR,
@@ -15,6 +15,7 @@ from uiprotect.data import (
     ProtectAdoptableDeviceModel,
     ProtectModelWithId,
     StateType,
+    WSSubscriptionMessage,
 )
 
 from homeassistant.core import callback
@@ -163,7 +164,7 @@ class BaseProtectEntity(Entity):
 
     _attr_should_poll = False
     _attr_attribution = DEFAULT_ATTRIBUTION
-    _state_attrs: tuple[str, ...] = ("available",)
+    _state_attrs: tuple[str, ...] = ("_attr_available",)
     _attr_has_entity_name = True
     _async_get_ufp_enabled: Callable[[ProtectAdoptableDeviceModel], bool] | None = None
 
@@ -188,7 +189,7 @@ class BaseProtectEntity(Entity):
                 self._async_get_ufp_enabled = description.get_ufp_enabled
 
         self._async_set_device_info()
-        self._async_update_device_from_protect(device)
+        self._async_protect_update(device, None)
         self._state_getters = tuple(
             partial(attrgetter(attr), self) for attr in self._state_attrs
         )
@@ -213,7 +214,9 @@ class BaseProtectEntity(Entity):
         )
 
     @callback
-    def _async_update_device_from_protect(self, device: ProtectModelWithId) -> None:
+    def _async_protect_update(
+        self, device: ProtectModelWithId, msg: WSSubscriptionMessage | None
+    ) -> None:
         """Update Entity object from Protect device."""
         if TYPE_CHECKING:
             assert isinstance(device, ProtectAdoptableDeviceModel)
@@ -222,8 +225,7 @@ class BaseProtectEntity(Entity):
             self.device = device
 
         async_get_ufp_enabled = self._async_get_ufp_enabled
-        was_available = self.available
-        is_available = (
+        self._attr_available = (
             last_update_success
             and (
                 device.state is StateType.CONNECTED
@@ -231,14 +233,16 @@ class BaseProtectEntity(Entity):
             )
             and (not async_get_ufp_enabled or async_get_ufp_enabled(device))
         )
-        if was_available != is_available:
-            self._attr_available = is_available
 
     @callback
-    def _async_updated_event(self, device: ProtectAdoptableDeviceModel | NVR) -> None:
+    def _async_updated_event(
+        self,
+        device: ProtectAdoptableDeviceModel | NVR,
+        msg: WSSubscriptionMessage | None,
+    ) -> None:
         """When device is updated from Protect."""
         previous_attrs = [getter() for getter in self._state_getters]
-        self._async_update_device_from_protect(device)
+        self._async_protect_update(device, msg)
         changed = False
         for idx, getter in enumerate(self._state_getters):
             if previous_attrs[idx] != getter():
@@ -264,9 +268,7 @@ class BaseProtectEntity(Entity):
         """When entity is added to hass."""
         await super().async_added_to_hass()
         self.async_on_remove(
-            self.data.async_subscribe_device_id(
-                self.device.mac, self._async_updated_event
-            )
+            self.data.async_subscribe(self.device.mac, self._async_updated_event)
         )
 
 
@@ -294,15 +296,14 @@ class ProtectNVREntity(BaseProtectEntity):
         )
 
     @callback
-    def _async_update_device_from_protect(self, device: ProtectModelWithId) -> None:
+    def _async_protect_update(
+        self, device: ProtectModelWithId, msg: WSSubscriptionMessage | None
+    ) -> None:
         data = self.data
         if last_update_success := data.last_update_success:
             self.device = data.api.bootstrap.nvr
 
         self._attr_available = last_update_success
-
-
-_EMPTY_EVENT_ATTRS: dict[str, Any] = {}
 
 
 class EventEntityMixin(ProtectDeviceEntity):
@@ -313,13 +314,15 @@ class EventEntityMixin(ProtectDeviceEntity):
     _event: Event | None = None
 
     @callback
-    def _async_update_device_from_protect(self, device: ProtectModelWithId) -> None:
+    def _async_protect_update(
+        self, device: ProtectModelWithId, msg: WSSubscriptionMessage | None
+    ) -> None:
         if (event := self.entity_description.get_event_obj(device)) is None:
-            self._attr_extra_state_attributes = _EMPTY_EVENT_ATTRS
-        elif not self._event or self._event.id != event.id:
+            self._attr_extra_state_attributes = {}
+        else:
             self._attr_extra_state_attributes = {
                 ATTR_EVENT_ID: event.id,
                 ATTR_EVENT_SCORE: event.score,
             }
         self._event = event
-        super()._async_update_device_from_protect(device)
+        super()._async_protect_update(device, msg)

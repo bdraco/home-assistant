@@ -14,6 +14,7 @@ from uiprotect.data import (
     ProtectAdoptableDeviceModel,
     ProtectModelWithId,
     Sensor,
+    WSSubscriptionMessage,
 )
 from uiprotect.data.nvr import UOSDisk
 
@@ -629,23 +630,31 @@ class ProtectDeviceBinarySensor(ProtectDeviceEntity, BinarySensorEntity):
 
     device: Camera | Light | Sensor
     entity_description: ProtectBinaryEntityDescription
-    _state_attrs: tuple[str, ...] = ("available", "is_on")
+    _state_attrs: tuple[str, ...] = ("_attr_available", "_attr_is_on")
 
-    def _async_update_device_from_protect(self, device: ProtectModelWithId) -> None:
-        super()._async_update_device_from_protect(device)
-        if self.is_on != (on := self.entity_description.get_ufp_value(device) is True):
-            self._attr_is_on = on
+    @callback
+    def _async_protect_update(
+        self, device: ProtectModelWithId, msg: WSSubscriptionMessage | None
+    ) -> None:
+        super()._async_protect_update(device, msg)
+        self._attr_is_on = self.entity_description.get_ufp_value(self.device)
 
 
 class MountableProtectDeviceBinarySensor(ProtectDeviceBinarySensor):
     """A UniFi Protect Device Binary Sensor that can change device class at runtime."""
 
     device: Sensor
-    _state_attrs = ("available", "is_on", "device_class")
+    _state_attrs: tuple[str, ...] = (
+        "_attr_available",
+        "_attr_is_on",
+        "_attr_device_class",
+    )
 
     @callback
-    def _async_update_device_from_protect(self, device: ProtectModelWithId) -> None:
-        super()._async_update_device_from_protect(device)
+    def _async_protect_update(
+        self, device: ProtectModelWithId, msg: WSSubscriptionMessage | None
+    ) -> None:
+        super()._async_protect_update(device, msg)
         # UP Sense can be any of the 3 contact sensor device classes
         self._attr_device_class = MOUNT_DEVICE_CLASS_MAP.get(
             self.device.mount_type, BinarySensorDeviceClass.DOOR
@@ -657,7 +666,7 @@ class ProtectDiskBinarySensor(ProtectNVREntity, BinarySensorEntity):
 
     _disk: UOSDisk
     entity_description: ProtectBinaryEntityDescription
-    _state_attrs = ("available", "is_on")
+    _state_attrs = ("_attr_available", "_attr_is_on")
 
     def __init__(
         self,
@@ -679,8 +688,10 @@ class ProtectDiskBinarySensor(ProtectNVREntity, BinarySensorEntity):
         super().__init__(data, device, description)
 
     @callback
-    def _async_update_device_from_protect(self, device: ProtectModelWithId) -> None:
-        super()._async_update_device_from_protect(device)
+    def _async_protect_update(
+        self, device: ProtectModelWithId, msg: WSSubscriptionMessage | None
+    ) -> None:
+        super()._async_protect_update(device, msg)
         slot = self._disk.slot
         self._attr_available = False
 
@@ -700,11 +711,13 @@ class ProtectEventBinarySensor(EventEntityMixin, BinarySensorEntity):
     """A UniFi Protect Device Binary Sensor for events."""
 
     entity_description: ProtectBinaryEventEntityDescription
-    _state_attrs = ("available", "is_on", "extra_state_attributes")
+    _state_attrs = ("_attr_available", "_attr_is_on", "_attr_extra_state_attributes")
 
     @callback
-    def _async_update_device_from_protect(self, device: ProtectModelWithId) -> None:
-        super()._async_update_device_from_protect(device)
+    def _async_protect_update(
+        self, device: ProtectModelWithId, msg: WSSubscriptionMessage | None
+    ) -> None:
+        super()._async_protect_update(device, msg)
         is_on = self.entity_description.get_is_on(self.device, self._event)
         self._attr_is_on = is_on
         if not is_on:
@@ -713,8 +726,8 @@ class ProtectEventBinarySensor(EventEntityMixin, BinarySensorEntity):
 
 
 MODEL_DESCRIPTIONS_WITH_CLASS = (
-    (ProtectDeviceBinarySensor, _MODEL_DESCRIPTIONS),
-    (MountableProtectDeviceBinarySensor, _MOUNTABLE_MODEL_DESCRIPTIONS),
+    (_MODEL_DESCRIPTIONS, ProtectDeviceBinarySensor),
+    (_MOUNTABLE_MODEL_DESCRIPTIONS, MountableProtectDeviceBinarySensor),
 )
 
 
@@ -757,7 +770,7 @@ async def async_setup_entry(
     @callback
     def _add_new_device(device: ProtectAdoptableDeviceModel) -> None:
         entities: list[BaseProtectEntity] = []
-        for klass, model_descriptions in MODEL_DESCRIPTIONS_WITH_CLASS:
+        for model_descriptions, klass in MODEL_DESCRIPTIONS_WITH_CLASS:
             entities += async_all_device_entities(
                 data, klass, model_descriptions=model_descriptions, ufp_device=device
             )
@@ -767,7 +780,7 @@ async def async_setup_entry(
 
     data.async_subscribe_adopt(_add_new_device)
     entities: list[BaseProtectEntity] = []
-    for klass, model_descriptions in MODEL_DESCRIPTIONS_WITH_CLASS:
+    for model_descriptions, klass in MODEL_DESCRIPTIONS_WITH_CLASS:
         entities += async_all_device_entities(
             data, klass, model_descriptions=model_descriptions
         )
