@@ -720,10 +720,10 @@ class BaseProtectSensor(BaseProtectEntity, SensorEntity):
     entity_description: ProtectSensorEntityDescription
     _state_attrs = ("_attr_available", "_attr_native_value")
 
-    def _async_protect_update(
+    def _async_update(
         self, device: ProtectModelWithId, msg: WSSubscriptionMessage | None
     ) -> None:
-        super()._async_protect_update(device, msg)
+        super()._async_update(device, msg)
         self._attr_native_value = self.entity_description.get_ufp_value(self.device)
 
 
@@ -758,38 +758,23 @@ class ProtectLicensePlateEventSensor(ProtectEventSensor):
         super()._async_clear_event()
 
     @callback
-    def _async_protect_update(
+    def _async_update(
         self, device: ProtectModelWithId, msg: WSSubscriptionMessage | None
     ) -> None:
         had_previous_event = self._event is not None
-        super()._async_protect_update(device, msg)
-        device = self.device
+        super()._async_update(device, msg)
         if (
             (event := self._event)
             and (metadata := event.metadata)
             and (license_plate := metadata.license_plate)
-            and device.is_smart_detected
+            and self.device.is_smart_detected
             and (
                 (is_end_of_event := websocket_message_is_end_of_event(msg))
                 or not event.end
             )
         ):
-            if is_end_of_event:
-                if had_previous_event:
-                    # If the event was already registered and we are at the
-                    # end of the event no need to write state again.
-                    self._async_clear_event()
-                    return
-
-                # If the event is so short that the plate detection is received
-                # in the same message as the end of the event we need to write
-                # state twice to ensure the detection is still registered.
-                self._attr_native_value = license_plate.name
-                self.async_write_ha_state()
-
-                self._async_clear_event()
-                self.async_write_ha_state()
-
             self._attr_native_value = license_plate.name
+            if is_end_of_event:
+                self._process_end_event(had_previous_event)
             return
         self._async_clear_event()
