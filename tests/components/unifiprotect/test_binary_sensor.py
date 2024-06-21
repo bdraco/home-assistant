@@ -5,7 +5,17 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from unittest.mock import Mock
 
-from uiprotect.data import Camera, Event, EventType, Light, ModelType, MountType, Sensor
+import pytest
+from uiprotect.data import (
+    Camera,
+    Event,
+    EventType,
+    Light,
+    ModelType,
+    MountType,
+    Sensor,
+    SmartDetectObjectType,
+)
 from uiprotect.data.nvr import EventMetadata
 
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
@@ -15,6 +25,7 @@ from homeassistant.components.unifiprotect.binary_sensor import (
     LIGHT_SENSORS,
     MOUNTABLE_SENSE_SENSORS,
     SENSE_SENSORS,
+    SMART_EVENT_SENSORS,
 )
 from homeassistant.components.unifiprotect.const import (
     ATTR_EVENT_SCORE,
@@ -51,11 +62,11 @@ async def test_binary_sensor_camera_remove(
 
     ufp.api.bootstrap.nvr.system_info.ustorage = None
     await init_entry(hass, ufp, [doorbell, unadopted_camera])
-    assert_entity_counts(hass, Platform.BINARY_SENSOR, 8, 8)
+    assert_entity_counts(hass, Platform.BINARY_SENSOR, 9, 8)
     await remove_entities(hass, ufp, [doorbell, unadopted_camera])
     assert_entity_counts(hass, Platform.BINARY_SENSOR, 0, 0)
     await adopt_devices(hass, ufp, [doorbell, unadopted_camera])
-    assert_entity_counts(hass, Platform.BINARY_SENSOR, 8, 8)
+    assert_entity_counts(hass, Platform.BINARY_SENSOR, 9, 8)
 
 
 async def test_binary_sensor_light_remove(
@@ -123,7 +134,7 @@ async def test_binary_sensor_setup_camera_all(
 
     ufp.api.bootstrap.nvr.system_info.ustorage = None
     await init_entry(hass, ufp, [doorbell, unadopted_camera])
-    assert_entity_counts(hass, Platform.BINARY_SENSOR, 8, 8)
+    assert_entity_counts(hass, Platform.BINARY_SENSOR, 9, 8)
 
     description = EVENT_SENSORS[0]
     unique_id, entity_id = ids_from_device_description(
@@ -273,7 +284,7 @@ async def test_binary_sensor_update_motion(
     """Test binary_sensor motion entity."""
 
     await init_entry(hass, ufp, [doorbell, unadopted_camera])
-    assert_entity_counts(hass, Platform.BINARY_SENSOR, 14, 14)
+    assert_entity_counts(hass, Platform.BINARY_SENSOR, 15, 14)
 
     _, entity_id = ids_from_device_description(
         Platform.BINARY_SENSOR, doorbell, EVENT_SENSORS[1]
@@ -421,3 +432,54 @@ async def test_binary_sensor_update_mount_type_garage(
     assert (
         state.attributes[ATTR_DEVICE_CLASS] == BinarySensorDeviceClass.GARAGE_DOOR.value
     )
+
+
+@pytest.mark.usefixtures("entity_registry_enabled_by_default")
+async def test_binary_sensor_package_detected(
+    hass: HomeAssistant,
+    ufp: MockUFPFixture,
+    doorbell: Camera,
+    unadopted_camera: Camera,
+    fixed_now: datetime,
+) -> None:
+    """Test binary_sensor motion entity."""
+
+    await init_entry(hass, ufp, [doorbell, unadopted_camera])
+    assert_entity_counts(hass, Platform.BINARY_SENSOR, 15, 15)
+
+    _, entity_id = ids_from_device_description(
+        Platform.BINARY_SENSOR, doorbell, SMART_EVENT_SENSORS[4]
+    )
+
+    event = Event(
+        model=ModelType.EVENT,
+        id="test_event_id",
+        type=EventType.SMART_DETECT,
+        start=fixed_now - timedelta(seconds=1),
+        end=None,
+        score=100,
+        smart_detect_types=[SmartDetectObjectType.PACKAGE],
+        smart_detect_event_ids=[],
+        camera_id=doorbell.id,
+        api=ufp.api,
+    )
+
+    new_camera = doorbell.copy()
+    new_camera.is_motion_detected = True
+    new_camera.last_motion_event_id = event.id
+
+    ufp.api.bootstrap.cameras = {new_camera.id: new_camera}
+    ufp.api.bootstrap.events = {event.id: event}
+
+    mock_msg = Mock()
+    mock_msg.changed_data = {}
+    mock_msg.new_obj = event
+    ufp.ws_msg(mock_msg)
+
+    await hass.async_block_till_done()
+
+    state = hass.states.get(entity_id)
+    assert state
+    assert state.state == STATE_ON
+    assert state.attributes[ATTR_ATTRIBUTION] == DEFAULT_ATTRIBUTION
+    assert state.attributes[ATTR_EVENT_SCORE] == 100
