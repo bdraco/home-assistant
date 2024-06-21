@@ -20,12 +20,6 @@ from homeassistant.loader import async_suggest_report_issue
 
 _LOGGER = logging.getLogger(__name__)
 
-_STABILITY_REPORT_TEXT = (
-    "This is causing stability issues. "
-    "Please create a bug report at "
-    "https://github.com/home-assistant/core/issues?q=is%3Aopen+is%3Aissue"
-)
-
 
 def _get_line_from_cache(filename: str, lineno: int) -> str:
     """Get line from cache or read from file."""
@@ -57,7 +51,7 @@ def raise_for_blocking_call(
             _LOGGER.warning(
                 "Detected blocking call to %s with args %s in %s, "
                 "line %s: %s inside the event loop; "
-                "This is causing stability issues."
+                "This is causing stability issues. "
                 "Please create a bug report at "
                 "https://github.com/home-assistant/core/issues?q=is%%3Aopen+is%%3Aissue\n"
                 "%s\n"
