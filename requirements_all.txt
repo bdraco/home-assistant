@@ -182,7 +182,7 @@ aio-georss-gdacs==0.9
 aioairq==0.3.2
 
 # homeassistant.components.airzone_cloud
-aioairzone-cloud==0.5.2
+aioairzone-cloud==0.5.3
 
 # homeassistant.components.airzone
 aioairzone==0.7.7
@@ -294,7 +294,7 @@ aiolookin==1.0.0
 aiolyric==1.1.0
 
 # homeassistant.components.mealie
-aiomealie==0.3.1
+aiomealie==0.4.0
 
 # homeassistant.components.modern_forms
 aiomodernforms==0.1.8
@@ -1353,7 +1353,7 @@ mopeka-iot-ble==0.7.0
 motionblinds==0.6.23
 
 # homeassistant.components.motionblinds_ble
-motionblindsble==0.0.9
+motionblindsble==0.1.0
 
 # homeassistant.components.motioneye
 motioneye-client==0.3.14
@@ -1815,7 +1815,7 @@ pyecoforest==0.4.0
 pyeconet==0.1.22
 
 # homeassistant.components.ista_ecotrend
-pyecotrend-ista==3.2.0
+pyecotrend-ista==3.3.1
 
 # homeassistant.components.edimax
 pyedimax==0.2.1
