@@ -14,6 +14,7 @@ from kasa import (
     TimeoutError,
 )
 from kasa.interfaces import LightEffect
+from kasa.iot import IotDevice
 import pytest
 
 from homeassistant.components import tplink
@@ -55,18 +56,16 @@ from tests.common import MockConfigEntry, async_fire_time_changed
 
 
 @pytest.mark.parametrize(
-    ("device_type", "expected_unique_id"),
+    ("device_type"),
     [
-        pytest.param(DeviceType.Dimmer, DEVICE_ID, id="Dimmer"),
-        pytest.param(DeviceType.Bulb, MAC_ADDRESS.replace(":", "").upper(), id="Bulb"),
-        pytest.param(
-            DeviceType.LightStrip, MAC_ADDRESS.replace(":", "").upper(), id="LightStrip"
-        ),
-        pytest.param(DeviceType.WallSwitch, DEVICE_ID, id="WallSwitch"),
+        pytest.param(DeviceType.Dimmer, id="Dimmer"),
+        pytest.param(DeviceType.Bulb, id="Bulb"),
+        pytest.param(DeviceType.LightStrip, id="LightStrip"),
+        pytest.param(DeviceType.WallSwitch, id="WallSwitch"),
     ],
 )
 async def test_light_unique_id(
-    hass: HomeAssistant, device_type, expected_unique_id
+    hass: HomeAssistant, entity_registry: er.EntityRegistry, device_type
 ) -> None:
     """Test a light unique id."""
     already_migrated_config_entry = MockConfigEntry(
@@ -80,15 +79,40 @@ async def test_light_unique_id(
         await hass.async_block_till_done()
 
     entity_id = "light.my_light"
+    assert (
+        entity_registry.async_get(entity_id).unique_id
+        == MAC_ADDRESS.replace(":", "").upper()
+    )
+
+
+async def test_legacy_dimmer_unique_id(hass: HomeAssistant) -> None:
+    """Test a light unique id."""
+    already_migrated_config_entry = MockConfigEntry(
+        domain=DOMAIN, data={CONF_HOST: "127.0.0.1"}, unique_id=MAC_ADDRESS
+    )
+    already_migrated_config_entry.add_to_hass(hass)
+    light = _mocked_device(
+        modules=[Module.Light],
+        alias="my_light",
+        spec=IotDevice,
+        device_id="aa:bb:cc:dd:ee:ff",
+    )
+    light.device_type = DeviceType.Dimmer
+
+    with _patch_discovery(device=light), _patch_connect(device=light):
+        await async_setup_component(hass, tplink.DOMAIN, {tplink.DOMAIN: {}})
+        await hass.async_block_till_done()
+
+    entity_id = "light.my_light"
     entity_registry = er.async_get(hass)
-    assert entity_registry.async_get(entity_id).unique_id == expected_unique_id
+    assert entity_registry.async_get(entity_id).unique_id == "aa:bb:cc:dd:ee:ff"
 
 
 @pytest.mark.parametrize(
     ("device", "transition"),
     [
         (_mocked_device(modules=[Module.Light]), 2.0),
-        (_mocked_device(modules=[Module.Light]), None),
+        (_mocked_device(modules=[Module.Light, Module.LightEffect]), None),
     ],
 )
 async def test_color_light(
@@ -853,3 +877,42 @@ async def test_light_errors_when_turned_on(
         )
         == reauth_expected
     )
+
+
+async def test_light_child(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+) -> None:
+    """Test child lights are added to parent device with the right ids."""
+    already_migrated_config_entry = MockConfigEntry(
+        domain=DOMAIN, data={CONF_HOST: "127.0.0.1"}, unique_id=MAC_ADDRESS
+    )
+    already_migrated_config_entry.add_to_hass(hass)
+
+    child_light_1 = _mocked_device(
+        modules=[Module.Light], alias="my_light_0", device_id=f"{DEVICE_ID}00"
+    )
+    child_light_2 = _mocked_device(
+        modules=[Module.Light], alias="my_light_1", device_id=f"{DEVICE_ID}01"
+    )
+    parent_device = _mocked_device(
+        device_id=DEVICE_ID,
+        alias="my_device",
+        children=[child_light_1, child_light_2],
+        modules=[Module.Light],
+    )
+
+    with _patch_discovery(device=parent_device), _patch_connect(device=parent_device):
+        await async_setup_component(hass, tplink.DOMAIN, {tplink.DOMAIN: {}})
+        await hass.async_block_till_done()
+
+    entity_id = "light.my_device"
+    entity = entity_registry.async_get(entity_id)
+    assert entity
+
+    for light_id in range(2):
+        child_entity_id = f"light.my_device_my_light_{light_id}"
+        child_entity = entity_registry.async_get(child_entity_id)
+        assert child_entity
+        assert child_entity.unique_id == f"{DEVICE_ID}0{light_id}"
+        assert child_entity.device_id == entity.device_id

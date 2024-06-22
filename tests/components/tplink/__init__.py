@@ -1,21 +1,22 @@
 """Tests for the TP-Link component."""
 
 from collections import namedtuple
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from kasa import (
-    ConnectionType,
     Device,
     DeviceConfig,
-    DeviceFamilyType,
+    DeviceConnectionParameters,
+    DeviceEncryptionType,
+    DeviceFamily,
     DeviceType,
-    EncryptType,
     Feature,
     KasaException,
     Module,
 )
-from kasa.interfaces import Fan, Light, LightEffect, LightState
+from kasa.interfaces import Light, LightEffect, LightState
 from kasa.protocol import BaseProtocol
 
 from homeassistant.components.tplink import (
@@ -53,16 +54,16 @@ CREDENTIALS_HASH_AUTH = "abcdefghijklmnopqrstuv=="
 DEVICE_CONFIG_AUTH = DeviceConfig(
     IP_ADDRESS,
     credentials=CREDENTIALS,
-    connection_type=ConnectionType(
-        DeviceFamilyType.IotSmartPlugSwitch, EncryptType.Klap
+    connection_type=DeviceConnectionParameters(
+        DeviceFamily.IotSmartPlugSwitch, DeviceEncryptionType.Klap
     ),
     uses_http=True,
 )
 DEVICE_CONFIG_AUTH2 = DeviceConfig(
     IP_ADDRESS2,
     credentials=CREDENTIALS,
-    connection_type=ConnectionType(
-        DeviceFamilyType.IotSmartPlugSwitch, EncryptType.Klap
+    connection_type=DeviceConnectionParameters(
+        DeviceFamily.IotSmartPlugSwitch, DeviceEncryptionType.Klap
     ),
     uses_http=True,
 )
@@ -95,7 +96,7 @@ CREATE_ENTRY_DATA_AUTH2 = {
 
 
 def _mock_protocol() -> BaseProtocol:
-    protocol = MagicMock(auto_spec=BaseProtocol)
+    protocol = MagicMock(spec=BaseProtocol)
     protocol.close = AsyncMock()
     return protocol
 
@@ -108,10 +109,11 @@ def _mocked_device(
     alias=ALIAS,
     modules: list[str] | None = None,
     children: list[Device] | None = None,
-    features: list[str] | None = None,
+    features: list[str | Feature] | None = None,
     device_type=DeviceType.Unknown,
+    spec: type = Device,
 ) -> Device:
-    device = MagicMock(auto_spec=Device, name="Mocked device")
+    device = MagicMock(spec=spec, name="Mocked device")
     device.update = AsyncMock()
     device.turn_off = AsyncMock()
     device.turn_on = AsyncMock()
@@ -132,8 +134,18 @@ def _mocked_device(
 
     if features:
         device.features = {
-            feature_id: FEATURE_TO_MOCK_GEN[feature_id]() for feature_id in features
+            feature_id: FEATURE_TO_MOCK_GEN[feature_id]()
+            for feature_id in features
+            if isinstance(feature_id, str)
         }
+
+        device.features.update(
+            {
+                feature.id: feature
+                for feature in features
+                if isinstance(feature, Feature)
+            }
+        )
 
     device.children = children if children else []
     device.device_type = device_type
@@ -149,20 +161,35 @@ def _mocked_device(
 
 
 def _mocked_feature(
-    value: Any, id: str, type_=Feature.Type.Sensor, category=Feature.Category.Debug
+    value: Any,
+    id: str,
+    *,
+    name=None,
+    type_=Feature.Type.Sensor,
+    category=Feature.Category.Debug,
+    precision_hint=None,
+    choices=None,
+    unit=None,
+    minimum_value=0,
+    maximum_value=2**16,  # Arbitrary max
 ) -> Feature:
-    feature = MagicMock(auto_spec=Feature, name="Mocked feature")
+    feature = MagicMock(spec=Feature, name="Mocked feature")
     feature.id = id
-    feature.name = id
+    feature.name = name or id
     feature.value = value
+    feature.choices = choices
     feature.type = type_
     feature.category = category
+    feature.precision_hint = precision_hint
+    feature.unit = unit
     feature.set_value = AsyncMock()
+    feature.minimum_value = minimum_value
+    feature.maximum_value = maximum_value
     return feature
 
 
 def _mocked_light_module() -> Light:
-    light = MagicMock(auto_spec=Light, name="Mocked light module")
+    light = MagicMock(spec=Light, name="Mocked light module")
     light.update = AsyncMock()
     light.brightness = 50
     light.color_temp = 4000
@@ -186,7 +213,7 @@ def _mocked_light_module() -> Light:
 
 
 def _mocked_light_effect_module() -> LightEffect:
-    effect = MagicMock(auto_spec=LightEffect, name="Mocked light effect")
+    effect = MagicMock(spec=LightEffect, name="Mocked light effect")
     effect.has_effects = True
     effect.has_custom_effects = True
     effect.effect = "Effect1"
@@ -194,13 +221,6 @@ def _mocked_light_effect_module() -> LightEffect:
     effect.set_effect = AsyncMock()
     effect.set_custom_effect = AsyncMock()
     return effect
-
-
-def _mocked_fan_module() -> Fan:
-    fan = MagicMock(auto_spec=Fan, name="Mocked fan")
-    fan.fan_speed_level = 0
-    fan.set_fan_speed_level = AsyncMock()
-    return fan
 
 
 def _mocked_strip_children(features=None) -> list[Device]:
@@ -223,18 +243,95 @@ def _mocked_strip_children(features=None) -> list[Device]:
     return [plug0, plug1]
 
 
+def _mocked_energy_features(
+    power=None, total=None, voltage=None, current=None, today=None
+) -> list[Feature]:
+    feats = []
+    if power is not None:
+        feats.append(
+            _mocked_feature(
+                power,
+                "current_consumption",
+                name="Current consumption",
+                type_=Feature.Type.Sensor,
+                category=Feature.Category.Primary,
+                unit="W",
+                precision_hint=1,
+            )
+        )
+    if total is not None:
+        feats.append(
+            _mocked_feature(
+                total,
+                "consumption_total",
+                name="Total consumption",
+                type_=Feature.Type.Sensor,
+                category=Feature.Category.Info,
+                unit="kWh",
+                precision_hint=3,
+            )
+        )
+    if voltage is not None:
+        feats.append(
+            _mocked_feature(
+                voltage,
+                "voltage",
+                name="Voltage",
+                type_=Feature.Type.Sensor,
+                category=Feature.Category.Primary,
+                unit="V",
+                precision_hint=1,
+            )
+        )
+    if current is not None:
+        feats.append(
+            _mocked_feature(
+                current,
+                "current",
+                name="Current",
+                type_=Feature.Type.Sensor,
+                category=Feature.Category.Primary,
+                unit="A",
+                precision_hint=2,
+            )
+        )
+    # Today is always reported as 0 by the library rather than none
+    feats.append(
+        _mocked_feature(
+            today if today is not None else 0.0,
+            "consumption_today",
+            name="Today's consumption",
+            type_=Feature.Type.Sensor,
+            category=Feature.Category.Info,
+            unit="kWh",
+            precision_hint=3,
+        )
+    )
+    return feats
+
+
 MODULE_TO_MOCK_GEN = {
     Module.Light: _mocked_light_module,
     Module.LightEffect: _mocked_light_effect_module,
-    Module.Fan: _mocked_fan_module,
 }
 
 FEATURE_TO_MOCK_GEN = {
     "state": lambda: _mocked_feature(
-        True, "state", Feature.Type.Switch, Feature.Category.Primary
+        True, "state", type_=Feature.Type.Switch, category=Feature.Category.Primary
     ),
     "led": lambda: _mocked_feature(
-        True, "led", Feature.Type.Switch, Feature.Category.Config
+        True,
+        "led",
+        name="LED",
+        type_=Feature.Type.Switch,
+        category=Feature.Category.Config,
+    ),
+    "on_since": lambda: _mocked_feature(
+        datetime.now(UTC).astimezone() - timedelta(minutes=5),
+        "on_since",
+        name="On since",
+        type_=Feature.Type.Sensor,
+        category=Feature.Category.Info,
     ),
 }
 
