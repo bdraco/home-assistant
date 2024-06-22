@@ -23,6 +23,7 @@ from uiprotect.data import (
 )
 from uiprotect.exceptions import ClientError, NotAuthorized
 from uiprotect.utils import log_event
+from uiprotect.websocket import WebsocketState
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
@@ -83,8 +84,7 @@ class ProtectData:
             str, set[Callable[[ProtectDeviceType], None]]
         ] = defaultdict(set)
         self._pending_camera_ids: set[str] = set()
-        self._unsub_interval: CALLBACK_TYPE | None = None
-        self._unsub_websocket: CALLBACK_TYPE | None = None
+        self._unsubs: list[CALLBACK_TYPE] = []
         self._auth_failures = 0
         self.last_update_success = False
         self.api = protect
@@ -133,19 +133,34 @@ class ProtectData:
     @callback
     def async_setup(self, bootstrap: Bootstrap) -> None:
         """Subscribe and do the refresh."""
-        self._process_updates_success(bootstrap)
-        self._unsub_websocket = self.api.subscribe_websocket(
-            self._async_process_ws_message
-        )
+        self._process_update(bootstrap)
+        api = self.api
+        self._unsubs = [
+            api.subscribe_websocket_state(self._async_websocket_state_changed),
+            api.subscribe_websocket(self._async_process_ws_message),
+            async_track_time_interval(
+                self._hass, self._async_poll, self._update_interval
+            ),
+        ]
+
+    @callback
+    def _async_websocket_state_changed(self, state: WebsocketState) -> None:
+        """Handle a change in the websocket state."""
+        new_last_update_success = state is WebsocketState.CONNECTED
+        if new_last_update_success != self.last_update_success:
+            self._async_process_update_success_change(new_last_update_success)
+
+    def _async_process_update_success_change(self, success: bool) -> None:
+        """Process a change in update success."""
+        # manually trigger update to mark entities available/unavailable
+        self.last_update_success = success
+        self._async_process_updates(self.api.bootstrap)
 
     async def async_stop(self, *args: Any) -> None:
         """Stop processing data."""
-        if self._unsub_websocket:
-            self._unsub_websocket()
-            self._unsub_websocket = None
-        if self._unsub_interval:
-            self._unsub_interval()
-            self._unsub_interval = None
+        for unsub in self._unsubs:
+            unsub()
+        self._unsubs.clear()
         await self.api.async_disconnect_ws()
 
     async def async_refresh(self) -> None:
@@ -161,16 +176,16 @@ class ProtectData:
                 _LOGGER.exception("Reauthentication required")
                 self._entry.async_start_reauth(self._hass)
             self.last_update_success = False
-        except ClientError:
+        except ClientError as ex:
             if self.last_update_success:
                 _LOGGER.exception("Error while updating")
-            self.last_update_success = False
-            # manually trigger update to mark entities unavailable
-            self._async_process_updates(self.api.bootstrap)
+            else:
+                _LOGGER.debug("Error while updating: %s", ex)
+                self._async_process_update_success_change(False)
         else:
-            self._process_updates_success(updates)
+            self._process_update(updates)
 
-    def _process_updates_success(self, updates: Bootstrap | None) -> None:
+    def _process_update(self, updates: Bootstrap | None) -> None:
         """Process a successful bootstrap."""
         self.last_update_success = True
         self._auth_failures = 0
@@ -309,10 +324,6 @@ class ProtectData:
         self, mac: str, update_callback: Callable[[ProtectDeviceType], None]
     ) -> CALLBACK_TYPE:
         """Add an callback subscriber."""
-        if not self._subscriptions:
-            self._unsub_interval = async_track_time_interval(
-                self._hass, self._async_poll, self._update_interval
-            )
         self._subscriptions[mac].add(update_callback)
         return partial(self._async_unsubscribe, mac, update_callback)
 
@@ -324,9 +335,6 @@ class ProtectData:
         self._subscriptions[mac].remove(update_callback)
         if not self._subscriptions[mac]:
             del self._subscriptions[mac]
-        if not self._subscriptions and self._unsub_interval:
-            self._unsub_interval()
-            self._unsub_interval = None
 
     @callback
     def _async_signal_device_update(self, device: ProtectDeviceType) -> None:
