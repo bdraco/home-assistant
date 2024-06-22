@@ -204,7 +204,6 @@ class ProtectData:
         initialized yet. Will cause Websocket code to check for channels to be
         initialized for the camera and issue a dispatch once they do.
         """
-
         self._pending_camera_ids.add(camera_id)
 
     @callback
@@ -306,12 +305,7 @@ class ProtectData:
 
     @callback
     def _async_poll(self, now: datetime) -> None:
-        """Poll the Protect API.
-
-        If the websocket is connected, most of the time
-        this will be a no-op. If the websocket is disconnected,
-        this will trigger a reconnect and refresh.
-        """
+        """Poll the Protect API."""
         self._entry.async_create_background_task(
             self._hass,
             self.async_refresh(),
