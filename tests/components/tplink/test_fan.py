@@ -51,7 +51,7 @@ async def test_fan(hass: HomeAssistant) -> None:
     fan.fan_speed_level = 0
     with _patch_discovery(device=device), _patch_connect(device=device):
         await async_setup_component(hass, tplink.DOMAIN, {tplink.DOMAIN: {}})
-        await hass.async_block_till_done()
+        await hass.async_block_till_done(wait_background_tasks=True)
 
     entity_id = "fan.my_fan"
 
@@ -93,3 +93,42 @@ async def test_fan(hass: HomeAssistant) -> None:
     )
     fan.set_fan_speed_level.assert_called_once_with(1)
     fan.set_fan_speed_level.reset_mock()
+
+
+async def test_fan_child(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+) -> None:
+    """Test child fans are added to parent device with the right ids."""
+    already_migrated_config_entry = MockConfigEntry(
+        domain=DOMAIN, data={CONF_HOST: "127.0.0.1"}, unique_id=MAC_ADDRESS
+    )
+    already_migrated_config_entry.add_to_hass(hass)
+
+    child_fan_1 = _mocked_device(
+        modules=[Module.Fan], alias="my_fan_0", device_id=f"{DEVICE_ID}00"
+    )
+    child_fan_2 = _mocked_device(
+        modules=[Module.Fan], alias="my_fan_1", device_id=f"{DEVICE_ID}01"
+    )
+    parent_device = _mocked_device(
+        device_id=DEVICE_ID,
+        alias="my_device",
+        children=[child_fan_1, child_fan_2],
+        modules=[Module.Fan],
+    )
+
+    with _patch_discovery(device=parent_device), _patch_connect(device=parent_device):
+        await async_setup_component(hass, tplink.DOMAIN, {tplink.DOMAIN: {}})
+        await hass.async_block_till_done()
+
+    entity_id = "fan.my_device"
+    entity = entity_registry.async_get(entity_id)
+    assert entity
+
+    for fan_id in range(2):
+        child_entity_id = f"fan.my_device_my_fan_{fan_id}"
+        child_entity = entity_registry.async_get(child_entity_id)
+        assert child_entity
+        assert child_entity.unique_id == f"{DEVICE_ID}0{fan_id}"
+        assert child_entity.device_id == entity.device_id

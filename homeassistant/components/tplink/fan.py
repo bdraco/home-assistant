@@ -8,7 +8,6 @@ from kasa import Device, Module
 from kasa.interfaces import Fan
 
 from homeassistant.components.fan import FanEntity, FanEntityFeature
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util.percentage import (
@@ -17,22 +16,20 @@ from homeassistant.util.percentage import (
 )
 from homeassistant.util.scaling import int_states_in_range
 
-from . import legacy_device_id
-from .const import DOMAIN
+from . import TPLinkConfigEntry
 from .coordinator import TPLinkDataUpdateCoordinator
 from .entity import CoordinatedTPLinkEntity, async_refresh_after
-from .models import TPLinkData
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: TPLinkConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up fans."""
-    data: TPLinkData = hass.data[DOMAIN][config_entry.entry_id]
+    data = config_entry.runtime_data
     parent_coordinator = data.parent_coordinator
     device = parent_coordinator.device
     entities: list = []
@@ -56,7 +53,6 @@ class TPLinkFan(CoordinatedTPLinkEntity, FanEntity):
 
     _attr_speed_count = int_states_in_range(SPEED_RANGE)
     _attr_supported_features = FanEntityFeature.SET_SPEED
-    _attr_name = None
 
     def __init__(
         self,
@@ -66,11 +62,11 @@ class TPLinkFan(CoordinatedTPLinkEntity, FanEntity):
         parent: Device | None = None,
     ) -> None:
         """Initialize the fan."""
-        super().__init__(
-            device, coordinator, parent=parent, unique_id=legacy_device_id(device)
-        )
+        super().__init__(device, coordinator, parent=parent)
         self.fan_module = fan_module
-        self._async_update_attrs()
+        # If _attr_name is None the entity name will be the device name
+        self._attr_name = None if parent is None else device.alias
+        self._async_call_update_attrs()
 
     @async_refresh_after
     async def async_turn_on(
@@ -107,9 +103,3 @@ class TPLinkFan(CoordinatedTPLinkEntity, FanEntity):
             self._attr_percentage = ranged_value_to_percentage(SPEED_RANGE, fan_speed)
         else:
             self._attr_percentage = None
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator."""
-        self._async_update_attrs()
-        super()._handle_coordinator_update()
