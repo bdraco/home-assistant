@@ -54,7 +54,7 @@ PyChromecast==14.0.1
 PyFlick==0.0.2
 
 # homeassistant.components.flume
-PyFlume==0.6.5
+PyFlume==0.8.7
 
 # homeassistant.components.fronius
 PyFronius==0.7.3
@@ -1182,10 +1182,7 @@ isal==1.6.1
 ismartgate==5.0.1
 
 # homeassistant.components.abode
-jaraco.abode==3.3.0
-
-# homeassistant.components.abode
-jaraco.functools==3.9.0
+jaraco.abode==5.1.2
 
 # homeassistant.components.jellyfin
 jellyfin-apiclient-python==1.9.2

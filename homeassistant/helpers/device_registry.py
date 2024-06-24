@@ -185,6 +185,35 @@ class DeviceInfoError(HomeAssistantError):
         self.domain = domain
 
 
+class DeviceCollisionError(HomeAssistantError):
+    """Raised when a device collision is detected."""
+
+
+class DeviceIdentifierCollisionError(DeviceCollisionError):
+    """Raised when a device identifier collision is detected."""
+
+    def __init__(
+        self, identifiers: set[tuple[str, str]], existing_device: DeviceEntry
+    ) -> None:
+        """Initialize error."""
+        super().__init__(
+            f"Identifiers {identifiers} already registered to {existing_device}"
+        )
+
+
+class DeviceConnectionCollisionError(DeviceCollisionError):
+    """Raised when a device connection collision is detected."""
+
+    def __init__(
+        self, normalized_connections: set[tuple[str, str]], existing_device: DeviceEntry
+    ) -> None:
+        """Initialize error."""
+        super().__init__(
+            f"Connections {normalized_connections} "
+            f"already registered to {existing_device}"
+        )
+
+
 def _validate_device_info(
     config_entry: ConfigEntry,
     device_info: DeviceInfo,
@@ -884,21 +913,35 @@ class DeviceRegistry(BaseRegistry[dict[str, list[dict[str, Any]]]]):
             new_values["config_entries"] = config_entries
             old_values["config_entries"] = old.config_entries
 
-        for attr_name, setvalue in (
-            ("connections", merge_connections),
-            ("identifiers", merge_identifiers),
-        ):
-            old_value = getattr(old, attr_name)
-            # If not undefined, check if `value` contains new items.
-            if setvalue is not UNDEFINED and not setvalue.issubset(old_value):
-                new_values[attr_name] = old_value | setvalue
-                old_values[attr_name] = old_value
+        if merge_connections is not UNDEFINED:
+            normalized_merge_connections = _normalize_connections(merge_connections)
+            self._raise_for_conflicting_connections(
+                device_id, normalized_merge_connections
+            )
+            old_connections = old.connections
+            if not normalized_merge_connections.issubset(old_connections):
+                new_values["connections"] = (
+                    old_connections | normalized_merge_connections
+                )
+                old_values["connections"] = old_connections
+
+        if merge_identifiers is not UNDEFINED:
+            self._raise_for_conflicting_identifiers(device_id, merge_identifiers)
+            old_identifiers = old.identifiers
+            if not merge_identifiers.issubset(old_identifiers):
+                new_values["identifiers"] = old_identifiers | merge_identifiers
+                old_values["identifiers"] = old_identifiers
 
         if new_connections is not UNDEFINED:
-            new_values["connections"] = _normalize_connections(new_connections)
+            normalized_new_connections = _normalize_connections(new_connections)
+            self._raise_for_conflicting_connections(
+                device_id, normalized_new_connections
+            )
+            new_values["connections"] = normalized_new_connections
             old_values["connections"] = old.connections
 
         if new_identifiers is not UNDEFINED:
+            self._raise_for_conflicting_identifiers(device_id, new_identifiers)
             new_values["identifiers"] = new_identifiers
             old_values["identifiers"] = old.identifiers
 
@@ -954,6 +997,40 @@ class DeviceRegistry(BaseRegistry[dict[str, list[dict[str, Any]]]]):
         self.hass.bus.async_fire_internal(EVENT_DEVICE_REGISTRY_UPDATED, data)
 
         return new
+
+    @callback
+    def _raise_for_conflicting_connections(
+        self, device_id: str, normalized_connections: set[tuple[str, str]]
+    ) -> None:
+        """Raise if connections conflict with another device.
+
+        Connections must be normalized before calling this method
+        with _normalize_connections.
+        """
+        for connection in normalized_connections:
+            # We need to iterate over each connection because if there was a
+            # conflict the index will only see the last one and we will not
+            # be able to tell which one caused the conflict
+            if (
+                existing_device := self.async_get_device(connections={connection})
+            ) and existing_device.id != device_id:
+                raise DeviceConnectionCollisionError(
+                    normalized_connections, existing_device
+                )
+
+    @callback
+    def _raise_for_conflicting_identifiers(
+        self, device_id: str, identifiers: set[tuple[str, str]]
+    ) -> None:
+        """Raise if identifiers conflict with another device."""
+        for identifier in identifiers:
+            # We need to iterate over each identifier because if there was a
+            # conflict the index will only see the last one and we will not
+            # be able to tell which one caused the conflict
+            if (
+                existing_device := self.async_get_device(identifiers={identifier})
+            ) and existing_device.id != device_id:
+                raise DeviceIdentifierCollisionError(identifiers, existing_device)
 
     @callback
     def async_remove_device(self, device_id: str) -> None:
