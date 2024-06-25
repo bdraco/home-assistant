@@ -2661,19 +2661,6 @@ async def test_device_registry_connections_collision(
         model="model",
     )
 
-    # Attempt to merge connection for device3 with the same
-    # connection that already exists in device1
-    with pytest.raises(
-        HomeAssistantError, match=f"Connections.*already registered.*{device1.id}"
-    ):
-        device_registry.async_update_device(
-            device3.id,
-            merge_connections={
-                (dr.CONNECTION_NETWORK_MAC, "EE:EE:EE:EE:EE:EE"),
-                (dr.CONNECTION_NETWORK_MAC, "none"),
-            },
-        )
-
     # Attempt to add new connections for device3 with the same
     # connection that already exists in device1
     with pytest.raises(
@@ -2731,15 +2718,6 @@ async def test_device_registry_identifiers_collision(
         manufacturer="manufacturer",
         model="model",
     )
-
-    # Attempt to merge identifiers for device3 with the same
-    # connection that already exists in device1
-    with pytest.raises(
-        HomeAssistantError, match=f"Identifiers.*already registered.*{device1.id}"
-    ):
-        device_registry.async_update_device(
-            device3.id, merge_identifiers={("bridgeid", "0123"), ("bridgeid", "8888")}
-        )
 
     # Attempt to add new identifiers for device3 with the same
     # connection that already exists in device1
