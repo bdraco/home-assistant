@@ -25,6 +25,17 @@
     "select": {
       "light_preset": {
         "default": "mdi:sign-direction"
+      },
+      "alarm_sound": {
+        "default": "mdi:music-note"
+      },
+      "alarm_volume": {
+        "default": "mdi:volume-medium",
+        "state": {
+          "low": "mdi:volume-low",
+          "medium": "mdi:volume-medium",
+          "high": "mdi:volume-high"
+        }
       }
     },
     "switch": {
@@ -50,12 +61,6 @@
         "default": "mdi:transition-masked",
         "state": {
           "on": "mdi:transition"
-        }
-      },
-      "fan_sleep_mode": {
-        "default": "mdi:sleep-off",
-        "state": {
-          "on": "mdi:sleep"
         }
       }
     },

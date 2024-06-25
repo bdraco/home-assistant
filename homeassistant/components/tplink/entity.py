@@ -52,7 +52,19 @@ DEVICETYPES_WITH_SPECIALIZED_PLATFORMS = {
     DeviceType.Bulb,
     DeviceType.LightStrip,
     DeviceType.Dimmer,
-    DeviceType.Fan,
+}
+
+# Features excluded due to future platform additions
+EXCLUDED_FEATURES = {
+    # climate
+    "target_temperature",
+    "thermostat_mode",
+    # update
+    "current_firmware_version",
+    "available_firmware_version",
+    "frost_protection_enabled",
+    # fan
+    "fan_speed_level",
 }
 
 LEGACY_KEY_MAPPING = {
@@ -164,7 +176,11 @@ class CoordinatedTPLinkEntity(CoordinatorEntity[TPLinkDataUpdateCoordinator], AB
 
     def _get_unique_id(self) -> str:
         """Return unique ID for the entity."""
-        return legacy_device_id(self._device)
+        # The light platform has historically had it's own implementation and
+        # feature-based entities use feature ids to create unique ids.
+        # When a new non-feature based platform is added,
+        # it needs to implement this.
+        raise NotImplementedError
 
     async def async_added_to_hass(self) -> None:
         """Handle being added to hass."""
@@ -333,6 +349,7 @@ class CoordinatedTPLinkFeatureEntity(CoordinatedTPLinkEntity, ABC):
             )
             for feat in device.features.values()
             if feat.type == feature_type
+            and feat.id not in EXCLUDED_FEATURES
             and (
                 feat.category is not Feature.Category.Primary
                 or device.device_type not in DEVICETYPES_WITH_SPECIALIZED_PLATFORMS
