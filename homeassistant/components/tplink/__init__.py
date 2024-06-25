@@ -9,14 +9,15 @@ from typing import Any
 
 from aiohttp import ClientSession
 from kasa import (
-    AuthenticationException,
+    AuthenticationError,
     Credentials,
+    Device,
     DeviceConfig,
     Discover,
-    SmartDevice,
-    SmartDeviceException,
+    KasaException,
 )
 from kasa.httpclient import get_cookie_jar
+from kasa.iot import IotStrip
 
 from homeassistant import config_entries
 from homeassistant.components import network
@@ -51,6 +52,8 @@ from .const import (
 from .coordinator import TPLinkDataUpdateCoordinator
 from .models import TPLinkData
 
+type TPLinkConfigEntry = ConfigEntry[TPLinkData]
+
 DISCOVERY_INTERVAL = timedelta(minutes=15)
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -67,7 +70,7 @@ def create_async_tplink_clientsession(hass: HomeAssistant) -> ClientSession:
 @callback
 def async_trigger_discovery(
     hass: HomeAssistant,
-    discovered_devices: dict[str, SmartDevice],
+    discovered_devices: dict[str, Device],
 ) -> None:
     """Trigger config flows for discovered devices."""
     for formatted_mac, device in discovered_devices.items():
@@ -87,7 +90,7 @@ def async_trigger_discovery(
         )
 
 
-async def async_discover_devices(hass: HomeAssistant) -> dict[str, SmartDevice]:
+async def async_discover_devices(hass: HomeAssistant) -> dict[str, Device]:
     """Discover TPLink devices on configured network interfaces."""
 
     credentials = await get_credentials(hass)
@@ -101,7 +104,7 @@ async def async_discover_devices(hass: HomeAssistant) -> dict[str, SmartDevice]:
         )
         for address in broadcast_addresses
     ]
-    discovered_devices: dict[str, SmartDevice] = {}
+    discovered_devices: dict[str, Device] = {}
     for device_list in await asyncio.gather(*tasks):
         for device in device_list.values():
             discovered_devices[dr.format_mac(device.mac)] = device
@@ -126,7 +129,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: TPLinkConfigEntry) -> bool:
     """Set up TPLink from a config entry."""
     host: str = entry.data[CONF_HOST]
     credentials = await get_credentials(hass)
@@ -135,7 +138,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if config_dict := entry.data.get(CONF_DEVICE_CONFIG):
         try:
             config = DeviceConfig.from_dict(config_dict)
-        except SmartDeviceException:
+        except KasaException:
             _LOGGER.warning(
                 "Invalid connection type dict for %s: %s", host, config_dict
             )
@@ -151,10 +154,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if credentials:
         config.credentials = credentials
     try:
-        device: SmartDevice = await SmartDevice.connect(config=config)
-    except AuthenticationException as ex:
+        device: Device = await Device.connect(config=config)
+    except AuthenticationError as ex:
         raise ConfigEntryAuthFailed from ex
-    except SmartDeviceException as ex:
+    except KasaException as ex:
         raise ConfigEntryNotReady from ex
 
     device_config_dict = device.config.to_dict(
@@ -189,7 +192,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     parent_coordinator = TPLinkDataUpdateCoordinator(hass, device, timedelta(seconds=5))
     child_coordinators: list[TPLinkDataUpdateCoordinator] = []
 
-    if device.is_strip:
+    # The iot HS300 allows a limited number of concurrent requests and fetching the
+    # emeter information requires separate ones so create child coordinators here.
+    if isinstance(device, IotStrip):
         child_coordinators = [
             # The child coordinators only update energy data so we can
             # set a longer update interval to avoid flooding the device
@@ -197,27 +202,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             for child in device.children
         ]
 
-    hass.data[DOMAIN][entry.entry_id] = TPLinkData(
-        parent_coordinator, child_coordinators
-    )
+    entry.runtime_data = TPLinkData(parent_coordinator, child_coordinators)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: TPLinkConfigEntry) -> bool:
     """Unload a config entry."""
-    hass_data: dict[str, Any] = hass.data[DOMAIN]
-    data: TPLinkData = hass_data[entry.entry_id]
+    data = entry.runtime_data
     device = data.parent_coordinator.device
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass_data.pop(entry.entry_id)
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     await device.protocol.close()
 
     return unload_ok
 
 
-def legacy_device_id(device: SmartDevice) -> str:
+def legacy_device_id(device: Device) -> str:
     """Convert the device id so it matches what was used in the original version."""
     device_id: str = device.device_id
     # Plugs are prefixed with the mac in python-kasa but not
