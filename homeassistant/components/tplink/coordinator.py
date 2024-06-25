@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import timedelta
 import logging
 
-from kasa import AuthenticationError, Device, KasaException
+from kasa import AuthenticationException, SmartDevice, SmartDeviceException
 
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
@@ -26,7 +26,7 @@ class TPLinkDataUpdateCoordinator(DataUpdateCoordinator[None]):
     def __init__(
         self,
         hass: HomeAssistant,
-        device: Device,
+        device: SmartDevice,
         update_interval: timedelta,
     ) -> None:
         """Initialize DataUpdateCoordinator to gather data for specific SmartPlug."""
@@ -47,7 +47,7 @@ class TPLinkDataUpdateCoordinator(DataUpdateCoordinator[None]):
         """Fetch all device and sensor data from api."""
         try:
             await self.device.update(update_children=False)
-        except AuthenticationError as ex:
+        except AuthenticationException as ex:
             raise ConfigEntryAuthFailed from ex
-        except KasaException as ex:
+        except SmartDeviceException as ex:
             raise UpdateFailed(ex) from ex
