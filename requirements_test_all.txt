@@ -1495,7 +1495,7 @@ pyialarm==2.2.0
 pyicloud==1.0.0
 
 # homeassistant.components.insteon
-pyinsteon==1.6.1
+pyinsteon==1.6.3
 
 # homeassistant.components.ipma
 pyipma==3.0.7
@@ -1806,7 +1806,7 @@ python-picnic-api==1.1.0
 python-rabbitair==0.0.8
 
 # homeassistant.components.roborock
-python-roborock==2.3.0
+python-roborock==2.5.0
 
 # homeassistant.components.smarttub
 python-smarttub==0.0.36
@@ -2258,7 +2258,7 @@ wiffi==1.1.2
 wled==0.18.0
 
 # homeassistant.components.wolflink
-wolf-comm==0.0.8
+wolf-comm==0.0.9
 
 # homeassistant.components.wyoming
 wyoming==1.5.4
