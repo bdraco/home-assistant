@@ -9,7 +9,7 @@ import voluptuous as vol
 
 from homeassistant.components.notify import (
     ATTR_TITLE,
-    PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA as NOTIFY_PLATFORM_SCHEMA,
     BaseNotificationService,
 )
 from homeassistant.const import CONF_TOKEN
@@ -26,7 +26,7 @@ _LOGGER = logging.getLogger(__name__)
 
 CONF_ROOM_ID = "room_id"
 
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = NOTIFY_PLATFORM_SCHEMA.extend(
     {vol.Required(CONF_TOKEN): cv.string, vol.Required(CONF_ROOM_ID): cv.string}
 )
 

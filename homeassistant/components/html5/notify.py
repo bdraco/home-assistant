@@ -26,7 +26,7 @@ from homeassistant.components.notify import (
     ATTR_TARGET,
     ATTR_TITLE,
     ATTR_TITLE_DEFAULT,
-    PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA as NOTIFY_PLATFORM_SCHEMA,
     BaseNotificationService,
 )
 from homeassistant.const import ATTR_NAME, URL_ROOT
@@ -51,7 +51,7 @@ _LOGGER = logging.getLogger(__name__)
 REGISTRATIONS_FILE = "html5_push_registrations.conf"
 
 
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
+PLATFORM_SCHEMA = NOTIFY_PLATFORM_SCHEMA.extend(
     {
         vol.Required(ATTR_VAPID_PUB_KEY): cv.string,
         vol.Required(ATTR_VAPID_PRV_KEY): cv.string,
