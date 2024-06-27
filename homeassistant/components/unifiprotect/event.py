@@ -4,7 +4,12 @@ from __future__ import annotations
 
 import dataclasses
 
-from uiprotect.data import Camera, ProtectAdoptableDeviceModel, ProtectModelWithId
+from uiprotect.data import (
+    Camera,
+    EventType,
+    ProtectAdoptableDeviceModel,
+    ProtectModelWithId,
+)
 
 from homeassistant.components.event import (
     EventDeviceClass,
@@ -14,7 +19,7 @@ from homeassistant.components.event import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import ATTR_EVENT_ID, ATTR_EVENT_SCORE
+from .const import ATTR_EVENT_ID
 from .data import ProtectData, UFPConfigEntry
 from .entity import EventEntityMixin, ProtectDeviceEntity
 from .models import ProtectEventMixin
@@ -33,12 +38,13 @@ EVENT_DESCRIPTIONS: tuple[ProtectEventEntityDescription, ...] = (
         icon="mdi:doorbell-video",
         ufp_required_field="feature_flags.is_doorbell",
         ufp_event_obj="last_ring_event",
+        event_types=[EventType.RING],
     ),
 )
 
 
 class ProtectDeviceEventEntity(EventEntityMixin, ProtectDeviceEntity, EventEntity):
-    """A UniFi Protect Device Binary Sensor for events."""
+    """A UniFi Protect event entity."""
 
     entity_description: ProtectEventEntityDescription
 
@@ -53,14 +59,14 @@ class ProtectDeviceEventEntity(EventEntityMixin, ProtectDeviceEntity, EventEntit
             self._event = event
             self._event_end = event.end if event else None
 
-        if event and not self._event_already_ended(prev_event, prev_event_end):
-            self._trigger_event(
-                description.key,
-                {
-                    ATTR_EVENT_ID: event.id,
-                    ATTR_EVENT_SCORE: event.score,
-                },
-            )
+        if (
+            event
+            and not self._event_already_ended(prev_event, prev_event_end)
+            and (event_types := description.event_types)
+            and (event_type := event.type) in event_types
+        ):
+            self._trigger_event(event_type, {ATTR_EVENT_ID: event.id})
+            self.async_write_ha_state()
 
 
 @callback
