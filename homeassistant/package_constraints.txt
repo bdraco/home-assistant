@@ -13,7 +13,7 @@ async-interrupt==1.1.2
 async-upnp-client==0.39.0
 atomicwrites-homeassistant==1.4.1
 attrs==23.2.0
-awesomeversion==24.2.0
+awesomeversion==24.6.0
 bcrypt==4.1.2
 bleak-retry-connector==3.5.0
 bleak==0.22.2
@@ -60,7 +60,7 @@ ulid-transform==0.9.0
 urllib3>=1.26.5,<2
 voluptuous-openapi==0.0.4
 voluptuous-serialize==2.6.0
-voluptuous==0.13.1
+voluptuous==0.15.1
 webrtc-noise-gain==1.2.3
 yarl==1.9.4
 zeroconf==0.132.2
