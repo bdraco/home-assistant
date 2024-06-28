@@ -24,7 +24,7 @@ from sqlalchemy.exc import (
     SQLAlchemyError,
 )
 from sqlalchemy.orm.session import Session
-from sqlalchemy.schema import AddConstraint, DropConstraint
+from sqlalchemy.schema import AddConstraint, CreateTable, DropConstraint
 from sqlalchemy.sql.expression import true
 from sqlalchemy.sql.lambdas import StatementLambdaElement
 
@@ -1738,14 +1738,16 @@ def cleanup_legacy_states_event_ids(instance: Recorder) -> bool:
         # Only drop the index if there are no more event_ids in the states table
         # ex all NULL
         assert instance.engine is not None, "engine should never be None"
-        if instance.dialect_name != SupportedDialect.SQLITE:
+        if instance.dialect_name == SupportedDialect.SQLITE:
+            rebuild_sqlite_table_schema(session_maker, instance.engine, States)
+        else:
             # SQLite does not support dropping foreign key constraints
             # so we can't drop the index at this time but we can avoid
             # looking for legacy rows during purge
             _drop_foreign_key_constraints(
                 session_maker, instance.engine, TABLE_STATES, ["event_id"]
             )
-            _drop_index(session_maker, "states", LEGACY_STATES_EVENT_ID_INDEX)
+        _drop_index(session_maker, "states", LEGACY_STATES_EVENT_ID_INDEX)
         instance.use_legacy_events_index = False
 
     return True
@@ -1894,3 +1896,61 @@ def _mark_migration_done(
             migration_id=migration.migration_id, version=migration.migration_version
         )
     )
+
+
+def rebuild_sqlite_table_schema(
+    session_maker: Callable[[], Session], engine: Engine, table: type[Base]
+) -> None:
+    """Rebuild the SQLite schema for a table.
+
+    This must only be called after all migrations are complete
+    and the database is in a consistent state since it will
+    replace the schema for the table with the current schema.
+
+    If the table is not migrated to the current schema this
+    will fail with an integrity error.
+
+    If the schema has been manually altered in an incompatible
+    way this will fail with an integrity error, or it may not
+    fail but the database will be in an inconsistent state.
+    """
+    table_table = cast(Table, table.__table__)
+    table_name = table_table.name
+    temp_table_name = f"{table_table.name}_temp_{int(time())}"
+    try:
+        # 12 step SQLite table rebuild
+        # https://www.sqlite.org/draft/lang_altertable.html
+        with session_scope(session=session_maker()) as session:
+            # Step 1 - Disable foreign keys
+            session.connection().execute(text("PRAGMA foreign_keys=OFF"))
+            # Step 2 - already in a transaction
+            # Step 3 - we know all the indexes, triggers, and views associated with table X
+            new_sql = str(CreateTable(table_table).compile(engine)).strip("\n") + ";"
+            new_sql = new_sql.replace(
+                f"CREATE TABLE {table_name}", f"CREATE TABLE {temp_table_name}"
+            )
+            # Step 4 - Create temp table
+            session.execute(text(new_sql))
+            column_names = ",".join([column.name for column in table_table.columns])
+            # Step 5 - Transfer content
+            sql = f"INSERT INTO {temp_table_name} SELECT {column_names} FROM {table_name};"  # noqa: S608
+            session.execute(text(sql))
+            # Step 6 - Drop the original table
+            session.execute(text(f"DROP TABLE {table_name}"))
+            # Step 7 - Rename the temp table
+            session.execute(
+                text(f"ALTER TABLE {temp_table_name} RENAME TO {table_name}")
+            )
+            # Step 8 - Recreate indexes
+            for index in table_table.indexes:
+                index.create(session.connection())
+            # Step 9 - Recreate views (there are none)
+            # Step 10 - Check foreign keys
+            session.execute(text("PRAGMA foreign_key_check"))
+            # Step 11 - Commit transaction
+            session.commit()
+            # Step 12 - Re-enable foreign keys
+            session.connection().execute(text("PRAGMA foreign_keys=ON"))
+    except SQLAlchemyError:
+        _LOGGER.exception("Error recreating SQLite table %s", table_table.name)
+        # Swallow the exception since we do not want to crash the recorder
