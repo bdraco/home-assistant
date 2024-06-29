@@ -504,7 +504,7 @@ class States(Base):
                 last_reported_ts = None
             else:
                 last_reported_ts = state.last_reported_timestamp
-        context = state.context
+        context = event.context
         return States(
             state=state_value,
             entity_id=event.data["entity_id"],
