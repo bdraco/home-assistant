@@ -298,18 +298,19 @@ class Events(Base):
     @staticmethod
     def from_event(event: Event) -> Events:
         """Create an event database object from a native event."""
+        context = event.context
         return Events(
             event_type=None,
             event_data=None,
-            origin_idx=EVENT_ORIGIN_TO_IDX.get(event.origin),
+            origin_idx=EVENT_ORIGIN_TO_IDX[event.origin],
             time_fired=None,
             time_fired_ts=event.time_fired_timestamp,
             context_id=None,
-            context_id_bin=ulid_to_bytes_or_none(event.context.id),
+            context_id_bin=ulid_to_bytes_or_none(context.id),
             context_user_id=None,
-            context_user_id_bin=uuid_hex_to_bytes_or_none(event.context.user_id),
+            context_user_id_bin=uuid_hex_to_bytes_or_none(context.user_id),
             context_parent_id=None,
-            context_parent_id_bin=ulid_to_bytes_or_none(event.context.parent_id),
+            context_parent_id_bin=ulid_to_bytes_or_none(context.parent_id),
         )
 
     def to_native(self, validate_entity_id: bool = True) -> Event | None:
@@ -503,17 +504,18 @@ class States(Base):
                 last_reported_ts = None
             else:
                 last_reported_ts = state.last_reported_timestamp
+        context = state.context
         return States(
             state=state_value,
             entity_id=event.data["entity_id"],
             attributes=None,
             context_id=None,
-            context_id_bin=ulid_to_bytes_or_none(event.context.id),
+            context_id_bin=ulid_to_bytes_or_none(context.id),
             context_user_id=None,
-            context_user_id_bin=uuid_hex_to_bytes_or_none(event.context.user_id),
+            context_user_id_bin=uuid_hex_to_bytes_or_none(context.user_id),
             context_parent_id=None,
-            context_parent_id_bin=ulid_to_bytes_or_none(event.context.parent_id),
-            origin_idx=EVENT_ORIGIN_TO_IDX.get(event.origin),
+            context_parent_id_bin=ulid_to_bytes_or_none(context.parent_id),
+            origin_idx=EVENT_ORIGIN_TO_IDX[event.origin],
             last_updated=None,
             last_changed=None,
             last_updated_ts=last_updated_ts,
