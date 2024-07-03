@@ -65,7 +65,7 @@ class DoorBirdEventEntity(DoorBirdEntity, EventEntity):
         self._attr_unique_id = f"{self._mac_addr}_{event}"
         slug_name = event.removeprefix(self._door_station.slug).strip("_")
         friendly_name = slug_name.replace("_", " ")
-        self._attr_name = friendly_name[0:1].capitalize() + friendly_name[1:]
+        self._attr_name = friendly_name[0:1].upper() + friendly_name[1:].lower()
 
     async def async_added_to_hass(self) -> None:
         """Subscribe to device events."""
