@@ -1068,7 +1068,7 @@ heatmiserV3==1.1.18
 here-routing==1.0.1
 
 # homeassistant.components.here_travel_time
-here-transit==1.2.0
+here-transit==1.2.1
 
 # homeassistant.components.hikvisioncam
 hikvision==0.4
@@ -1090,7 +1090,7 @@ hole==0.8.0
 holidays==0.51
 
 # homeassistant.components.frontend
-home-assistant-frontend==20240702.0
+home-assistant-frontend==20240703.0
 
 # homeassistant.components.conversation
 home-assistant-intents==2024.6.26
