@@ -457,7 +457,7 @@ auroranoaa==0.0.3
 aurorapy==0.2.7
 
 # homeassistant.components.axis
-axis==61
+axis==62
 
 # homeassistant.components.azure_event_hub
 azure-eventhub==5.11.1
@@ -1775,7 +1775,7 @@ python-juicenet==1.1.0
 python-kasa[speedups]==0.7.0.2
 
 # homeassistant.components.matter
-python-matter-server==6.2.0b1
+python-matter-server==6.2.2
 
 # homeassistant.components.xiaomi_miio
 python-miio==0.5.12
@@ -2166,7 +2166,7 @@ twitchAPI==4.0.0
 uasiren==0.0.1
 
 # homeassistant.components.unifiprotect
-uiprotect==5.0.0
+uiprotect==5.2.0
 
 # homeassistant.components.landisgyr_heat_meter
 ultraheat-api==0.5.7
