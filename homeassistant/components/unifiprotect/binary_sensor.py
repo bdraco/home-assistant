@@ -8,11 +8,9 @@ import dataclasses
 from uiprotect.data import (
     NVR,
     Camera,
-    Light,
     ModelType,
     MountType,
     ProtectAdoptableDeviceModel,
-    ProtectModelWithId,
     Sensor,
     SmartDetectObjectType,
 )
@@ -27,11 +25,12 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .data import ProtectData, UFPConfigEntry
+from .data import ProtectData, ProtectDeviceType, UFPConfigEntry
 from .entity import (
     BaseProtectEntity,
     EventEntityMixin,
     ProtectDeviceEntity,
+    ProtectIsOnEntity,
     ProtectNVREntity,
     async_all_device_entities,
 )
@@ -623,31 +622,22 @@ _MOUNTABLE_MODEL_DESCRIPTIONS: dict[ModelType, Sequence[ProtectEntityDescription
 }
 
 
-class ProtectDeviceBinarySensor(ProtectDeviceEntity, BinarySensorEntity):
+class ProtectDeviceBinarySensor(
+    ProtectIsOnEntity, ProtectDeviceEntity, BinarySensorEntity
+):
     """A UniFi Protect Device Binary Sensor."""
 
-    device: Camera | Light | Sensor
     entity_description: ProtectBinaryEntityDescription
-    _state_attrs: tuple[str, ...] = ("_attr_available", "_attr_is_on")
-
-    @callback
-    def _async_update_device_from_protect(self, device: ProtectModelWithId) -> None:
-        super()._async_update_device_from_protect(device)
-        self._attr_is_on = self.entity_description.get_ufp_value(self.device)
 
 
 class MountableProtectDeviceBinarySensor(ProtectDeviceBinarySensor):
     """A UniFi Protect Device Binary Sensor that can change device class at runtime."""
 
     device: Sensor
-    _state_attrs: tuple[str, ...] = (
-        "_attr_available",
-        "_attr_is_on",
-        "_attr_device_class",
-    )
+    _state_attrs = ("_attr_available", "_attr_is_on", "_attr_device_class")
 
     @callback
-    def _async_update_device_from_protect(self, device: ProtectModelWithId) -> None:
+    def _async_update_device_from_protect(self, device: ProtectDeviceType) -> None:
         super()._async_update_device_from_protect(device)
         # UP Sense can be any of the 3 contact sensor device classes
         self._attr_device_class = MOUNT_DEVICE_CLASS_MAP.get(
@@ -673,7 +663,6 @@ class ProtectDiskBinarySensor(ProtectNVREntity, BinarySensorEntity):
         self._disk = disk
         # backwards compat with old unique IDs
         index = self._disk.slot - 1
-
         description = dataclasses.replace(
             description,
             key=f"{description.key}_{index}",
@@ -682,21 +671,19 @@ class ProtectDiskBinarySensor(ProtectNVREntity, BinarySensorEntity):
         super().__init__(data, device, description)
 
     @callback
-    def _async_update_device_from_protect(self, device: ProtectModelWithId) -> None:
+    def _async_update_device_from_protect(self, device: ProtectDeviceType) -> None:
         super()._async_update_device_from_protect(device)
         slot = self._disk.slot
-        self._attr_available = False
-        available = self.data.last_update_success
-
+        ustorage = self.device.system_info.ustorage
         # should not be possible since it would require user to
         # _downgrade_ to make ustorage disppear
-        assert self.device.system_info.ustorage is not None
-        for disk in self.device.system_info.ustorage.disks:
-            if disk.slot == slot:
-                self._disk = disk
-                self._attr_available = available
-                break
-
+        assert ustorage is not None
+        disk = next((d for d in ustorage.disks if d.slot == slot), None)
+        if disk is None:
+            # disk was removed
+            self._attr_available = False
+            return
+        self._disk = disk
         self._attr_is_on = not self._disk.is_healthy
 
 
@@ -712,7 +699,7 @@ class ProtectEventBinarySensor(EventEntityMixin, BinarySensorEntity):
         self._attr_extra_state_attributes = {}
 
     @callback
-    def _async_update_device_from_protect(self, device: ProtectModelWithId) -> None:
+    def _async_update_device_from_protect(self, device: ProtectDeviceType) -> None:
         description = self.entity_description
 
         prev_event = self._event
