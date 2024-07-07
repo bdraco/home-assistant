@@ -104,6 +104,7 @@ class ConfiguredDoorBird:
             for output in entry.output
             if output.event == "http"
         }
+        _LOGGER.warning("Favorite input type: %s", favorite_input_type)
         for identifier, data in http_fav.items():
             title: str | None = data.get("title")
             if not title or not title.startswith("Home Assistant"):
