@@ -936,7 +936,7 @@ ical==8.1.1
 icmplib==3.0
 
 # homeassistant.components.idasen_desk
-idasen-ha==2.6.1
+idasen-ha==2.6.2
 
 # homeassistant.components.network
 ifaddr==0.2.0
@@ -967,6 +967,9 @@ isal==1.6.1
 
 # homeassistant.components.gogogate2
 ismartgate==5.0.1
+
+# homeassistant.components.israel_rail
+israel-rail-api==0.1.2
 
 # homeassistant.components.abode
 jaraco.abode==5.2.1
@@ -1214,7 +1217,7 @@ openhomedevice==2.2.0
 openwebifpy==4.2.5
 
 # homeassistant.components.opower
-opower==0.4.7
+opower==0.5.2
 
 # homeassistant.components.oralb
 oralb-ble==0.17.6
