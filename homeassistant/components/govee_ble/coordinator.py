@@ -1,6 +1,7 @@
 """The govee Bluetooth integration."""
 
 from collections.abc import Callable
+import logging
 from logging import Logger
 
 from govee_ble import GoveeBluetoothDeviceData, ModelInfo, SensorUpdate, get_model_info
@@ -20,6 +21,8 @@ from .const import CONF_DEVICE_TYPE, DOMAIN
 
 type GoveeBLEConfigEntry = ConfigEntry[GoveeBLEBluetoothProcessorCoordinator]
 
+_LOGGER = logging.getLogger(__name__)
+
 
 def process_service_info(
     hass: HomeAssistant,
@@ -30,8 +33,7 @@ def process_service_info(
     coordinator = entry.runtime_data
     data = coordinator.device_data
     update = data.update(service_info)
-    if entry.data.get(CONF_DEVICE_TYPE) is None:
-        device_type = data.device_type
+    if not coordinator.model_info and (device_type := data.device_type):
         hass.config_entries.async_update_entry(
             entry, data={**entry.data, CONF_DEVICE_TYPE: device_type}
         )
@@ -41,10 +43,9 @@ def process_service_info(
         address = service_info.device.address
         for event in update.events.values():
             event_type = event.event_type
-            async_dispatcher_send(
-                hass,
-                format_event_dispatcher_name(address, event_type),
-            )
+            signal = format_event_dispatcher_name(address, event_type)
+            _LOGGER.debug("Firing signal %s", signal)
+            async_dispatcher_send(hass, signal)
 
     return update
 
