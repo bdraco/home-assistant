@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-import logging
+from govee_ble import ModelInfo, SensorType
 
-from govee_ble import SensorType
-
+from homeassistant.components.bluetooth import (
+    BluetoothServiceInfoBleak,
+    async_last_service_info,
+)
 from homeassistant.components.event import (
     EventDeviceClass,
     EventEntity,
@@ -19,7 +21,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import DOMAIN
 from .coordinator import GoveeBLEConfigEntry, format_event_dispatcher_name
 
-_LOGGER = logging.getLogger(__name__)
 BUTTON_DESCRIPTIONS = [
     EventEntityDescription(
         key=f"button_{i}",
@@ -43,11 +44,19 @@ class GoveeBluetoothEventEntity(EventEntity):
     _attr_should_poll = False
     _attr_has_entity_name = True
 
-    def __init__(self, address: str, description: EventEntityDescription) -> None:
+    def __init__(
+        self,
+        model_info: ModelInfo,
+        service_info: BluetoothServiceInfoBleak | None,
+        address: str,
+        description: EventEntityDescription,
+    ) -> None:
         """Initialise a govee ble event entity."""
         self.entity_description = description
         # Matches logic in PassiveBluetoothProcessorEntity
+        name = service_info.name if service_info else model_info.model_id
         self._attr_device_info = dr.DeviceInfo(
+            name=name,
             identifiers={(DOMAIN, address)},
             connections={(dr.CONNECTION_BLUETOOTH, address)},
         )
@@ -92,6 +101,8 @@ async def async_setup_entry(
         descriptions = BUTTON_DESCRIPTIONS[0:button_count]
     else:
         return
+    last_service_info = async_last_service_info(hass, address, False)
     async_add_entities(
-        GoveeBluetoothEventEntity(address, description) for description in descriptions
+        GoveeBluetoothEventEntity(model_info, last_service_info, address, description)
+        for description in descriptions
     )
