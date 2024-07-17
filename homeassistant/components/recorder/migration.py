@@ -102,12 +102,9 @@ from .queries import (
 from .statistics import get_start_time
 from .tasks import (
     CommitTask,
-    EntityIDMigrationTask,
-    EventsContextIDMigrationTask,
-    EventTypeIDMigrationTask,
+    EntityIDPostMigrationTask,
     PostSchemaMigrationTask,
     RecorderTask,
-    StatesContextIDMigrationTask,
     StatisticsTimestampMigrationCleanupTask,
 )
 from .util import (
@@ -1866,220 +1863,6 @@ def _generate_ulid_bytes_at_time(timestamp: float | None) -> bytes:
     return ulid_to_bytes(ulid_at_time(timestamp or time()))
 
 
-@retryable_database_job("migrate states context_ids to binary format")
-def migrate_states_context_ids(instance: Recorder) -> bool:
-    """Migrate states context_ids to use binary format."""
-    _to_bytes = _context_id_to_bytes
-    session_maker = instance.get_session
-    _LOGGER.debug("Migrating states context_ids to binary format")
-    with session_scope(session=session_maker()) as session:
-        if states := session.execute(
-            find_states_context_ids_to_migrate(instance.max_bind_vars)
-        ).all():
-            session.execute(
-                update(States),
-                [
-                    {
-                        "state_id": state_id,
-                        "context_id": None,
-                        "context_id_bin": _to_bytes(context_id)
-                        or _generate_ulid_bytes_at_time(last_updated_ts),
-                        "context_user_id": None,
-                        "context_user_id_bin": _to_bytes(context_user_id),
-                        "context_parent_id": None,
-                        "context_parent_id_bin": _to_bytes(context_parent_id),
-                    }
-                    for state_id, last_updated_ts, context_id, context_user_id, context_parent_id in states
-                ],
-            )
-        # If there is more work to do return False
-        # so that we can be called again
-        if is_done := not states:
-            _mark_migration_done(session, StatesContextIDMigration)
-
-    if is_done:
-        _drop_index(session_maker, "states", "ix_states_context_id")
-
-    _LOGGER.debug("Migrating states context_ids to binary format: done=%s", is_done)
-    return is_done
-
-
-@retryable_database_job("migrate events context_ids to binary format")
-def migrate_events_context_ids(instance: Recorder) -> bool:
-    """Migrate events context_ids to use binary format."""
-    _to_bytes = _context_id_to_bytes
-    session_maker = instance.get_session
-    _LOGGER.debug("Migrating context_ids to binary format")
-    with session_scope(session=session_maker()) as session:
-        if events := session.execute(
-            find_events_context_ids_to_migrate(instance.max_bind_vars)
-        ).all():
-            session.execute(
-                update(Events),
-                [
-                    {
-                        "event_id": event_id,
-                        "context_id": None,
-                        "context_id_bin": _to_bytes(context_id)
-                        or _generate_ulid_bytes_at_time(time_fired_ts),
-                        "context_user_id": None,
-                        "context_user_id_bin": _to_bytes(context_user_id),
-                        "context_parent_id": None,
-                        "context_parent_id_bin": _to_bytes(context_parent_id),
-                    }
-                    for event_id, time_fired_ts, context_id, context_user_id, context_parent_id in events
-                ],
-            )
-        # If there is more work to do return False
-        # so that we can be called again
-        if is_done := not events:
-            _mark_migration_done(session, EventsContextIDMigration)
-
-    if is_done:
-        _drop_index(session_maker, "events", "ix_events_context_id")
-
-    _LOGGER.debug("Migrating events context_ids to binary format: done=%s", is_done)
-    return is_done
-
-
-@retryable_database_job("migrate events event_types to event_type_ids")
-def migrate_event_type_ids(instance: Recorder) -> bool:
-    """Migrate event_type to event_type_ids."""
-    session_maker = instance.get_session
-    _LOGGER.debug("Migrating event_types")
-    event_type_manager = instance.event_type_manager
-    with session_scope(session=session_maker()) as session:
-        if events := session.execute(
-            find_event_type_to_migrate(instance.max_bind_vars)
-        ).all():
-            event_types = {event_type for _, event_type in events}
-            if None in event_types:
-                # event_type should never be None but we need to be defensive
-                # so we don't fail the migration because of a bad state
-                event_types.remove(None)
-                event_types.add(_EMPTY_EVENT_TYPE)
-
-            event_type_to_id = event_type_manager.get_many(event_types, session)
-            if missing_event_types := {
-                event_type
-                for event_type, event_id in event_type_to_id.items()
-                if event_id is None
-            }:
-                missing_db_event_types = [
-                    EventTypes(event_type=event_type)
-                    for event_type in missing_event_types
-                ]
-                session.add_all(missing_db_event_types)
-                session.flush()  # Assign ids
-                for db_event_type in missing_db_event_types:
-                    # We cannot add the assigned ids to the event_type_manager
-                    # because the commit could get rolled back
-                    assert (
-                        db_event_type.event_type is not None
-                    ), "event_type should never be None"
-                    event_type_to_id[db_event_type.event_type] = (
-                        db_event_type.event_type_id
-                    )
-                    event_type_manager.clear_non_existent(db_event_type.event_type)
-
-            session.execute(
-                update(Events),
-                [
-                    {
-                        "event_id": event_id,
-                        "event_type": None,
-                        "event_type_id": event_type_to_id[
-                            _EMPTY_EVENT_TYPE if event_type is None else event_type
-                        ],
-                    }
-                    for event_id, event_type in events
-                ],
-            )
-
-        # If there is more work to do return False
-        # so that we can be called again
-        if is_done := not events:
-            _mark_migration_done(session, EventTypeIDMigration)
-
-    if is_done:
-        instance.event_type_manager.active = True
-
-    _LOGGER.debug("Migrating event_types done=%s", is_done)
-    return is_done
-
-
-@retryable_database_job("migrate states entity_ids to states_meta")
-def migrate_entity_ids(instance: Recorder) -> bool:
-    """Migrate entity_ids to states_meta.
-
-    We do this in two steps because we need the history queries to work
-    while we are migrating.
-
-    1. Link the states to the states_meta table
-    2. Remove the entity_id column from the states table (in post_migrate_entity_ids)
-    """
-    _LOGGER.debug("Migrating entity_ids")
-    states_meta_manager = instance.states_meta_manager
-    with session_scope(session=instance.get_session()) as session:
-        if states := session.execute(
-            find_entity_ids_to_migrate(instance.max_bind_vars)
-        ).all():
-            entity_ids = {entity_id for _, entity_id in states}
-            if None in entity_ids:
-                # entity_id should never be None but we need to be defensive
-                # so we don't fail the migration because of a bad state
-                entity_ids.remove(None)
-                entity_ids.add(_EMPTY_ENTITY_ID)
-
-            entity_id_to_metadata_id = states_meta_manager.get_many(
-                entity_ids, session, True
-            )
-            if missing_entity_ids := {
-                entity_id
-                for entity_id, metadata_id in entity_id_to_metadata_id.items()
-                if metadata_id is None
-            }:
-                missing_states_metadata = [
-                    StatesMeta(entity_id=entity_id) for entity_id in missing_entity_ids
-                ]
-                session.add_all(missing_states_metadata)
-                session.flush()  # Assign ids
-                for db_states_metadata in missing_states_metadata:
-                    # We cannot add the assigned ids to the event_type_manager
-                    # because the commit could get rolled back
-                    assert (
-                        db_states_metadata.entity_id is not None
-                    ), "entity_id should never be None"
-                    entity_id_to_metadata_id[db_states_metadata.entity_id] = (
-                        db_states_metadata.metadata_id
-                    )
-
-            session.execute(
-                update(States),
-                [
-                    {
-                        "state_id": state_id,
-                        # We cannot set "entity_id": None yet since
-                        # the history queries still need to work while the
-                        # migration is in progress and we will do this in
-                        # post_migrate_entity_ids
-                        "metadata_id": entity_id_to_metadata_id[
-                            _EMPTY_ENTITY_ID if entity_id is None else entity_id
-                        ],
-                    }
-                    for state_id, entity_id in states
-                ],
-            )
-
-        # If there is more work to do return False
-        # so that we can be called again
-        if is_done := not states:
-            _mark_migration_done(session, EntityIDMigration)
-
-    _LOGGER.debug("Migrating entity_ids done=%s", is_done)
-    return is_done
-
-
 @retryable_database_job("post migrate states entity_ids to states_meta")
 def post_migrate_entity_ids(instance: Recorder) -> bool:
     """Remove old entity_id strings from states.
@@ -2182,27 +1965,62 @@ def initialize_database(session_maker: Callable[[], Session]) -> bool:
         return False
 
 
+@dataclass(slots=True)
+class MigrationTask(RecorderTask):
+    """Base class for migration tasks."""
+
+    migrator: BaseRunTimeMigration
+    commit_before = False
+
+    def run(self, instance: Recorder) -> None:
+        """Run migration task."""
+        if not self.migrator.migrate_data(instance):
+            # Schedule a new migration task if this one didn't finish
+            instance.queue_task(MigrationTask(self.migrator))
+        else:
+            self.migrator.migration_done(instance)
+
+
+@dataclass(slots=True)
+class CommitBeforeMigrationTask(MigrationTask):
+    """Base class for migration tasks which commit first."""
+
+    commit_before = True
+
+
 class BaseRunTimeMigration(ABC):
     """Base class for run time migrations."""
 
     required_schema_version = 0
     migration_version = 1
     migration_id: str
-    task: Callable[[], RecorderTask]
+    task = MigrationTask
 
-    def __init__(
-        self, session: Session, schema_version: int, migration_changes: dict[str, int]
-    ) -> None:
+    def __init__(self, schema_version: int, migration_changes: dict[str, int]) -> None:
         """Initialize a new BaseRunTimeMigration."""
         self.schema_version = schema_version
-        self.session = session
         self.migration_changes = migration_changes
+
+    def do_migrate(self, instance: Recorder, session: Session) -> None:
+        """Start migration if needed."""
+        if self.needs_migrate(session):
+            instance.queue_task(self.task(self))
+        else:
+            self.migration_done(instance)
+
+    @staticmethod
+    @abstractmethod
+    def migrate_data(instance: Recorder) -> bool:
+        """Migrate some data, returns True if migration is completed."""
+
+    def migration_done(self, instance: Recorder) -> None:
+        """Will be called after migrate returns True or if migration is not needed."""
 
     @abstractmethod
     def needs_migrate_query(self) -> StatementLambdaElement:
         """Return the query to check if the migration needs to run."""
 
-    def needs_migrate(self) -> bool:
+    def needs_migrate(self, session: Session) -> bool:
         """Return if the migration needs to run.
 
         If the migration needs to run, it will return True.
@@ -2220,8 +2038,8 @@ class BaseRunTimeMigration(ABC):
         # We do not know if the migration is done from the
         # migration changes table so we must check the data
         # This is the slow path
-        if not execute_stmt_lambda_element(self.session, self.needs_migrate_query()):
-            _mark_migration_done(self.session, self.__class__)
+        if not execute_stmt_lambda_element(session, self.needs_migrate_query()):
+            _mark_migration_done(session, self.__class__)
             return False
         return True
 
@@ -2231,7 +2049,44 @@ class StatesContextIDMigration(BaseRunTimeMigration):
 
     required_schema_version = CONTEXT_ID_AS_BINARY_SCHEMA_VERSION
     migration_id = "state_context_id_as_binary"
-    task = StatesContextIDMigrationTask
+
+    @staticmethod
+    @retryable_database_job("migrate states context_ids to binary format")
+    def migrate_data(instance: Recorder) -> bool:
+        """Migrate states context_ids to use binary format, return True if completed."""
+        _to_bytes = _context_id_to_bytes
+        session_maker = instance.get_session
+        _LOGGER.debug("Migrating states context_ids to binary format")
+        with session_scope(session=session_maker()) as session:
+            if states := session.execute(
+                find_states_context_ids_to_migrate(instance.max_bind_vars)
+            ).all():
+                session.execute(
+                    update(States),
+                    [
+                        {
+                            "state_id": state_id,
+                            "context_id": None,
+                            "context_id_bin": _to_bytes(context_id)
+                            or _generate_ulid_bytes_at_time(last_updated_ts),
+                            "context_user_id": None,
+                            "context_user_id_bin": _to_bytes(context_user_id),
+                            "context_parent_id": None,
+                            "context_parent_id_bin": _to_bytes(context_parent_id),
+                        }
+                        for state_id, last_updated_ts, context_id, context_user_id, context_parent_id in states
+                    ],
+                )
+            # If there is more work to do return False
+            # so that we can be called again
+            if is_done := not states:
+                _mark_migration_done(session, StatesContextIDMigration)
+
+        if is_done:
+            _drop_index(session_maker, "states", "ix_states_context_id")
+
+        _LOGGER.debug("Migrating states context_ids to binary format: done=%s", is_done)
+        return is_done
 
     def needs_migrate_query(self) -> StatementLambdaElement:
         """Return the query to check if the migration needs to run."""
@@ -2243,7 +2098,44 @@ class EventsContextIDMigration(BaseRunTimeMigration):
 
     required_schema_version = CONTEXT_ID_AS_BINARY_SCHEMA_VERSION
     migration_id = "event_context_id_as_binary"
-    task = EventsContextIDMigrationTask
+
+    @staticmethod
+    @retryable_database_job("migrate events context_ids to binary format")
+    def migrate_data(instance: Recorder) -> bool:
+        """Migrate events context_ids to use binary format, return True if completed."""
+        _to_bytes = _context_id_to_bytes
+        session_maker = instance.get_session
+        _LOGGER.debug("Migrating context_ids to binary format")
+        with session_scope(session=session_maker()) as session:
+            if events := session.execute(
+                find_events_context_ids_to_migrate(instance.max_bind_vars)
+            ).all():
+                session.execute(
+                    update(Events),
+                    [
+                        {
+                            "event_id": event_id,
+                            "context_id": None,
+                            "context_id_bin": _to_bytes(context_id)
+                            or _generate_ulid_bytes_at_time(time_fired_ts),
+                            "context_user_id": None,
+                            "context_user_id_bin": _to_bytes(context_user_id),
+                            "context_parent_id": None,
+                            "context_parent_id_bin": _to_bytes(context_parent_id),
+                        }
+                        for event_id, time_fired_ts, context_id, context_user_id, context_parent_id in events
+                    ],
+                )
+            # If there is more work to do return False
+            # so that we can be called again
+            if is_done := not events:
+                _mark_migration_done(session, EventsContextIDMigration)
+
+        if is_done:
+            _drop_index(session_maker, "events", "ix_events_context_id")
+
+        _LOGGER.debug("Migrating events context_ids to binary format: done=%s", is_done)
+        return is_done
 
     def needs_migrate_query(self) -> StatementLambdaElement:
         """Return the query to check if the migration needs to run."""
@@ -2255,7 +2147,78 @@ class EventTypeIDMigration(BaseRunTimeMigration):
 
     required_schema_version = EVENT_TYPE_IDS_SCHEMA_VERSION
     migration_id = "event_type_id_migration"
-    task = EventTypeIDMigrationTask
+    task = CommitBeforeMigrationTask
+    # We have to commit before to make sure there are
+    # no new pending event_types about to be added to
+    # the db since this happens live
+
+    @staticmethod
+    @retryable_database_job("migrate events event_types to event_type_ids")
+    def migrate_data(instance: Recorder) -> bool:
+        """Migrate event_type to event_type_ids, return True if completed."""
+        session_maker = instance.get_session
+        _LOGGER.debug("Migrating event_types")
+        event_type_manager = instance.event_type_manager
+        with session_scope(session=session_maker()) as session:
+            if events := session.execute(
+                find_event_type_to_migrate(instance.max_bind_vars)
+            ).all():
+                event_types = {event_type for _, event_type in events}
+                if None in event_types:
+                    # event_type should never be None but we need to be defensive
+                    # so we don't fail the migration because of a bad state
+                    event_types.remove(None)
+                    event_types.add(_EMPTY_EVENT_TYPE)
+
+                event_type_to_id = event_type_manager.get_many(event_types, session)
+                if missing_event_types := {
+                    event_type
+                    for event_type, event_id in event_type_to_id.items()
+                    if event_id is None
+                }:
+                    missing_db_event_types = [
+                        EventTypes(event_type=event_type)
+                        for event_type in missing_event_types
+                    ]
+                    session.add_all(missing_db_event_types)
+                    session.flush()  # Assign ids
+                    for db_event_type in missing_db_event_types:
+                        # We cannot add the assigned ids to the event_type_manager
+                        # because the commit could get rolled back
+                        assert (
+                            db_event_type.event_type is not None
+                        ), "event_type should never be None"
+                        event_type_to_id[db_event_type.event_type] = (
+                            db_event_type.event_type_id
+                        )
+                        event_type_manager.clear_non_existent(db_event_type.event_type)
+
+                session.execute(
+                    update(Events),
+                    [
+                        {
+                            "event_id": event_id,
+                            "event_type": None,
+                            "event_type_id": event_type_to_id[
+                                _EMPTY_EVENT_TYPE if event_type is None else event_type
+                            ],
+                        }
+                        for event_id, event_type in events
+                    ],
+                )
+
+            # If there is more work to do return False
+            # so that we can be called again
+            if is_done := not events:
+                _mark_migration_done(session, EventTypeIDMigration)
+
+        _LOGGER.debug("Migrating event_types done=%s", is_done)
+        return is_done
+
+    def migration_done(self, instance: Recorder) -> None:
+        """Will be called after migrate returns True."""
+        _LOGGER.debug("Activating event_types manager as all data is migrated")
+        instance.event_type_manager.active = True
 
     def needs_migrate_query(self) -> StatementLambdaElement:
         """Check if the data is migrated."""
@@ -2267,7 +2230,107 @@ class EntityIDMigration(BaseRunTimeMigration):
 
     required_schema_version = STATES_META_SCHEMA_VERSION
     migration_id = "entity_id_migration"
-    task = EntityIDMigrationTask
+    task = CommitBeforeMigrationTask
+    # We have to commit before to make sure there are
+    # no new pending states_meta about to be added to
+    # the db since this happens live
+
+    @staticmethod
+    @retryable_database_job("migrate states entity_ids to states_meta")
+    def migrate_data(instance: Recorder) -> bool:
+        """Migrate entity_ids to states_meta, return True if completed.
+
+        We do this in two steps because we need the history queries to work
+        while we are migrating.
+
+        1. Link the states to the states_meta table
+        2. Remove the entity_id column from the states table (in post_migrate_entity_ids)
+        """
+        _LOGGER.debug("Migrating entity_ids")
+        states_meta_manager = instance.states_meta_manager
+        with session_scope(session=instance.get_session()) as session:
+            if states := session.execute(
+                find_entity_ids_to_migrate(instance.max_bind_vars)
+            ).all():
+                entity_ids = {entity_id for _, entity_id in states}
+                if None in entity_ids:
+                    # entity_id should never be None but we need to be defensive
+                    # so we don't fail the migration because of a bad state
+                    entity_ids.remove(None)
+                    entity_ids.add(_EMPTY_ENTITY_ID)
+
+                entity_id_to_metadata_id = states_meta_manager.get_many(
+                    entity_ids, session, True
+                )
+                if missing_entity_ids := {
+                    entity_id
+                    for entity_id, metadata_id in entity_id_to_metadata_id.items()
+                    if metadata_id is None
+                }:
+                    missing_states_metadata = [
+                        StatesMeta(entity_id=entity_id)
+                        for entity_id in missing_entity_ids
+                    ]
+                    session.add_all(missing_states_metadata)
+                    session.flush()  # Assign ids
+                    for db_states_metadata in missing_states_metadata:
+                        # We cannot add the assigned ids to the event_type_manager
+                        # because the commit could get rolled back
+                        assert (
+                            db_states_metadata.entity_id is not None
+                        ), "entity_id should never be None"
+                        entity_id_to_metadata_id[db_states_metadata.entity_id] = (
+                            db_states_metadata.metadata_id
+                        )
+
+                session.execute(
+                    update(States),
+                    [
+                        {
+                            "state_id": state_id,
+                            # We cannot set "entity_id": None yet since
+                            # the history queries still need to work while the
+                            # migration is in progress and we will do this in
+                            # post_migrate_entity_ids
+                            "metadata_id": entity_id_to_metadata_id[
+                                _EMPTY_ENTITY_ID if entity_id is None else entity_id
+                            ],
+                        }
+                        for state_id, entity_id in states
+                    ],
+                )
+
+            # If there is more work to do return False
+            # so that we can be called again
+            if is_done := not states:
+                _mark_migration_done(session, EntityIDMigration)
+
+        _LOGGER.debug("Migrating entity_ids done=%s", is_done)
+        return is_done
+
+    def migration_done(self, instance: Recorder) -> None:
+        """Will be called after migrate returns True."""
+        # The migration has finished, now we start the post migration
+        # to remove the old entity_id data from the states table
+        # at this point we can also start using the StatesMeta table
+        # so we set active to True
+        _LOGGER.debug("Activating states_meta manager as all data is migrated")
+        instance.states_meta_manager.active = True
+        with (
+            contextlib.suppress(SQLAlchemyError),
+            session_scope(session=instance.get_session()) as session,
+        ):
+            # If ix_states_entity_id_last_updated_ts still exists
+            # on the states table it means the entity id migration
+            # finished by the EntityIDPostMigrationTask did not
+            # complete because they restarted in the middle of it. We need
+            # to pick back up where we left off.
+            if get_index_by_name(
+                session,
+                TABLE_STATES,
+                LEGACY_STATES_ENTITY_ID_LAST_UPDATED_INDEX,
+            ):
+                instance.queue_task(EntityIDPostMigrationTask())
 
     def needs_migrate_query(self) -> StatementLambdaElement:
         """Check if the data is migrated."""
