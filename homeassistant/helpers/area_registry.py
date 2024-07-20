@@ -456,8 +456,8 @@ class AreaRegistry(BaseRegistry[AreasRegistryStoreData]):
         )
 
 
-@callback
 @singleton(DATA_REGISTRY)
+@callback
 def async_get(hass: HomeAssistant) -> AreaRegistry:
     """Get area registry."""
     return AreaRegistry(hass)

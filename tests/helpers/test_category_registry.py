@@ -6,10 +6,15 @@ from typing import Any
 
 import pytest
 
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, is_callback
 from homeassistant.helpers import category_registry as cr
 
 from tests.common import async_capture_events, flush_store
+
+
+async def test_async_get_is_callback() -> None:
+    """Test that async_get is a callback."""
+    assert is_callback(cr.async_get)
 
 
 async def test_list_categories_for_scope(

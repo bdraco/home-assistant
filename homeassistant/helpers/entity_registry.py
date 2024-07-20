@@ -1386,8 +1386,8 @@ class EntityRegistry(BaseRegistry):
             self.async_update_entity(entry.entity_id, area_id=None)
 
 
-@callback
 @singleton(DATA_REGISTRY)
+@callback
 def async_get(hass: HomeAssistant) -> EntityRegistry:
     """Get entity registry."""
     return EntityRegistry(hass)

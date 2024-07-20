@@ -279,8 +279,8 @@ class LabelRegistry(BaseRegistry[LabelRegistryStoreData]):
         }
 
 
-@callback
 @singleton(DATA_REGISTRY)
+@callback
 def async_get(hass: HomeAssistant) -> LabelRegistry:
     """Get label registry."""
     return LabelRegistry(hass)

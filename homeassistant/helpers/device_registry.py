@@ -1255,8 +1255,8 @@ class DeviceRegistry(BaseRegistry[dict[str, list[dict[str, Any]]]]):
             self.async_update_device(device.id, labels=device.labels - {label_id})
 
 
-@callback
 @singleton(DATA_REGISTRY)
+@callback
 def async_get(hass: HomeAssistant) -> DeviceRegistry:
     """Get device registry."""
     return DeviceRegistry(hass)

@@ -8,7 +8,7 @@ from typing import Any
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, is_callback
 from homeassistant.helpers import (
     device_registry as dr,
     entity_registry as er,
@@ -17,6 +17,11 @@ from homeassistant.helpers import (
 from homeassistant.util.dt import utcnow
 
 from tests.common import ANY, MockConfigEntry, async_capture_events, flush_store
+
+
+async def test_async_get_is_callback() -> None:
+    """Test that async_get is a callback."""
+    assert is_callback(lr.async_get)
 
 
 async def test_list_labels(label_registry: lr.LabelRegistry) -> None:

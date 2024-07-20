@@ -12,7 +12,7 @@ from yarl import URL
 
 from homeassistant import config_entries
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
-from homeassistant.core import CoreState, HomeAssistant, ReleaseChannel
+from homeassistant.core import CoreState, HomeAssistant, ReleaseChannel, is_callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import (
     area_registry as ar,
@@ -35,6 +35,11 @@ def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
     entry = MockConfigEntry(title=None)
     entry.add_to_hass(hass)
     return entry
+
+
+async def test_async_get_is_callback() -> None:
+    """Test that async_get is a callback."""
+    assert is_callback(dr.async_get)
 
 
 async def test_get_or_create_returns_same_entry(

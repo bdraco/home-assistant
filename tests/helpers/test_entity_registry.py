@@ -16,7 +16,7 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     EntityCategory,
 )
-from homeassistant.core import CoreState, HomeAssistant, callback
+from homeassistant.core import CoreState, HomeAssistant, callback, is_callback
 from homeassistant.exceptions import MaxLengthExceeded
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 
@@ -28,6 +28,11 @@ from tests.common import (
 )
 
 YAML__OPEN_PATH = "homeassistant.util.yaml.loader.open"
+
+
+async def test_async_get_is_callback() -> None:
+    """Test that async_get is a callback."""
+    assert is_callback(er.async_get)
 
 
 async def test_get(entity_registry: er.EntityRegistry) -> None:
