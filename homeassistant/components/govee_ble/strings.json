@@ -25,7 +25,7 @@
         "state_attributes": {
           "event_type": {
             "state": {
-              "motion": "Motion"
+              "motion": "[%key:component::event::entity_component::motion::name%]"
             }
           }
         }
@@ -45,7 +45,7 @@
         "state_attributes": {
           "event_type": {
             "state": {
-              "press": "Press"
+              "press": "[%key:component::govee_ble::entity::event::button_0::state_attributes::event_type::state::press%]"
             }
           }
         }
@@ -55,7 +55,7 @@
         "state_attributes": {
           "event_type": {
             "state": {
-              "press": "Press"
+              "press": "[%key:component::govee_ble::entity::event::button_0::state_attributes::event_type::state::press%]"
             }
           }
         }
@@ -65,7 +65,7 @@
         "state_attributes": {
           "event_type": {
             "state": {
-              "press": "Press"
+              "press": "[%key:component::govee_ble::entity::event::button_0::state_attributes::event_type::state::press%]"
             }
           }
         }
@@ -75,7 +75,7 @@
         "state_attributes": {
           "event_type": {
             "state": {
-              "press": "Press"
+              "press": "[%key:component::govee_ble::entity::event::button_0::state_attributes::event_type::state::press%]"
             }
           }
         }
@@ -85,7 +85,7 @@
         "state_attributes": {
           "event_type": {
             "state": {
-              "press": "Press"
+              "press": "[%key:component::govee_ble::entity::event::button_0::state_attributes::event_type::state::press%]"
             }
           }
         }
