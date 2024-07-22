@@ -329,7 +329,7 @@ aioridwell==2024.01.0
 aioruckus==0.34
 
 # homeassistant.components.russound_rio
-aiorussound==2.0.6
+aiorussound==2.0.7
 
 # homeassistant.components.ruuvi_gateway
 aioruuvigateway==0.1.0
@@ -1780,7 +1780,7 @@ python-fullykiosk==0.0.14
 python-homeassistant-analytics==0.7.0
 
 # homeassistant.components.homewizard
-python-homewizard-energy==v6.0.0
+python-homewizard-energy==v6.1.1
 
 # homeassistant.components.izone
 python-izone==1.2.9
@@ -1869,7 +1869,7 @@ pyuptimerobot==22.2.0
 pyvera==0.3.13
 
 # homeassistant.components.vesync
-pyvesync==2.1.10
+pyvesync==2.1.12
 
 # homeassistant.components.vizio
 pyvizio==0.1.61
@@ -1938,7 +1938,7 @@ renault-api==0.2.5
 renson-endura-delta==1.7.1
 
 # homeassistant.components.reolink
-reolink-aio==0.9.4
+reolink-aio==0.9.5
 
 # homeassistant.components.rflink
 rflink==0.0.66

@@ -367,6 +367,13 @@ class Recorder(threading.Thread):
         """Add an executor job from within the event loop."""
         return self.hass.loop.run_in_executor(self._db_executor, target, *args)
 
+    def _stop_executor(self) -> None:
+        """Stop the executor."""
+        if self._db_executor is None:
+            return
+        self._db_executor.shutdown()
+        self._db_executor = None
+
     @callback
     def _async_check_queue(self, *_: Any) -> None:
         """Periodic check of the queue size to ensure we do not exhaust memory.
@@ -707,6 +714,10 @@ class Recorder(threading.Thread):
             "recorder_database_migration",
         )
 
+    def _dismiss_migration_in_progress(self) -> None:
+        """Dismiss notification about migration in progress."""
+        persistent_notification.dismiss(self.hass, "recorder_database_migration")
+
     def _run(self) -> None:
         """Start processing events to save."""
         thread_id = threading.get_ident()
@@ -725,7 +736,7 @@ class Recorder(threading.Thread):
             return
         self.schema_version = schema_status.current_version
 
-        if schema_status.valid:
+        if not schema_status.migration_needed and not schema_status.schema_errors:
             self._setup_run()
         else:
             self.migration_in_progress = True
@@ -734,13 +745,14 @@ class Recorder(threading.Thread):
         self.hass.add_job(self.async_connection_success)
 
         # First do non-live migration steps, if needed
-        if not schema_status.valid:
+        if schema_status.migration_needed:
             result, schema_status = self._migrate_schema_offline(schema_status)
             if not result:
                 self._notify_migration_failed()
                 self.migration_in_progress = False
                 return
             self.schema_version = schema_status.current_version
+            # Non-live migration is now completed, remaining steps are live
             self.migration_is_live = True
 
         # After non-live migration, activate the recorder
@@ -755,11 +767,9 @@ class Recorder(threading.Thread):
             # we restart before startup finishes
             return
 
-        # Do live migration steps, if needed
-        if not schema_status.valid:
-            result, schema_status = self._migrate_schema_live_and_setup_run(
-                schema_status
-            )
+        # Do live migration steps and repairs, if needed
+        if schema_status.migration_needed or schema_status.schema_errors:
+            result, schema_status = self._migrate_schema_live(schema_status)
             if result:
                 self.schema_version = SCHEMA_VERSION
                 if not self._event_listener:
@@ -768,8 +778,16 @@ class Recorder(threading.Thread):
                     # was True, we need to reinitialize the listener.
                     self.hass.add_job(self.async_initialize)
             else:
+                self.migration_in_progress = False
+                self._dismiss_migration_in_progress()
                 self._notify_migration_failed()
                 return
+
+        # Schema migration and repair is now completed
+        if self.migration_in_progress:
+            self.migration_in_progress = False
+            self._dismiss_migration_in_progress()
+            self._setup_run()
 
         # Catch up with missed statistics
         self._schedule_compile_missing_statistics()
@@ -888,7 +906,7 @@ class Recorder(threading.Thread):
                 self._commit_event_session_or_retry()
             task.run(self)
         except exc.DatabaseError as err:
-            if self._handle_database_error(err):
+            if self._handle_database_error(err, setup_run=True):
                 return
             _LOGGER.exception("Unhandled database error while processing task %s", task)
         except SQLAlchemyError:
@@ -934,7 +952,7 @@ class Recorder(threading.Thread):
         """Migrate schema to the latest version."""
         return self._migrate_schema(schema_status, False)
 
-    def _migrate_schema_live_and_setup_run(
+    def _migrate_schema_live(
         self, schema_status: migration.SchemaValidationStatus
     ) -> tuple[bool, migration.SchemaValidationStatus]:
         """Migrate schema to the latest version."""
@@ -944,7 +962,7 @@ class Recorder(threading.Thread):
                 "System performance will temporarily degrade during the database"
                 " upgrade. Do not power down or restart the system until the upgrade"
                 " completes. Integrations that read the database, such as logbook,"
-                " history, and statistics may return inconsistent results until the "
+                " history, and statistics may return inconsistent results until the"
                 " upgrade completes. This notification will be automatically dismissed"
                 " when the upgrade completes."
             ),
@@ -952,14 +970,7 @@ class Recorder(threading.Thread):
             "recorder_database_migration",
         )
         self.hass.add_job(self._async_migration_started)
-        try:
-            migration_result, schema_status = self._migrate_schema(schema_status, True)
-            if migration_result:
-                self._setup_run()
-            return migration_result, schema_status
-        finally:
-            self.migration_in_progress = False
-            persistent_notification.dismiss(self.hass, "recorder_database_migration")
+        return self._migrate_schema(schema_status, True)
 
     def _migrate_schema(
         self,
@@ -970,23 +981,30 @@ class Recorder(threading.Thread):
         assert self.engine is not None
         try:
             if live:
-                schema_status = migration.migrate_schema_live(
-                    self, self.hass, self.engine, self.get_session, schema_status
-                )
+                migrator = migration.migrate_schema_live
             else:
-                schema_status = migration.migrate_schema_non_live(
-                    self, self.hass, self.engine, self.get_session, schema_status
-                )
+                migrator = migration.migrate_schema_non_live
+            new_schema_status = migrator(
+                self, self.hass, self.engine, self.get_session, schema_status
+            )
         except exc.DatabaseError as err:
-            if self._handle_database_error(err):
-                return (True, schema_status)
+            if self._handle_database_error(err, setup_run=False):
+                # If _handle_database_error returns True, we have a new database
+                # which does not need migration or repair.
+                new_schema_status = migration.SchemaValidationStatus(
+                    current_version=SCHEMA_VERSION,
+                    migration_needed=False,
+                    schema_errors=set(),
+                    start_version=SCHEMA_VERSION,
+                )
+                return (True, new_schema_status)
             _LOGGER.exception("Database error during schema migration")
             return (False, schema_status)
         except Exception:
             _LOGGER.exception("Error during schema migration")
             return (False, schema_status)
         else:
-            return (True, schema_status)
+            return (True, new_schema_status)
 
     def _lock_database(self, task: DatabaseLockTask) -> None:
         @callback
@@ -1157,7 +1175,7 @@ class Recorder(threading.Thread):
 
         self._add_to_session(session, dbstate)
 
-    def _handle_database_error(self, err: Exception) -> bool:
+    def _handle_database_error(self, err: Exception, *, setup_run: bool) -> bool:
         """Handle a database error that may result in moving away the corrupt db."""
         if (
             (cause := err.__cause__)
@@ -1171,7 +1189,7 @@ class Recorder(threading.Thread):
             _LOGGER.exception(
                 "Unrecoverable sqlite3 database corruption detected: %s", err
             )
-            self._handle_sqlite_corruption()
+            self._handle_sqlite_corruption(setup_run)
             return True
         return False
 
@@ -1238,7 +1256,7 @@ class Recorder(threading.Thread):
             self._commits_without_expire = 0
             session.expire_all()
 
-    def _handle_sqlite_corruption(self) -> None:
+    def _handle_sqlite_corruption(self, setup_run: bool) -> None:
         """Handle the sqlite3 database being corrupt."""
         try:
             self._close_event_session()
@@ -1247,7 +1265,8 @@ class Recorder(threading.Thread):
         move_away_broken_database(dburl_to_path(self.db_url))
         self.recorder_runs_manager.reset()
         self._setup_recorder()
-        self._setup_run()
+        if setup_run:
+            self._setup_run()
 
     def _close_event_session(self) -> None:
         """Close the event session."""
@@ -1481,8 +1500,5 @@ class Recorder(threading.Thread):
         try:
             self._end_session()
         finally:
-            if self._db_executor:
-                self._db_executor.shutdown(join_threads_or_timeout=False)
+            self._stop_executor()
             self._close_connection()
-            if self._db_executor:
-                self._db_executor.join_threads_or_timeout()
