@@ -1175,7 +1175,9 @@ class DeviceRegistry(BaseRegistry[dict[str, list[dict[str, Any]]]]):
                         tuple(conn)  # type: ignore[misc]
                         for conn in device["connections"]
                     },
-                    created_at=datetime.fromisoformat(device["created_at"]),
+                    created_at=datetime.fromisoformat(device["created_at"])
+                    if device["created_at"]
+                    else None,
                     disabled_by=(
                         DeviceEntryDisabler(device["disabled_by"])
                         if device["disabled_by"]
@@ -1196,7 +1198,9 @@ class DeviceRegistry(BaseRegistry[dict[str, list[dict[str, Any]]]]):
                     manufacturer=device["manufacturer"],
                     model=device["model"],
                     model_id=device["model_id"],
-                    modified_at=datetime.fromisoformat(device["modified_at"]),
+                    modified_at=datetime.fromisoformat(device["modified_at"])
+                    if device["modified_at"]
+                    else None,
                     name_by_user=device["name_by_user"],
                     name=device["name"],
                     primary_config_entry=device["primary_config_entry"],
@@ -1209,10 +1213,14 @@ class DeviceRegistry(BaseRegistry[dict[str, list[dict[str, Any]]]]):
                 deleted_devices[device["id"]] = DeletedDeviceEntry(
                     config_entries=set(device["config_entries"]),
                     connections={tuple(conn) for conn in device["connections"]},
-                    created_at=datetime.fromisoformat(device["created_at"]),
+                    created_at=datetime.fromisoformat(device["created_at"])
+                    if device["created_at"]
+                    else None,
                     identifiers={tuple(iden) for iden in device["identifiers"]},
                     id=device["id"],
-                    modified_at=datetime.fromisoformat(device["modified_at"]),
+                    modified_at=datetime.fromisoformat(device["modified_at"])
+                    if device["modified_at"]
+                    else None,
                     orphaned_timestamp=device["orphaned_timestamp"],
                 )
 
