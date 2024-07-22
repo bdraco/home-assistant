@@ -1176,7 +1176,7 @@ class DeviceRegistry(BaseRegistry[dict[str, list[dict[str, Any]]]]):
                         for conn in device["connections"]
                     },
                     created_at=datetime.fromisoformat(device["created_at"])
-                    if device["created_at"]
+                    if "created_at" in device
                     else None,
                     disabled_by=(
                         DeviceEntryDisabler(device["disabled_by"])
@@ -1199,7 +1199,7 @@ class DeviceRegistry(BaseRegistry[dict[str, list[dict[str, Any]]]]):
                     model=device["model"],
                     model_id=device["model_id"],
                     modified_at=datetime.fromisoformat(device["modified_at"])
-                    if device["modified_at"]
+                    if "modified_at" in device
                     else None,
                     name_by_user=device["name_by_user"],
                     name=device["name"],
@@ -1214,12 +1214,12 @@ class DeviceRegistry(BaseRegistry[dict[str, list[dict[str, Any]]]]):
                     config_entries=set(device["config_entries"]),
                     connections={tuple(conn) for conn in device["connections"]},
                     created_at=datetime.fromisoformat(device["created_at"])
-                    if device["created_at"]
+                    if "created_at" in device
                     else None,
                     identifiers={tuple(iden) for iden in device["identifiers"]},
                     id=device["id"],
                     modified_at=datetime.fromisoformat(device["modified_at"])
-                    if device["modified_at"]
+                    if "modified_at" in device
                     else None,
                     orphaned_timestamp=device["orphaned_timestamp"],
                 )
