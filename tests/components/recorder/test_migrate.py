@@ -211,6 +211,11 @@ async def test_live_database_migration_encounters_corruption(
         patch(
             "homeassistant.components.recorder.core.move_away_broken_database"
         ) as move_away,
+        patch(
+            "homeassistant.components.recorder.core.Recorder._setup_run",
+            autospec=True,
+            wraps=recorder.Recorder._setup_run,
+        ) as setup_run,
     ):
         await async_setup_recorder_instance(hass)
         hass.states.async_set("my.entity", "on", {})
@@ -219,6 +224,7 @@ async def test_live_database_migration_encounters_corruption(
 
     assert recorder.util.async_migration_in_progress(hass) is False
     move_away.assert_called_once()
+    setup_run.assert_called_once()
 
 
 @pytest.mark.skip_on_db_engine(["mysql", "postgresql"])
@@ -256,6 +262,11 @@ async def test_non_live_database_migration_encounters_corruption(
         patch(
             "homeassistant.components.recorder.core.move_away_broken_database"
         ) as move_away,
+        patch(
+            "homeassistant.components.recorder.core.Recorder._setup_run",
+            autospec=True,
+            wraps=recorder.Recorder._setup_run,
+        ) as setup_run,
     ):
         await async_setup_recorder_instance(hass)
         hass.states.async_set("my.entity", "on", {})
@@ -265,6 +276,7 @@ async def test_non_live_database_migration_encounters_corruption(
     assert recorder.util.async_migration_in_progress(hass) is False
     move_away.assert_called_once()
     migrate_schema_live.assert_not_called()
+    setup_run.assert_called_once()
 
 
 @pytest.mark.parametrize(
