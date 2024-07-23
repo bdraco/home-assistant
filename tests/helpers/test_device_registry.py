@@ -998,12 +998,12 @@ async def test_migration_1_5_to_1_7(
 
 @pytest.mark.parametrize("load_registries", [False])
 @pytest.mark.usefixtures("freezer")
-async def test_migration_1_6_to_1_7(
+async def test_migration_1_6_to_1_8(
     hass: HomeAssistant,
     hass_storage: dict[str, Any],
     mock_config_entry: MockConfigEntry,
 ) -> None:
-    """Test migration from version 1.6 to 1.7."""
+    """Test migration from version 1.6 to 1.8."""
     hass_storage[dr.STORAGE_KEY] = {
         "version": 1,
         "minor_version": 6,
@@ -1146,7 +1146,7 @@ async def test_migration_1_7_to_1_8(
     """Test migration from version 1.7 to 1.8."""
     hass_storage[dr.STORAGE_KEY] = {
         "version": 1,
-        "minor_version": 6,
+        "minor_version": 7,
         "key": dr.STORAGE_KEY,
         "data": {
             "devices": [
@@ -1155,8 +1155,6 @@ async def test_migration_1_7_to_1_8(
                     "config_entries": [mock_config_entry.entry_id],
                     "configuration_url": None,
                     "connections": [["Zigbee", "01.23.45.67.89"]],
-                    "created_at": "2024-01-01T01:00:00+00:00",
-                    "modified_at": "2024-01-01T01:00:00+00:00",
                     "disabled_by": None,
                     "entry_type": "service",
                     "hw_version": "hw_version",
@@ -1165,6 +1163,7 @@ async def test_migration_1_7_to_1_8(
                     "labels": ["blah"],
                     "manufacturer": "manufacturer",
                     "model": "model",
+                    "model_id": None,
                     "name": "name",
                     "name_by_user": None,
                     "primary_config_entry": mock_config_entry.entry_id,
@@ -1185,6 +1184,7 @@ async def test_migration_1_7_to_1_8(
                     "labels": ["blah"],
                     "manufacturer": None,
                     "model": None,
+                    "model_id": None,
                     "name_by_user": None,
                     "primary_config_entry": None,
                     "name": None,
@@ -1231,7 +1231,7 @@ async def test_migration_1_7_to_1_8(
                     "config_entries": [mock_config_entry.entry_id],
                     "configuration_url": None,
                     "connections": [["Zigbee", "01.23.45.67.89"]],
-                    "created_at": "2024-01-01T01:00:00+00:00",
+                    "created_at": "1970-01-01T00:00:00+00:00",
                     "disabled_by": None,
                     "entry_type": "service",
                     "hw_version": "hw_version",
@@ -1242,7 +1242,7 @@ async def test_migration_1_7_to_1_8(
                     "model": "model",
                     "name": "name",
                     "model_id": None,
-                    "modified_at": "2024-01-01T01:00:00+00:00",
+                    "modified_at": "1970-01-01T00:00:00+00:00",
                     "name_by_user": None,
                     "primary_config_entry": mock_config_entry.entry_id,
                     "serial_number": None,

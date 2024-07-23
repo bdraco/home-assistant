@@ -503,16 +503,17 @@ class DeviceRegistryStore(storage.Store[dict[str, list[dict[str, Any]]]]):
                 # Introduced in 2024.7
                 for device in old_data["devices"]:
                     device["primary_config_entry"] = None
+            if old_minor_version < 7:
+                # Introduced in 2024.8
+                for device in old_data["devices"]:
+                    device["model_id"] = None
             if old_minor_version < 8:
                 # Introduced in 2024.8
                 created_at = utc_from_timestamp(0).isoformat()
                 for device in old_data["devices"]:
-                    device.setdefault("model_id", None)
-                    device.setdefault("created_at", created_at)
-                    device.setdefault("modified_at", created_at)
+                    device["created_at"] = device["modified_at"] = created_at
                 for device in old_data["deleted_devices"]:
-                    device.setdefault("created_at", created_at)
-                    device.setdefault("modified_at", created_at)
+                    device["created_at"] = device["modified_at"] = created_at
 
         if old_major_version > 1:
             raise NotImplementedError
