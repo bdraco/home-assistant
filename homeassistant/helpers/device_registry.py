@@ -1175,9 +1175,7 @@ class DeviceRegistry(BaseRegistry[dict[str, list[dict[str, Any]]]]):
                         tuple(conn)  # type: ignore[misc]
                         for conn in device["connections"]
                     },
-                    created_at=datetime.fromisoformat(device["created_at"])
-                    if "created_at" in device
-                    else None,
+                    created_at=datetime.fromisoformat(device["created_at"]),
                     disabled_by=(
                         DeviceEntryDisabler(device["disabled_by"])
                         if device["disabled_by"]
@@ -1198,9 +1196,7 @@ class DeviceRegistry(BaseRegistry[dict[str, list[dict[str, Any]]]]):
                     manufacturer=device["manufacturer"],
                     model=device["model"],
                     model_id=device["model_id"],
-                    modified_at=datetime.fromisoformat(device["modified_at"])
-                    if "modified_at" in device
-                    else None,
+                    modified_at=datetime.fromisoformat(device["modified_at"]),
                     name_by_user=device["name_by_user"],
                     name=device["name"],
                     primary_config_entry=device["primary_config_entry"],
@@ -1213,14 +1209,10 @@ class DeviceRegistry(BaseRegistry[dict[str, list[dict[str, Any]]]]):
                 deleted_devices[device["id"]] = DeletedDeviceEntry(
                     config_entries=set(device["config_entries"]),
                     connections={tuple(conn) for conn in device["connections"]},
-                    created_at=datetime.fromisoformat(device["created_at"])
-                    if "created_at" in device
-                    else None,
+                    created_at=datetime.fromisoformat(device["created_at"]),
                     identifiers={tuple(iden) for iden in device["identifiers"]},
                     id=device["id"],
-                    modified_at=datetime.fromisoformat(device["modified_at"])
-                    if "modified_at" in device
-                    else None,
+                    modified_at=datetime.fromisoformat(device["modified_at"]),
                     orphaned_timestamp=device["orphaned_timestamp"],
                 )
 
@@ -1293,8 +1285,8 @@ class DeviceRegistry(BaseRegistry[dict[str, list[dict[str, Any]]]]):
             self.async_update_device(device.id, labels=device.labels - {label_id})
 
 
-@singleton(DATA_REGISTRY)
 @callback
+@singleton(DATA_REGISTRY)
 def async_get(hass: HomeAssistant) -> DeviceRegistry:
     """Get device registry."""
     return DeviceRegistry(hass)
