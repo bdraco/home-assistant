@@ -1330,7 +1330,7 @@ py-madvr2==1.6.29
 py-melissa-climate==2.1.4
 
 # homeassistant.components.nextbus
-py-nextbusnext==1.0.2
+py-nextbusnext==2.0.3
 
 # homeassistant.components.nightscout
 py-nightscout==1.2.2
@@ -1449,6 +1449,9 @@ pyefergy==22.5.0
 
 # homeassistant.components.energenie_power_sockets
 pyegps==0.2.5
+
+# homeassistant.components.emoncms
+pyemoncms==0.0.7
 
 # homeassistant.components.enphase_envoy
 pyenphase==1.20.6
