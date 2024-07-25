@@ -7,7 +7,6 @@ from collections.abc import Generator
 from datetime import timedelta
 from functools import cached_property
 import logging
-import re
 from typing import Any
 from unittest.mock import ANY, AsyncMock, Mock, patch
 
@@ -5546,7 +5545,6 @@ async def test_config_entry_unloaded_during_platform_setups(
 ) -> None:
     """Test async_forward_entry_setups not being awaited."""
     task = None
-    task_created_future = hass.loop.create_future()
 
     async def mock_setup_entry(
         hass: HomeAssistant, entry: config_entries.ConfigEntry
@@ -5560,7 +5558,6 @@ async def test_config_entry_unloaded_during_platform_setups(
             task = asyncio.create_task(
                 hass.config_entries.async_forward_entry_setups(entry, ["light"])
             )
-            task_created_future.set_result(None)
 
         hass.loop.call_soon(_late_setup)
         return True
@@ -5606,17 +5603,14 @@ async def test_config_entry_unloaded_during_platform_setups(
     await hass.async_block_till_done()
     await manager.async_unload(entry.entry_id)
     await hass.async_block_till_done()
-    await task_created_future
+    del task
 
-    msg = (
-        "The config entry 'Mock Title' (test) with "
+    assert (
+        "OperationNotAllowed: The config entry 'Mock Title' (test) with "
         "entry_id 'test2' cannot forward setup for ['light'] because it is "
         "in state ConfigEntryState.NOT_LOADED, but needs to be in the "
         "ConfigEntryState.LOADED state"
-    )
-
-    with pytest.raises(config_entries.OperationNotAllowed, match=re.escape(msg)):
-        await task
+    ) in caplog.text
 
 
 async def test_non_awaited_async_forward_entry_setups(
@@ -5770,7 +5764,6 @@ async def test_config_entry_unloaded_during_platform_setup(
 ) -> None:
     """Test async_forward_entry_setup not being awaited."""
     task = None
-    task_created_future = hass.loop.create_future()
 
     async def mock_setup_entry(
         hass: HomeAssistant, entry: config_entries.ConfigEntry
@@ -5784,7 +5777,6 @@ async def test_config_entry_unloaded_during_platform_setup(
             task = asyncio.create_task(
                 hass.config_entries.async_forward_entry_setup(entry, "light")
             )
-            task_created_future.set_result(None)
 
         hass.loop.call_soon(_late_setup)
         return True
@@ -5830,17 +5822,14 @@ async def test_config_entry_unloaded_during_platform_setup(
     await hass.async_block_till_done()
     await manager.async_unload(entry.entry_id)
     await hass.async_block_till_done()
-    await task_created_future
+    del task
 
-    msg = (
-        "The config entry 'Mock Title' (test) with "
+    assert (
+        "OperationNotAllowed: The config entry 'Mock Title' (test) with "
         "entry_id 'test2' cannot forward setup for light because it is "
         "in state ConfigEntryState.NOT_LOADED, but needs to be in the "
         "ConfigEntryState.LOADED state"
-    )
-
-    with pytest.raises(config_entries.OperationNotAllowed, match=re.escape(msg)):
-        await task
+    ) in caplog.text
 
 
 async def test_config_entry_late_platform_setup(
