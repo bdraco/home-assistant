@@ -1701,13 +1701,13 @@ class EventBus:
             self._rebuild_all_listeners()
             return functools.partial(self._async_remove_all_listener, filterable_job)
         if group is ListenGroup.FIRST:
-            listen_group = self._first_listeners
+            listeners = self._first_listeners
         else:
-            listen_group = self._last_listeners
-        listen_group[event_type].append(filterable_job)
+            listeners = self._last_listeners
+        listeners[event_type].append(filterable_job)
         self._rebuild_event_type_listeners(event_type)
         return functools.partial(
-            self._async_remove_listener, listen_group, event_type, filterable_job
+            self._async_remove_listener, listeners, event_type, filterable_job
         )
 
     def _rebuild_event_type_listeners(self, event_type: EventType[Any] | str) -> None:
@@ -1790,7 +1790,7 @@ class EventBus:
     @callback
     def _async_remove_listener(
         self,
-        listen_group: defaultdict[EventType[Any] | str, list[_FilterableJobType[Any]]],
+        listeners: defaultdict[EventType[Any] | str, list[_FilterableJobType[Any]]],
         event_type: EventType[_DataT] | str,
         filterable_job: _FilterableJobType[_DataT],
     ) -> None:
@@ -1799,10 +1799,10 @@ class EventBus:
         This method must be run in the event loop.
         """
         try:
-            listen_group[event_type].remove(filterable_job)
+            listeners[event_type].remove(filterable_job)
             # delete event_type list if empty
-            if not listen_group[event_type] and event_type != MATCH_ALL:
-                listen_group.pop(event_type)
+            if not listeners[event_type]:
+                listeners.pop(event_type)
         except (KeyError, ValueError):
             # KeyError is key event_type listener did not exist
             # ValueError if listener did not exist within event_type
