@@ -8,7 +8,6 @@ from collections.abc import Callable, Coroutine, Iterable, Mapping, Sequence
 import copy
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-import enum
 from functools import partial, wraps
 import logging
 from random import randint
@@ -33,7 +32,6 @@ from homeassistant.core import (
     HassJob,
     HassJobType,
     HomeAssistant,
-    ListenGroup,
     State,
     callback,
     split_entity_id,
@@ -93,13 +91,6 @@ RANDOM_MICROSECOND_MAX = 500000
 
 _TypedDictT = TypeVar("_TypedDictT", bound=Mapping[str, Any])
 _StateEventDataT = TypeVar("_StateEventDataT", bound=EventStateEventData)
-
-
-class CallbackOrder(enum.Enum):
-    """Order to execute callbacks in."""
-
-    FIRST = "FIRST"
-    LAST = "LAST"
 
 
 @dataclass(slots=True, frozen=True)
@@ -320,7 +311,6 @@ def async_track_state_change_event(
     entity_ids: str | Iterable[str],
     action: Callable[[Event[EventStateChangedData]], Any],
     job_type: HassJobType | None = None,
-    order: CallbackOrder = CallbackOrder.LAST,
 ) -> CALLBACK_TYPE:
     """Track specific state change events indexed by entity_id.
 
@@ -335,7 +325,7 @@ def async_track_state_change_event(
     """
     if not (entity_ids := _async_string_to_lower_list(entity_ids)):
         return _remove_empty_listener
-    return _async_track_state_change_event(hass, entity_ids, action, job_type, order)
+    return _async_track_state_change_event(hass, entity_ids, action, job_type)
 
 
 @callback
@@ -382,11 +372,10 @@ def _async_track_state_change_event(
     entity_ids: str | Iterable[str],
     action: Callable[[Event[EventStateChangedData]], Any],
     job_type: HassJobType | None,
-    order: CallbackOrder,
 ) -> CALLBACK_TYPE:
     """async_track_state_change_event without lowercasing."""
     return _async_track_event(
-        _KEYED_TRACK_STATE_CHANGE, hass, entity_ids, action, job_type, order
+        _KEYED_TRACK_STATE_CHANGE, hass, entity_ids, action, job_type
     )
 
 
@@ -441,7 +430,6 @@ def _async_track_event(
     keys: str | Iterable[str],
     action: Callable[[Event[_TypedDictT]], None],
     job_type: HassJobType | None,
-    order: CallbackOrder = CallbackOrder.LAST,
 ) -> CALLBACK_TYPE:
     """Track an event by a specific key.
 
@@ -461,7 +449,6 @@ def _async_track_event(
             tracker.event_type,
             partial(tracker.dispatcher_callable, hass, callbacks),
             event_filter=partial(tracker.filter_callable, hass, callbacks),
-            group=ListenGroup.LAST,
         )
         event_data = _KeyedEventData(listener, callbacks)
         hass_data[tracker_key] = event_data
@@ -474,14 +461,8 @@ def _async_track_event(
         # here because this function gets called ~20000 times
         # during startup, and we want to avoid the overhead of
         # creating empty lists and throwing them away.
-        if order is CallbackOrder.FIRST:
-            callbacks[keys].insert(0, job)
-        else:
-            callbacks[keys].append(job)
+        callbacks[keys].append(job)
         keys = (keys,)
-    elif order is CallbackOrder.FIRST:
-        for key in keys:
-            callbacks[key].insert(0, job)
     else:
         for key in keys:
             callbacks[key].append(job)
@@ -823,11 +804,7 @@ class _TrackStateChangeFiltered:
             return
 
         self._listeners[_ENTITIES_LISTENER] = _async_track_state_change_event(
-            self.hass,
-            entities,
-            self._action,
-            self._action_as_hassjob.job_type,
-            CallbackOrder.LAST,
+            self.hass, entities, self._action, self._action_as_hassjob.job_type
         )
 
     @callback

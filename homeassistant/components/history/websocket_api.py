@@ -32,7 +32,6 @@ from homeassistant.core import (
     valid_entity_id,
 )
 from homeassistant.helpers.event import (
-    CallbackOrder,
     async_track_point_in_utc_time,
     async_track_state_change_event,
 )
@@ -392,9 +391,7 @@ def _async_subscribe_events(
         target(event)
 
     subscriptions.append(
-        async_track_state_change_event(
-            hass, entity_ids, _forward_state_events_filtered, order=CallbackOrder.FIRST
-        )
+        async_track_state_change_event(hass, entity_ids, _forward_state_events_filtered)
     )
 
 
