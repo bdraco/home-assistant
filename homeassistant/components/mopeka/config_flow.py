@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from enum import Enum
 from typing import Any
 
-from mopeka_iot_ble import MediumType, MopekaIOTBluetoothDeviceData as DeviceData
+from mopeka_iot_ble import MopekaIOTBluetoothDeviceData as DeviceData
 import voluptuous as vol
 
 from homeassistant import config_entries
@@ -16,7 +17,7 @@ from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_ADDRESS
 from homeassistant.core import callback
 
-from .const import CONF_MEDIUM_TYPE, DOMAIN
+from .const import CONF_MEDIUM_TYPE, DEFAULT_MEDIUM_TYPE, DOMAIN, MediumType
 
 
 class MopekaConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -38,6 +39,25 @@ class MopekaConfigFlow(ConfigFlow, domain=DOMAIN):
         """Return the options flow for this handler."""
         return MopekaOptionsFlow(config_entry)
 
+    @staticmethod
+    def format_medium_type(medium_type: Enum) -> str:
+        """Format the medium type for human reading."""
+        return medium_type.name.replace("_", " ").title()
+
+    @property
+    def base_schema(self) -> vol.Schema:
+        """Return the base schema with formatted medium types."""
+        return vol.Schema(
+            {
+                vol.Required(CONF_MEDIUM_TYPE, default=DEFAULT_MEDIUM_TYPE): vol.In(
+                    {
+                        medium.value: self.format_medium_type(medium)
+                        for medium in MediumType
+                    }
+                )
+            }
+        )
+
     async def async_step_bluetooth(
         self, discovery_info: BluetoothServiceInfoBleak
     ) -> ConfigFlowResult:
@@ -54,7 +74,7 @@ class MopekaConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_bluetooth_confirm(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Confirm discovery."""
+        """Confirm discovery and select medium type."""
         assert self._discovered_device is not None
         device = self._discovered_device
         assert self._discovery_info is not None
@@ -62,41 +82,24 @@ class MopekaConfigFlow(ConfigFlow, domain=DOMAIN):
         title = device.title or device.get_device_name() or discovery_info.name
         if user_input is not None:
             self._discovered_devices[discovery_info.address] = title
-            return await self.async_step_medium_type()
+            return self.async_create_entry(
+                title=self._discovered_devices[discovery_info.address],
+                data={CONF_MEDIUM_TYPE: user_input[CONF_MEDIUM_TYPE]},
+            )
 
         self._set_confirm_only()
         placeholders = {"name": title}
         self.context["title_placeholders"] = placeholders
         return self.async_show_form(
-            step_id="bluetooth_confirm", description_placeholders=placeholders
-        )
-
-    async def async_step_medium_type(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        """Pick a MediumType."""
-        if user_input is not None:
-            assert self.unique_id is not None
-            return self.async_create_entry(
-                title=self._discovered_devices[self.unique_id],
-                data={CONF_MEDIUM_TYPE: user_input[CONF_MEDIUM_TYPE]},
-            )
-
-        return self.async_show_form(
-            step_id="medium_type",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(
-                        CONF_MEDIUM_TYPE, default=MediumType.PROPANE.value
-                    ): vol.In({medium.value: medium.name for medium in MediumType})
-                }
-            ),
+            step_id="bluetooth_confirm",
+            description_placeholders=placeholders,
+            data_schema=self.base_schema,
         )
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Handle the user step to pick discovered device."""
+        """Handle the user step to pick discovered device and select medium type."""
         if user_input is not None:
             address = user_input[CONF_ADDRESS]
             await self.async_set_unique_id(address, raise_on_progress=False)
@@ -125,10 +128,7 @@ class MopekaConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_ADDRESS): vol.In(self._discovered_devices),
-                    vol.Required(
-                        CONF_MEDIUM_TYPE,
-                        default=MediumType.PROPANE.value,
-                    ): vol.In({medium.value: medium.name for medium in MediumType}),
+                    **self.base_schema.schema,
                 }
             ),
         )
@@ -157,15 +157,5 @@ class MopekaOptionsFlow(config_entries.OptionsFlow):
             return self.async_create_entry(title="", data={})
 
         return self.async_show_form(
-            step_id="init",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(
-                        CONF_MEDIUM_TYPE,
-                        default=self.config_entry.data.get(
-                            CONF_MEDIUM_TYPE, MediumType.PROPANE.value
-                        ),
-                    ): vol.In({m.value: m.name for m in MediumType}),
-                }
-            ),
+            step_id="init", data_schema=MopekaConfigFlow().base_schema
         )
