@@ -779,6 +779,9 @@ ecoaliface==0.4.0
 # homeassistant.components.electric_kiwi
 electrickiwi-api==0.8.5
 
+# homeassistant.components.elevenlabs
+elevenlabs==1.6.1
+
 # homeassistant.components.elgato
 elgato==5.1.2
 
@@ -2008,7 +2011,7 @@ pymelcloud==2.5.9
 pymeteoclimatic==0.1.0
 
 # homeassistant.components.assist_pipeline
-pymicro-vad==1.0.0
+pymicro-vad==1.0.1
 
 # homeassistant.components.xiaomi_tv
 pymitv==1.4.3
@@ -2292,7 +2295,7 @@ python-join-api==0.0.9
 python-juicenet==1.1.0
 
 # homeassistant.components.tplink
-python-kasa[speedups]==0.7.0.5
+python-kasa[speedups]==0.7.1
 
 # homeassistant.components.linkplay
 python-linkplay==0.0.5
