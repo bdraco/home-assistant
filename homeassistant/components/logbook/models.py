@@ -155,7 +155,7 @@ def async_event_to_row(event: Event) -> EventAsRow:
             icon=None,
             context_only=None,
             data=event.data,
-            context=event.context,
+            context=context,
         )
     # States are prefiltered so we never get states
     # that are missing new_state or old_state
@@ -175,5 +175,5 @@ def async_event_to_row(event: Event) -> EventAsRow:
         icon=new_state.attributes.get(ATTR_ICON),
         context_only=None,
         data=event.data,
-        context=event.context,
+        context=context,
     )
