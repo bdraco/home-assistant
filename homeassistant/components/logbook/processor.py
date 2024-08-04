@@ -216,6 +216,7 @@ def _humanify(
     include_entity_name = logbook_run.include_entity_name
     timestamp = logbook_run.timestamp
     memoize_new_contexts = logbook_run.memoize_new_contexts
+    get_context_row = context_augmenter.get_context_row
     context_id_bin: bytes
     data: dict[str, Any] | None
 
@@ -295,8 +296,21 @@ def _humanify(
             data[CONTEXT_USER_ID] = bytes_to_uuid_hex_or_none(context_user_id_bin)
 
         # Augment context if its available
-        if context_row := context_augmenter.get_context_row(context_id_bin, row):
-            context_augmenter.augment(data, row, context_row)
+        if context_row := get_context_row(context_id_bin, row):
+            if (row is context_row or _rows_ids_match(row, context_row)) and (
+                not (context_parent := row[CONTEXT_PARENT_ID_BIN_POS])
+                or (context_row := get_context_row(context_parent, context_row)) is None
+                or row is context_row
+                or _rows_ids_match(row, context_row)
+            ):
+                # This is the first event with the given ID. Was it directly caused by
+                # a parent event?
+                # Ensure the (parent) context_event exists and is not the root cause of
+                # this log entry.
+                yield data
+                continue
+
+            context_augmenter.augment(data, context_row)
 
         yield data
 
@@ -328,29 +342,8 @@ class ContextAugmenter:
             return async_event_to_row(origin_event)
         return None
 
-    def augment(
-        self, data: dict[str, Any], row: Row | EventAsRow, context_row: Row | EventAsRow
-    ) -> None:
+    def augment(self, data: dict[str, Any], context_row: Row | EventAsRow) -> None:
         """Augment data from the row and cache."""
-        if row is context_row or _rows_ids_match(row, context_row):
-            # This is the first event with the given ID. Was it directly caused by
-            # a parent event?
-            context_parent_id_bin = row[CONTEXT_PARENT_ID_BIN_POS]
-            if (
-                not context_parent_id_bin
-                or (
-                    context_row := self.get_context_row(
-                        context_parent_id_bin, context_row
-                    )
-                )
-                is None
-            ):
-                return
-            # Ensure the (parent) context_event exists and is not the root cause of
-            # this log entry.
-            if row is context_row or _rows_ids_match(row, context_row):
-                return
-
         event_type = context_row[EVENT_TYPE_POS]
         # State change
         if context_entity_id := context_row[ENTITY_ID_POS]:
