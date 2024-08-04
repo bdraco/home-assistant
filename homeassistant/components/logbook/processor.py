@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime as dt
 import logging
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy.engine import Result
 from sqlalchemy.engine.row import Row
@@ -216,30 +216,25 @@ def _humanify(
     include_entity_name = logbook_run.include_entity_name
     timestamp = logbook_run.timestamp
     memoize_new_contexts = logbook_run.memoize_new_contexts
+    context_id_bin: bytes
+    data: dict[str, Any] | None
 
     # Process rows
     for row in rows:
-        context_id_bin: bytes = row[CONTEXT_ID_BIN_POS]
+        context_id_bin = row[CONTEXT_ID_BIN_POS]
         if memoize_new_contexts and context_id_bin not in context_lookup:
             context_lookup[context_id_bin] = row
         if row[CONTEXT_ONLY_POS]:
             continue
         event_type = row[EVENT_TYPE_POS]
-
         if event_type == EVENT_CALL_SERVICE:
             continue
 
-        time_fired_ts = row[TIME_FIRED_TS_POS]
-        if timestamp:
-            when = time_fired_ts or time.time()
-        else:
-            when = process_timestamp_to_utc_isoformat(
-                dt_util.utc_from_timestamp(time_fired_ts) or dt_util.utcnow()
-            )
-
+        data = None
         if event_type is PSEUDO_EVENT_STATE_CHANGED:
             entity_id = row[ENTITY_ID_POS]
-            assert entity_id is not None
+            if TYPE_CHECKING:
+                assert entity_id is not None
             # Skip continuous sensors
             if (
                 is_continuous := continuous_sensors.get(entity_id)
@@ -250,7 +245,6 @@ def _humanify(
                 continue
 
             data = {
-                LOGBOOK_ENTRY_WHEN: when,
                 LOGBOOK_ENTRY_STATE: row[STATE_POS],
                 LOGBOOK_ENTRY_ENTITY_ID: entity_id,
             }
@@ -258,9 +252,6 @@ def _humanify(
                 data[LOGBOOK_ENTRY_NAME] = entity_name_cache.get(entity_id)
             if icon := row[ICON_POS]:
                 data[LOGBOOK_ENTRY_ICON] = icon
-
-            context_augmenter.augment(data, row, context_id_bin)
-            yield data
 
         elif event_type in external_events:
             domain, describe_event = external_events[event_type]
@@ -271,10 +262,7 @@ def _humanify(
                     "Error with %s describe event for %s", domain, event_type
                 )
                 continue
-            data[LOGBOOK_ENTRY_WHEN] = when
             data[LOGBOOK_ENTRY_DOMAIN] = domain
-            context_augmenter.augment(data, row, context_id_bin)
-            yield data
 
         elif event_type == EVENT_LOGBOOK_ENTRY:
             event = event_cache.get(row)
@@ -285,14 +273,32 @@ def _humanify(
             if entry_domain is None and entry_entity_id is not None:
                 entry_domain = split_entity_id(str(entry_entity_id))[0]
             data = {
-                LOGBOOK_ENTRY_WHEN: when,
                 LOGBOOK_ENTRY_NAME: event_data.get(ATTR_NAME),
                 LOGBOOK_ENTRY_MESSAGE: event_data.get(ATTR_MESSAGE),
                 LOGBOOK_ENTRY_DOMAIN: entry_domain,
                 LOGBOOK_ENTRY_ENTITY_ID: entry_entity_id,
             }
-            context_augmenter.augment(data, row, context_id_bin)
-            yield data
+
+        if data is None:
+            continue
+
+        time_fired_ts = row[TIME_FIRED_TS_POS]
+        if timestamp:
+            when = time_fired_ts or time.time()
+        else:
+            when = process_timestamp_to_utc_isoformat(
+                dt_util.utc_from_timestamp(time_fired_ts) or dt_util.utcnow()
+            )
+        data[LOGBOOK_ENTRY_WHEN] = when
+
+        if context_user_id_bin := row[CONTEXT_USER_ID_BIN_POS]:
+            data[CONTEXT_USER_ID] = bytes_to_uuid_hex_or_none(context_user_id_bin)
+
+        # Augment context if its available
+        if context_row := context_augmenter.get_context_row(context_id_bin, row):
+            context_augmenter.augment(data, row, context_row)
+
+        yield data
 
 
 class ContextAugmenter:
@@ -306,7 +312,7 @@ class ContextAugmenter:
         self.event_cache = logbook_run.event_cache
         self.include_entity_name = logbook_run.include_entity_name
 
-    def _get_context_row(
+    def get_context_row(
         self, context_id_bin: bytes | None, row: Row | EventAsRow
     ) -> Row | EventAsRow | None:
         """Get the context row from the id or row context."""
@@ -323,15 +329,9 @@ class ContextAugmenter:
         return None
 
     def augment(
-        self, data: dict[str, Any], row: Row | EventAsRow, context_id_bin: bytes | None
+        self, data: dict[str, Any], row: Row | EventAsRow, context_row: Row | EventAsRow
     ) -> None:
         """Augment data from the row and cache."""
-        if context_user_id_bin := row[CONTEXT_USER_ID_BIN_POS]:
-            data[CONTEXT_USER_ID] = bytes_to_uuid_hex_or_none(context_user_id_bin)
-
-        if not (context_row := self._get_context_row(context_id_bin, row)):
-            return
-
         if row is context_row or _rows_ids_match(row, context_row):
             # This is the first event with the given ID. Was it directly caused by
             # a parent event?
@@ -339,7 +339,7 @@ class ContextAugmenter:
             if (
                 not context_parent_id_bin
                 or (
-                    context_row := self._get_context_row(
+                    context_row := self.get_context_row(
                         context_parent_id_bin, context_row
                     )
                 )
@@ -350,6 +350,7 @@ class ContextAugmenter:
             # this log entry.
             if row is context_row or _rows_ids_match(row, context_row):
                 return
+
         event_type = context_row[EVENT_TYPE_POS]
         # State change
         if context_entity_id := context_row[ENTITY_ID_POS]:
