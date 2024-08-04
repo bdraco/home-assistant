@@ -216,7 +216,7 @@ def _humanify(
     include_entity_name = logbook_run.include_entity_name
     timestamp = logbook_run.timestamp
     memoize_new_contexts = logbook_run.memoize_new_contexts
-    get_context_row = context_augmenter.get_context_row
+    get_context = context_augmenter.get_context
     context_id_bin: bytes
     data: dict[str, Any]
 
@@ -296,11 +296,11 @@ def _humanify(
 
         # Augment context if its available but not if the context is the same as the row
         # or if the context is the parent of the row
-        if (context_row := get_context_row(context_id_bin, row)) and not (
+        if (context_row := get_context(context_id_bin, row)) and not (
             (row is context_row or _rows_ids_match(row, context_row))
             and (
                 not (context_parent := row[CONTEXT_PARENT_ID_BIN_POS])
-                or not (context_row := get_context_row(context_parent, context_row))
+                or not (context_row := get_context(context_parent, context_row))
                 or row is context_row
                 or _rows_ids_match(row, context_row)
             )
@@ -321,8 +321,8 @@ class ContextAugmenter:
         self.event_cache = logbook_run.event_cache
         self.include_entity_name = logbook_run.include_entity_name
 
-    def get_context_row(
-        self, context_id_bin: bytes | None, row: Row | EventAsRow
+    def get_context(
+        self, context_id_bin: bytes | None, row: Row | EventAsRow | None
     ) -> Row | EventAsRow | None:
         """Get the context row from the id or row context."""
         if context_id_bin is not None and (
