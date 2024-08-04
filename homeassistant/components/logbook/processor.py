@@ -218,7 +218,7 @@ def _humanify(
     memoize_new_contexts = logbook_run.memoize_new_contexts
     get_context_row = context_augmenter.get_context_row
     context_id_bin: bytes
-    data: dict[str, Any] | None
+    data: dict[str, Any]
 
     # Process rows
     for row in rows:
@@ -231,7 +231,6 @@ def _humanify(
         if event_type == EVENT_CALL_SERVICE:
             continue
 
-        data = None
         if event_type is PSEUDO_EVENT_STATE_CHANGED:
             entity_id = row[ENTITY_ID_POS]
             if TYPE_CHECKING:
@@ -280,7 +279,7 @@ def _humanify(
                 LOGBOOK_ENTRY_ENTITY_ID: entry_entity_id,
             }
 
-        if data is None:
+        else:
             continue
 
         time_fired_ts = row[TIME_FIRED_TS_POS]
@@ -296,20 +295,15 @@ def _humanify(
             data[CONTEXT_USER_ID] = bytes_to_uuid_hex_or_none(context_user_id_bin)
 
         # Augment context if its available
-        if context_row := get_context_row(context_id_bin, row):
-            if (row is context_row or _rows_ids_match(row, context_row)) and (
+        if (context_row := get_context_row(context_id_bin, row)) and not (
+            (row is context_row or _rows_ids_match(row, context_row))
+            and (
                 not (context_parent := row[CONTEXT_PARENT_ID_BIN_POS])
                 or (context_row := get_context_row(context_parent, context_row)) is None
                 or row is context_row
                 or _rows_ids_match(row, context_row)
-            ):
-                # This is the first event with the given ID. Was it directly caused by
-                # a parent event?
-                # Ensure the (parent) context_event exists and is not the root cause of
-                # this log entry.
-                yield data
-                continue
-
+            )
+        ):
             context_augmenter.augment(data, context_row)
 
         yield data
