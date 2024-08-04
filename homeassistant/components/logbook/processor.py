@@ -211,8 +211,8 @@ def _humanify(
     continuous_sensors: dict[str, bool] = {}
     context_lookup = logbook_run.context_lookup
     external_events = logbook_run.external_events
-    event_cache = logbook_run.event_cache
-    entity_name_cache = logbook_run.entity_name_cache
+    event_cache_get = logbook_run.event_cache.get
+    entity_name_cache_get = logbook_run.entity_name_cache.get
     include_entity_name = logbook_run.include_entity_name
     timestamp = logbook_run.timestamp
     memoize_new_contexts = logbook_run.memoize_new_contexts
@@ -249,14 +249,14 @@ def _humanify(
                 LOGBOOK_ENTRY_ENTITY_ID: entity_id,
             }
             if include_entity_name:
-                data[LOGBOOK_ENTRY_NAME] = entity_name_cache.get(entity_id)
+                data[LOGBOOK_ENTRY_NAME] = entity_name_cache_get(entity_id)
             if icon := row[ICON_POS]:
                 data[LOGBOOK_ENTRY_ICON] = icon
 
         elif event_type in external_events:
             domain, describe_event = external_events[event_type]
             try:
-                data = describe_event(event_cache.get(row))
+                data = describe_event(event_cache_get(row))
             except Exception:
                 _LOGGER.exception(
                     "Error with %s describe event for %s", domain, event_type
@@ -265,7 +265,7 @@ def _humanify(
             data[LOGBOOK_ENTRY_DOMAIN] = domain
 
         elif event_type == EVENT_LOGBOOK_ENTRY:
-            event = event_cache.get(row)
+            event = event_cache_get(row)
             if not (event_data := event.data):
                 continue
             entry_domain = event_data.get(ATTR_DOMAIN)
