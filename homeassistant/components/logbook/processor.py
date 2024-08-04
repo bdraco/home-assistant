@@ -299,7 +299,7 @@ def _humanify(
             (row is context_row or _rows_ids_match(row, context_row))
             and (
                 not (context_parent := row[CONTEXT_PARENT_ID_BIN_POS])
-                or (context_row := get_context_row(context_parent, context_row)) is None
+                or not (context_row := get_context_row(context_parent, context_row))
                 or row is context_row
                 or _rows_ids_match(row, context_row)
             )
