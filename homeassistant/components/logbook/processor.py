@@ -294,7 +294,8 @@ def _humanify(
         if context_user_id_bin := row[CONTEXT_USER_ID_BIN_POS]:
             data[CONTEXT_USER_ID] = bytes_to_uuid_hex_or_none(context_user_id_bin)
 
-        # Augment context if its available
+        # Augment context if its available but not if the context is the same as the row
+        # or if the context is the parent of the row
         if (context_row := get_context_row(context_id_bin, row)) and not (
             (row is context_row or _rows_ids_match(row, context_row))
             and (
