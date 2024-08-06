@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-from functools import partial
 import logging
 import os
 import ssl
@@ -212,14 +211,11 @@ class LutronCasetaFlowHandler(ConfigFlow, domain=DOMAIN):
     async def async_get_lutron_id(self) -> str | None:
         """Check if we can connect to the bridge with the current config."""
         try:
-            bridge = await self.hass.async_add_executor_job(
-                partial(
-                    Smartbridge.create_tls,
-                    hostname=self.data[CONF_HOST],
-                    keyfile=self.hass.config.path(self.data[CONF_KEYFILE]),
-                    certfile=self.hass.config.path(self.data[CONF_CERTFILE]),
-                    ca_certs=self.hass.config.path(self.data[CONF_CA_CERTS]),
-                )
+            bridge = Smartbridge.create_tls(
+                hostname=self.data[CONF_HOST],
+                keyfile=self.hass.config.path(self.data[CONF_KEYFILE]),
+                certfile=self.hass.config.path(self.data[CONF_CERTFILE]),
+                ca_certs=self.hass.config.path(self.data[CONF_CA_CERTS]),
             )
         except ssl.SSLError:
             _LOGGER.error(
