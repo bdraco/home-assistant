@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+from functools import partial
 from itertools import chain
 import logging
 import ssl
