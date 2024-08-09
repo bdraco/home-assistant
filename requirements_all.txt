@@ -1813,7 +1813,7 @@ pydiscovergy==3.0.1
 pydoods==1.0.2
 
 # homeassistant.components.hydrawise
-pydrawise==2024.6.4
+pydrawise==2024.8.0
 
 # homeassistant.components.android_ip_webcam
 pydroid-ipcam==2.0.0
@@ -2994,7 +2994,7 @@ zeroconf==0.132.2
 zeversolar==0.3.1
 
 # homeassistant.components.zha
-zha==0.0.28
+zha==0.0.29
 
 # homeassistant.components.zhong_hong
 zhong-hong-hvac==1.0.12
