@@ -1227,8 +1227,12 @@ class HomeAssistant:
 
     def _cancel_cancellable_timers(self) -> None:
         """Cancel timer handles marked as cancellable."""
-        handles: Iterable[asyncio.TimerHandle] = self.loop._scheduled  # type: ignore[attr-defined] # noqa: SLF001
+        handles: Iterable[asyncio.TimerHandle | tuple[float, asyncio.TimerHandle]] = (
+            self.loop._scheduled  # type: ignore[attr-defined] # noqa: SLF001
+        )
         for handle in handles:
+            if isinstance(handle, tuple):
+                handle = handle[1]
             if (
                 not handle.cancelled()
                 and (args := handle._args)  # noqa: SLF001
