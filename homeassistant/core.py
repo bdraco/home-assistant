@@ -143,7 +143,7 @@ CORE_STORAGE_MINOR_VERSION = 4
 DOMAIN = "homeassistant"
 
 # How long to wait to log tasks that are blocking
-BLOCK_LOG_TIMEOUT = 60
+BLOCK_LOG_TIMEOUT = 0.1
 
 type ServiceResponse = JsonObjectType | None
 type EntityServiceResponse = dict[str, ServiceResponse]
