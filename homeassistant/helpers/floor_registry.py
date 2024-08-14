@@ -277,8 +277,8 @@ class FloorRegistry(BaseRegistry[FloorRegistryStoreData]):
         }
 
 
-@callback
 @singleton(DATA_REGISTRY)
+@callback
 def async_get(hass: HomeAssistant) -> FloorRegistry:
     """Get floor registry."""
     return FloorRegistry(hass)

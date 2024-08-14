@@ -9,6 +9,7 @@ There are two different types of discoveries that can be fired/listened for.
 from __future__ import annotations
 
 from collections.abc import Callable, Coroutine
+import logging
 from typing import Any, TypedDict
 
 from homeassistant import core, setup
@@ -19,6 +20,7 @@ from ..util.signal_type import SignalTypeFormat
 from .dispatcher import async_dispatcher_connect, async_dispatcher_send_internal
 from .typing import ConfigType, DiscoveryInfoType
 
+_LOGGER = logging.getLogger(__name__)
 SIGNAL_PLATFORM_DISCOVERED: SignalTypeFormat[DiscoveryDict] = SignalTypeFormat(
     "discovery.platform_discovered_{}"
 )

@@ -136,6 +136,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         hass.async_create_task(setup, eager_start=True)
 
     hass.http.register_view(SpeechToTextView(hass.data[DATA_PROVIDERS]))
+
     return True
 
 

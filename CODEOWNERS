@@ -123,7 +123,6 @@ build.json @home-assistant/supervisor
 /homeassistant/components/application_credentials/ @home-assistant/core
 /tests/components/application_credentials/ @home-assistant/core
 /homeassistant/components/apprise/ @caronc
-/tests/components/apprise/ @caronc
 /homeassistant/components/aprilaire/ @chamberlain2007
 /tests/components/aprilaire/ @chamberlain2007
 /homeassistant/components/aprs/ @PhilRW
@@ -627,6 +626,8 @@ build.json @home-assistant/supervisor
 /tests/components/homewizard/ @DCSBL
 /homeassistant/components/honeywell/ @rdfurman @mkmer
 /tests/components/honeywell/ @rdfurman @mkmer
+/homeassistant/components/html5/ @alexyao2015
+/tests/components/html5/ @alexyao2015
 /homeassistant/components/http/ @home-assistant/core
 /tests/components/http/ @home-assistant/core
 /homeassistant/components/huawei_lte/ @scop @fphammerle
@@ -1652,6 +1653,8 @@ build.json @home-assistant/supervisor
 /tests/components/xiaomi_miio/ @rytilahti @syssi @starkillerOG
 /homeassistant/components/xiaomi_tv/ @simse
 /homeassistant/components/xmpp/ @fabaff @flowolf
+/homeassistant/components/yale/ @bdraco
+/tests/components/yale/ @bdraco
 /homeassistant/components/yale_smart_alarm/ @gjohansson-ST
 /tests/components/yale_smart_alarm/ @gjohansson-ST
 /homeassistant/components/yalexs_ble/ @bdraco

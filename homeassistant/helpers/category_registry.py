@@ -258,8 +258,8 @@ class CategoryRegistry(BaseRegistry[CategoryRegistryStoreData]):
                 raise ValueError(f"The name '{name}' is already in use")
 
 
-@callback
 @singleton(DATA_REGISTRY)
+@callback
 def async_get(hass: HomeAssistant) -> CategoryRegistry:
     """Get category registry."""
     return CategoryRegistry(hass)

@@ -7,7 +7,7 @@ from typing import Any
 from freezegun.api import FrozenDateTimeFactory
 import pytest
 
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, is_callback
 from homeassistant.helpers import (
     area_registry as ar,
     floor_registry as fr,
@@ -16,6 +16,11 @@ from homeassistant.helpers import (
 from homeassistant.util.dt import utcnow
 
 from tests.common import ANY, async_capture_events, flush_store
+
+
+async def test_async_get_is_callback() -> None:
+    """Test that async_get is a callback."""
+    assert is_callback(ar.async_get)
 
 
 async def test_list_areas(area_registry: ar.AreaRegistry) -> None:

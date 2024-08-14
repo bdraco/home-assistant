@@ -307,8 +307,8 @@ class IssueRegistry(BaseRegistry):
         return data
 
 
-@callback
 @singleton(DATA_REGISTRY)
+@callback
 def async_get(hass: HomeAssistant) -> IssueRegistry:
     """Get issue registry."""
     return IssueRegistry(hass)
