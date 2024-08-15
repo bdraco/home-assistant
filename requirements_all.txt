@@ -1665,7 +1665,7 @@ py-schluter==0.1.7
 py-sucks==0.9.10
 
 # homeassistant.components.synology_dsm
-py-synologydsm-api==2.4.5
+py-synologydsm-api==2.5.2
 
 # homeassistant.components.zabbix
 py-zabbix==1.1.7
@@ -1909,7 +1909,7 @@ pyhiveapi==0.5.16
 pyhomematic==0.1.77
 
 # homeassistant.components.homeworks
-pyhomeworks==1.1.0
+pyhomeworks==1.1.1
 
 # homeassistant.components.ialarm
 pyialarm==2.2.0
@@ -2100,7 +2100,7 @@ pyownet==0.10.0.post1
 pypca==0.0.7
 
 # homeassistant.components.lcn
-pypck==0.7.17
+pypck==0.7.20
 
 # homeassistant.components.pjlink
 pypjlink2==1.2.1

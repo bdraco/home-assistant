@@ -1354,7 +1354,7 @@ py-nightscout==1.2.2
 py-sucks==0.9.10
 
 # homeassistant.components.synology_dsm
-py-synologydsm-api==2.4.5
+py-synologydsm-api==2.5.2
 
 # homeassistant.components.hdmi_cec
 pyCEC==0.5.2
@@ -1523,7 +1523,7 @@ pyhiveapi==0.5.16
 pyhomematic==0.1.77
 
 # homeassistant.components.homeworks
-pyhomeworks==1.1.0
+pyhomeworks==1.1.1
 
 # homeassistant.components.ialarm
 pyialarm==2.2.0
@@ -1678,7 +1678,7 @@ pyoverkiz==1.13.14
 pyownet==0.10.0.post1
 
 # homeassistant.components.lcn
-pypck==0.7.17
+pypck==0.7.20
 
 # homeassistant.components.pjlink
 pypjlink2==1.2.1
