@@ -580,6 +580,11 @@ class ShellyRpcCoordinator(ShellyCoordinatorBase[RpcDevice]):
 
     async def _async_update_data(self) -> None:
         """Fetch data."""
+        LOGGER.warning(
+            "_async_update_data: %s (initialized=%s)",
+            self.name,
+            self.device.initialized,
+        )
         if self.update_sleep_period():
             return
 
@@ -593,6 +598,7 @@ class ShellyRpcCoordinator(ShellyCoordinatorBase[RpcDevice]):
             if self.device.connected:  # Already connected
                 return
 
+            LOGGER.error("Device %s not connected, trying to reconnect", self.name)
             if not await self._async_device_connect_task():
                 raise UpdateFailed("Device reconnect error")
 
