@@ -679,6 +679,7 @@ class ShellyRpcCoordinator(ShellyCoordinatorBase[RpcDevice]):
                 eager_start=True,
             )
         elif update_type is RpcUpdateType.INITIALIZED:
+            LOGGER.error("Device %s initialized", self.name)
             self.entry.async_create_background_task(
                 self.hass, self._async_connected(), "rpc device init", eager_start=True
             )
