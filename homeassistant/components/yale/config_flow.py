@@ -32,8 +32,9 @@ class YaleConfigFlow(config_entry_oauth2_flow.AbstractOAuth2FlowHandler, domain=
         self, data: Mapping[str, Any]
     ) -> config_entries.ConfigFlowResult:
         """Handle configuration by re-auth."""
+        _LOGGER.warning("Reauth flow triggered with data: %s", data)
         self.reauth_entry = self.hass.config_entries.async_get_entry(data["entry_id"])
-        return await self.async_step_user()
+        return await self.async_step_pick_implementation()
 
     async def async_oauth_create_entry(
         self, data: dict
@@ -41,4 +42,4 @@ class YaleConfigFlow(config_entry_oauth2_flow.AbstractOAuth2FlowHandler, domain=
         """Create an entry for the flow."""
         if entry := self.reauth_entry:
             return self.async_update_reload_and_abort(entry, data=data)
-        return self.async_create_entry(title=self.flow_impl.name, data=data)
+        return await super().async_oauth_create_entry(data)
