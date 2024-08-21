@@ -538,6 +538,7 @@ class HomeAccessory(Accessory):  # type: ignore[misc]
     @ha_callback
     def async_update_state_callback(self, new_state: State | None) -> None:
         """Handle state change listener callback."""
+        self._async_cancel_state_resync()
         _LOGGER.debug("New_state: %s", new_state)
         # HomeKit handles unavailable state via the available property
         # so we should not propagate it here
