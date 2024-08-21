@@ -53,7 +53,7 @@ from homeassistant.core import (
     split_entity_id,
 )
 from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.helpers.event import async_call_later, async_track_state_change_event
 from homeassistant.util.decorator import Registry
 
 from .const import (
@@ -362,6 +362,7 @@ class HomeAccessory(Accessory):  # type: ignore[misc]
         self.entity_id = entity_id
         self.hass = hass
         self._subscriptions: list[CALLBACK_TYPE] = []
+        self._state_resync: CALLBACK_TYPE | None = None
 
         if device_id:
             return
@@ -421,6 +422,27 @@ class HomeAccessory(Accessory):  # type: ignore[misc]
         self._char_low_battery = serv_battery.configure_char(
             CHAR_STATUS_LOW_BATTERY, value=0
         )
+
+    @ha_callback
+    def _async_cancel_state_resync(self) -> None:
+        """Cancel any scheduled state resync."""
+        if self._state_resync:
+            self._state_resync()
+            self._state_resync = None
+
+    @ha_callback
+    def _async_schedule_state_resync(self) -> None:
+        """Schedule a state resync."""
+        self._async_cancel_state_resync()
+        self._state_resync = async_call_later(self.hass, 3, self._async_resync_state_cb)
+
+    @ha_callback
+    def _async_resync_state_cb(self, _now: Any) -> None:
+        """Resync the state of the accessory."""
+        self._state_resync = None
+        new_state = self.hass.states.get(self.entity_id)
+        self._update_available_from_state(new_state)
+        self.async_update_state_callback(new_state)
 
     def _update_available_from_state(self, new_state: State | None) -> None:
         """Update the available property based on the state."""
@@ -617,12 +639,23 @@ class HomeAccessory(Accessory):  # type: ignore[misc]
         context = Context()
 
         self.hass.bus.async_fire(EVENT_HOMEKIT_CHANGED, event_data, context=context)
-        self.hass.async_create_task(
-            self.hass.services.async_call(
-                domain, service, service_data, context=context
-            ),
+        self.hass.async_create_background_task(
+            self._async_call_service_task(domain, service, service_data),
+            name="homekit_call_service",
             eager_start=True,
         )
+
+    async def _async_call_service_task(
+        self,
+        domain: str,
+        service: str,
+        service_data: dict[str, Any] | None,
+    ) -> None:
+        """Call a service and schedule a resync when it finishes."""
+        await self.hass.services.async_call(
+            domain, service, service_data, blocking=True
+        )
+        self._async_schedule_state_resync()
 
     @ha_callback
     def async_reload(self) -> None:
