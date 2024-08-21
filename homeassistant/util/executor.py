@@ -70,10 +70,13 @@ class InterruptibleThreadPoolExecutor(ThreadPoolExecutor):
         )
         return super().submit(fn, *args, **kwargs)
 
-    def shutdown(self, *args: Any, **kwargs: Any) -> None:
+    def shutdown(
+        self, *args: Any, join_threads_or_timeout: bool = True, **kwargs: Any
+    ) -> None:
         """Shutdown with interrupt support added."""
         super().shutdown(wait=False, cancel_futures=True)
-        self.join_threads_or_timeout()
+        if join_threads_or_timeout:
+            self.join_threads_or_timeout()
 
     def join_threads_or_timeout(self) -> None:
         """Join threads or timeout."""
