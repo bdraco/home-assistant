@@ -720,7 +720,6 @@ class ShellyRpcCoordinator(ShellyCoordinatorBase[RpcDevice]):
         LOGGER.debug("Shelly %s handle update, type: %s", self.name, update_type)
         if update_type is RpcUpdateType.ONLINE:
             self._came_online_once = True
-            self._async_handle_rpc_device_online()
         elif update_type is RpcUpdateType.INITIALIZED:
             LOGGER.error("Device %s initialized", self.name)
             self.entry.async_create_background_task(
