@@ -449,6 +449,7 @@ def websocket_list_engines(
     for engine_id, provider in legacy_providers.items():
         provider_info = {
             "engine_id": engine_id,
+            "name": provider.name,
             "supported_languages": provider.supported_languages,
         }
         if language:
