@@ -201,7 +201,7 @@ aioasuswrt==1.4.0
 aioautomower==2024.8.0
 
 # homeassistant.components.azure_devops
-aioazuredevops==2.1.1
+aioazuredevops==2.2.1
 
 # homeassistant.components.baf
 aiobafi6==0.9.0
@@ -1102,7 +1102,7 @@ hole==0.8.0
 holidays==0.55
 
 # homeassistant.components.frontend
-home-assistant-frontend==20240809.0
+home-assistant-frontend==20240828.0
 
 # homeassistant.components.conversation
 home-assistant-intents==2024.8.7
@@ -1685,6 +1685,9 @@ pyAtome==0.1.1
 # homeassistant.components.hdmi_cec
 pyCEC==0.5.2
 
+# homeassistant.components.control4
+pyControl4==1.2.0
+
 # homeassistant.components.duotecno
 pyDuotecno==2024.5.1
 
@@ -1795,10 +1798,13 @@ pycsspeechtts==1.0.8
 # pycups==1.9.73
 
 # homeassistant.components.daikin
-pydaikin==2.13.4
+pydaikin==2.13.5
 
 # homeassistant.components.danfoss_air
 pydanfossair==0.1.0
+
+# homeassistant.components.deako
+pydeako==0.4.0
 
 # homeassistant.components.deconz
 pydeconz==116
@@ -2501,7 +2507,7 @@ renault-api==0.2.5
 renson-endura-delta==1.7.1
 
 # homeassistant.components.reolink
-reolink-aio==0.9.7
+reolink-aio==0.9.8
 
 # homeassistant.components.idteck_prox
 rfk101py==0.0.1
