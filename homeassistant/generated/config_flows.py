@@ -320,7 +320,7 @@ FLOWS = {
         "lektrico",
         "lg_netcast",
         "lg_soundbar",
-        "lgthinq",
+        "lg_thinq",
         "lidarr",
         "lifx",
         "linear_garage_door",

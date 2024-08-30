@@ -1,7 +1,7 @@
 """Config flow for the html5 component."""
 
 import binascii
-from typing import cast
+from typing import Any, cast
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
@@ -13,15 +13,12 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_NAME
 from homeassistant.core import callback
-import homeassistant.helpers.config_validation as cv
 
 from .const import ATTR_VAPID_EMAIL, ATTR_VAPID_PRV_KEY, ATTR_VAPID_PUB_KEY, DOMAIN
 from .issues import async_create_html5_issue
 
-EMAIL_REGEX = r"^([a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})$"
 
-
-def vapid_generate_private_key():
+def vapid_generate_private_key() -> str:
     """Generate a VAPID private key."""
     private_key = ec.generate_private_key(ec.SECP256R1(), default_backend())
     return b64urlencode(
@@ -29,7 +26,7 @@ def vapid_generate_private_key():
     )
 
 
-def vapid_get_public_key(private_key: str):
+def vapid_get_public_key(private_key: str) -> str:
     """Get the VAPID public key from a private key."""
     vapid = Vapid.from_string(private_key)
     public_key = cast(ec.EllipticCurvePublicKey, vapid.public_key)
@@ -45,15 +42,11 @@ class HTML5ConfigFlow(ConfigFlow, domain=DOMAIN):
 
     @callback
     def _async_create_html5_entry(
-        self, data: dict[str, str]
+        self: "HTML5ConfigFlow", data: dict[str, str]
     ) -> tuple[dict[str, str], ConfigFlowResult | None]:
         """Create an HTML5 entry."""
         errors = {}
         flow_result = None
-        try:
-            cv.matches_regex(EMAIL_REGEX)(data[ATTR_VAPID_EMAIL])
-        except vol.Invalid:
-            errors[ATTR_VAPID_EMAIL] = "invalid_email"
 
         if not data.get(ATTR_VAPID_PRV_KEY):
             data[ATTR_VAPID_PRV_KEY] = vapid_generate_private_key()
@@ -74,7 +67,9 @@ class HTML5ConfigFlow(ConfigFlow, domain=DOMAIN):
             flow_result = self.async_create_entry(title="HTML5", data=config)
         return errors, flow_result
 
-    async def async_step_user(self, user_input=None) -> ConfigFlowResult:
+    async def async_step_user(
+        self: "HTML5ConfigFlow", user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Handle a flow initialized by the user."""
         errors: dict[str, str] = {}
         if user_input:
@@ -96,7 +91,9 @@ class HTML5ConfigFlow(ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_import(self, import_config: dict) -> ConfigFlowResult:
+    async def async_step_import(
+        self: "HTML5ConfigFlow", import_config: dict
+    ) -> ConfigFlowResult:
         """Handle config import from yaml."""
         _, flow_result = self._async_create_html5_entry(import_config)
         if not flow_result:
