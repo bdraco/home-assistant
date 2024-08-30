@@ -209,6 +209,7 @@ homeassistant.components.glances.*
 homeassistant.components.goalzero.*
 homeassistant.components.google.*
 homeassistant.components.google_assistant_sdk.*
+homeassistant.components.google_photos.*
 homeassistant.components.google_sheets.*
 homeassistant.components.gpsd.*
 homeassistant.components.greeneye_monitor.*
@@ -279,6 +280,7 @@ homeassistant.components.lawn_mower.*
 homeassistant.components.lcn.*
 homeassistant.components.ld2410_ble.*
 homeassistant.components.led_ble.*
+homeassistant.components.lektrico.*
 homeassistant.components.lidarr.*
 homeassistant.components.lifx.*
 homeassistant.components.light.*
