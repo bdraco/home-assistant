@@ -931,7 +931,7 @@ hole==0.8.0
 holidays==0.55
 
 # homeassistant.components.frontend
-home-assistant-frontend==20240902.0
+home-assistant-frontend==20240903.1
 
 # homeassistant.components.conversation
 home-assistant-intents==2024.8.29
@@ -2371,7 +2371,7 @@ yalexs-ble==2.4.3
 
 # homeassistant.components.august
 # homeassistant.components.yale
-yalexs==8.6.2
+yalexs==8.6.3
 
 # homeassistant.components.yeelight
 yeelight==0.7.14
