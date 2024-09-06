@@ -47,6 +47,7 @@ class Platform(StrEnum):
 
     AIR_QUALITY = "air_quality"
     ALARM_CONTROL_PANEL = "alarm_control_panel"
+    ASSIST_SATELLITE = "assist_satellite"
     BINARY_SENSOR = "binary_sensor"
     BUTTON = "button"
     CALENDAR = "calendar"
