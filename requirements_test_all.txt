@@ -167,7 +167,7 @@ aioairq==0.3.2
 aioairzone-cloud==0.6.5
 
 # homeassistant.components.airzone
-aioairzone==0.8.2
+aioairzone==0.9.0
 
 # homeassistant.components.ambient_network
 # homeassistant.components.ambient_station
@@ -2355,7 +2355,7 @@ wyoming==1.5.4
 xbox-webapi==2.0.11
 
 # homeassistant.components.xiaomi_ble
-xiaomi-ble==0.31.1
+xiaomi-ble==0.32.0
 
 # homeassistant.components.knx
 xknx==3.1.1
@@ -2401,7 +2401,7 @@ yt-dlp==2024.08.06
 zamg==0.3.6
 
 # homeassistant.components.zeroconf
-zeroconf==0.133.0
+zeroconf==0.134.0
 
 # homeassistant.components.zeversolar
 zeversolar==0.3.1
