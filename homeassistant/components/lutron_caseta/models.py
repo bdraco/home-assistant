@@ -48,7 +48,7 @@ class LutronCasetaButtonDevice:
     parent_device_info: DeviceInfo
 
 
-class LutronCasetaButtonActionData(TypedDict):
+class LutronCasetaButtonEventData(TypedDict):
     """A lutron_caseta button event data."""
 
     serial: str
