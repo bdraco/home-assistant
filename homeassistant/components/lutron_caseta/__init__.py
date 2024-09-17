@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-from functools import partial
 from itertools import chain
 import logging
 import ssl
@@ -15,26 +14,31 @@ from pylutron_caseta.smartbridge import Smartbridge
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.const import ATTR_SUGGESTED_AREA, CONF_HOST, Platform
+from homeassistant.const import ATTR_DEVICE_ID, CONF_HOST, Platform
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.typing import ConfigType
 
 from .const import (
     ACTION_PRESS,
     ACTION_RELEASE,
+    ATTR_ACTION,
+    ATTR_AREA_NAME,
+    ATTR_BUTTON_NUMBER,
+    ATTR_BUTTON_TYPE,
+    ATTR_DEVICE_NAME,
+    ATTR_LEAP_BUTTON_NUMBER,
+    ATTR_SERIAL,
+    ATTR_TYPE,
     BRIDGE_DEVICE_ID,
     BRIDGE_TIMEOUT,
     CONF_CA_CERTS,
     CONF_CERTFILE,
     CONF_KEYFILE,
     CONF_SUBTYPE,
-    CONFIG_URL,
     DOMAIN,
     LUTRON_CASETA_BUTTON_EVENT,
     MANUFACTURER,
@@ -57,14 +61,12 @@ from .models import (
     LUTRON_KEYPAD_SERIAL,
     LUTRON_KEYPAD_TYPE,
     LutronButton,
-    LutronCasetaButtonDevice,
-    LutronCasetaButtonEventData,
     LutronCasetaConfigEntry,
     LutronCasetaData,
     LutronKeypad,
     LutronKeypadData,
 )
-from .util import serial_to_unique_id
+from .util import area_name_from_id, serial_to_unique_id
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -91,7 +93,6 @@ PLATFORMS = [
     Platform.BINARY_SENSOR,
     Platform.BUTTON,
     Platform.COVER,
-    Platform.EVENT,
     Platform.FAN,
     Platform.LIGHT,
     Platform.SCENE,
@@ -197,70 +198,12 @@ async def async_setup_entry(
 
     # Store this bridge (keyed by entry_id) so it can be retrieved by the
     # platforms we're setting up.
-    button_devices = _async_build_button_devices(bridge, keypad_data)
 
-    entry.runtime_data = LutronCasetaData(
-        bridge, bridge_device, keypad_data, button_devices
-    )
+    entry.runtime_data = LutronCasetaData(bridge, bridge_device, keypad_data)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
-
-
-@callback
-def _async_build_button_devices(
-    bridge: Smartbridge, keypad_data: LutronKeypadData
-) -> list[LutronCasetaButtonDevice]:
-    button_devices = bridge.get_buttons()
-    all_devices = bridge.get_devices()
-    keypads = keypad_data.keypads
-    buttons: list[LutronCasetaButtonDevice] = []
-
-    for button_id, device in button_devices.items():
-        parent_keypad = keypads[device["parent_device"]]
-        parent_device_info = parent_keypad["device_info"]
-        parent_name = parent_device_info["name"]
-
-        button_key: str | None = None
-        button_name: str
-        device_name = cast(str | None, device.get("device_name"))
-        user_defined_name = bool(device_name)
-        if device_name:
-            button_name = device_name
-        else:
-            # device name (button name) is missing, probably a caseta pico
-            # try to get the name using the button number from the triggers
-            # disable the button by default
-            keypad_device = all_devices[device["parent_device"]]
-            button_numbers = LEAP_TO_DEVICE_TYPE_SUBTYPE_MAP.get(
-                keypad_device["type"],
-                {},
-            )
-            button_key = button_numbers.get(int(device["button_number"]))
-            button_name = (
-                button_key
-                or f"button {device['button_number']}".replace("_", " ").title()
-            )
-
-        # Append the child device name to the end of the parent keypad
-        # name to create the entity name
-        full_name = f"{parent_name} {button_name}"
-        # Set the device_info to the same as the Parent Keypad
-        # The entities will be nested inside the keypad device
-        buttons.append(
-            LutronCasetaButtonDevice(
-                button_id,
-                device,
-                button_key,
-                button_name,
-                full_name,
-                user_defined_name,
-                parent_device_info,
-            ),
-        )
-
-    return buttons
 
 
 @callback
@@ -279,7 +222,7 @@ def _async_register_bridge_device(
         configuration_url="https://device-login.lutron.com",
     )
 
-    area = _area_name_from_id(bridge.areas, bridge_device["area"])
+    area = area_name_from_id(bridge.areas, bridge_device["area"])
     if area != UNASSIGNED_AREA:
         device_args["suggested_area"] = area
 
@@ -356,7 +299,6 @@ def _async_setup_keypads(
 
     _async_subscribe_keypad_events(
         hass=hass,
-        config_entry_id=config_entry_id,
         bridge=bridge,
         keypads=keypads,
         keypad_buttons=keypad_buttons,
@@ -398,7 +340,7 @@ def _async_build_lutron_keypad(
     keypad_device_id: int,
 ) -> LutronKeypad:
     # First time seeing this keypad, build keypad data and store in keypads
-    area_name = _area_name_from_id(bridge.areas, bridge_keypad["area"])
+    area_name = area_name_from_id(bridge.areas, bridge_keypad["area"])
     keypad_name = bridge_keypad["name"].split("_")[-1]
     keypad_serial = _handle_none_keypad_serial(bridge_keypad, bridge_device["serial"])
     device_info = DeviceInfo(
@@ -460,27 +402,6 @@ def _handle_none_keypad_serial(keypad_device: dict, bridge_serial: int) -> str:
     return keypad_device["serial"] or f"{bridge_serial}_{keypad_device['device_id']}"
 
 
-def _area_name_from_id(areas: dict[str, dict], area_id: str | None) -> str:
-    """Return the full area name including parent(s)."""
-    if area_id is None:
-        return UNASSIGNED_AREA
-    return _construct_area_name_from_id(areas, area_id, [])
-
-
-def _construct_area_name_from_id(
-    areas: dict[str, dict], area_id: str, labels: list[str]
-) -> str:
-    """Recursively construct the full area name including parent(s)."""
-    area = areas[area_id]
-    parent_area_id = area["parent_id"]
-    if parent_area_id is None:
-        # This is the root area, return last area
-        return " ".join(labels)
-
-    labels.insert(0, area["name"])
-    return _construct_area_name_from_id(areas, parent_area_id, labels)
-
-
 @callback
 def async_get_lip_button(device_type: str, leap_button: int) -> int | None:
     """Get the LIP button for a given LEAP button."""
@@ -496,16 +417,15 @@ def async_get_lip_button(device_type: str, leap_button: int) -> int | None:
 @callback
 def _async_subscribe_keypad_events(
     hass: HomeAssistant,
-    config_entry_id: str,
     bridge: Smartbridge,
     keypads: dict[int, LutronKeypad],
     keypad_buttons: dict[int, LutronButton],
     leap_to_keypad_button_names: dict[int, dict[int, str]],
-) -> None:
+):
     """Subscribe to lutron events."""
 
     @callback
-    def _async_button_event(button_id: int, event_type: str) -> None:
+    def _async_button_event(button_id, event_type):
         if not (button := keypad_buttons.get(button_id)) or not (
             keypad := keypads.get(button["parent_keypad"])
         ):
@@ -524,24 +444,27 @@ def _async_subscribe_keypad_events(
             keypad_type, leap_to_keypad_button_names[keypad_device_id]
         )[leap_button_number]
 
-        data = LutronCasetaButtonEventData(
-            serial=keypad[LUTRON_KEYPAD_SERIAL],
-            type=keypad_type,
-            button_number=lip_button_number,
-            leap_button_number=leap_button_number,
-            device_name=keypad[LUTRON_KEYPAD_NAME],
-            device_id=keypad[LUTRON_KEYPAD_DEVICE_REGISTRY_DEVICE_ID],
-            area_name=keypad[LUTRON_KEYPAD_AREA_NAME],
-            button_type=button_type,
-            action=action,
+        hass.bus.async_fire(
+            LUTRON_CASETA_BUTTON_EVENT,
+            {
+                ATTR_SERIAL: keypad[LUTRON_KEYPAD_SERIAL],
+                ATTR_TYPE: keypad_type,
+                ATTR_BUTTON_NUMBER: lip_button_number,
+                ATTR_LEAP_BUTTON_NUMBER: leap_button_number,
+                ATTR_DEVICE_NAME: keypad[LUTRON_KEYPAD_NAME],
+                ATTR_DEVICE_ID: keypad[LUTRON_KEYPAD_DEVICE_REGISTRY_DEVICE_ID],
+                ATTR_AREA_NAME: keypad[LUTRON_KEYPAD_AREA_NAME],
+                ATTR_BUTTON_TYPE: button_type,
+                ATTR_ACTION: action,
+            },
         )
-        signal = f"{DOMAIN}_{config_entry_id}_button_{button_id}"
-        async_dispatcher_send(hass, signal, data)
-        hass.bus.async_fire(LUTRON_CASETA_BUTTON_EVENT, data)
 
     for button_id in keypad_buttons:
         bridge.add_button_subscriber(
-            str(button_id), partial(_async_button_event, button_id)
+            str(button_id),
+            lambda event_type, button_id=button_id: _async_button_event(
+                button_id, event_type
+            ),
         )
 
 
@@ -552,98 +475,6 @@ async def async_unload_entry(
     data = entry.runtime_data
     await data.bridge.close()
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-
-
-class LutronCasetaDevice(Entity):
-    """Common base class for all Lutron Caseta devices."""
-
-    _attr_should_poll = False
-
-    def __init__(self, device: dict[str, Any], data: LutronCasetaData) -> None:
-        """Set up the base class.
-
-        [:param]device the device metadata
-        [:param]bridge the smartbridge object
-        [:param]bridge_device a dict with the details of the bridge
-        """
-        self._device = device
-        self._smartbridge = data.bridge
-        self._bridge_device = data.bridge_device
-        self._bridge_unique_id = serial_to_unique_id(data.bridge_device["serial"])
-        if "serial" not in self._device:
-            return
-
-        if "parent_device" in device:
-            # This is a child entity, handle the naming in button.py and switch.py
-            return
-        area = _area_name_from_id(self._smartbridge.areas, device["area"])
-        name = device["name"].split("_")[-1]
-        self._attr_name = full_name = f"{area} {name}"
-        info = DeviceInfo(
-            # Historically we used the device serial number for the identifier
-            # but the serial is usually an integer and a string is expected
-            # here. Since it would be a breaking change to change the identifier
-            # we are ignoring the type error here until it can be migrated to
-            # a string in a future release.
-            identifiers={
-                (
-                    DOMAIN,
-                    self._handle_none_serial(self.serial),  # type: ignore[arg-type]
-                )
-            },
-            manufacturer=MANUFACTURER,
-            model=f"{device['model']} ({device['type']})",
-            name=full_name,
-            via_device=(DOMAIN, self._bridge_device["serial"]),
-            configuration_url=CONFIG_URL,
-        )
-        if area != UNASSIGNED_AREA:
-            info[ATTR_SUGGESTED_AREA] = area
-        self._attr_device_info = info
-
-    async def async_added_to_hass(self):
-        """Register callbacks."""
-        self._smartbridge.add_subscriber(self.device_id, self.async_write_ha_state)
-
-    def _handle_none_serial(self, serial: str | int | None) -> str | int:
-        """Handle None serial returned by RA3 and QSX processors."""
-        if serial is None:
-            return f"{self._bridge_unique_id}_{self.device_id}"
-        return serial
-
-    @property
-    def device_id(self):
-        """Return the device ID used for calling pylutron_caseta."""
-        return self._device["device_id"]
-
-    @property
-    def serial(self) -> int | None:
-        """Return the serial number of the device."""
-        return self._device["serial"]
-
-    @property
-    def unique_id(self) -> str:
-        """Return the unique ID of the device (serial)."""
-        return str(self._handle_none_serial(self.serial))
-
-    @property
-    def extra_state_attributes(self):
-        """Return the state attributes."""
-        attributes = {
-            "device_id": self.device_id,
-        }
-        if zone := self._device.get("zone"):
-            attributes["zone_id"] = zone
-        return attributes
-
-
-class LutronCasetaDeviceUpdatableEntity(LutronCasetaDevice):
-    """A lutron_caseta entity that can update by syncing data from the bridge."""
-
-    async def async_update(self) -> None:
-        """Update when forcing a refresh of the device."""
-        self._device = self._smartbridge.get_device_by_id(self.device_id)
-        _LOGGER.debug(self._device)
 
 
 def _id_to_identifier(lutron_id: str) -> tuple[str, str]:
