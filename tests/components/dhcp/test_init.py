@@ -1237,7 +1237,7 @@ async def test_dhcp_rediscover(
 
     # Assert the cached MAC address is hexstring without :
     assert address_data == {
-        "192.168.210.56": {"hostname": "connect", "macaddress": "b8b7f16db533"}
+        "b8b7f16db533": {"hostname": "connect", "ip": "192.168.210.56"}
     }
 
     expected_context = {
