@@ -1981,7 +1981,7 @@ pyisy==3.1.14
 pyitachip2ir==0.0.7
 
 # homeassistant.components.jvc_projector
-pyjvcprojector==1.1.0
+pyjvcprojector==1.1.2
 
 # homeassistant.components.kaleidescape
 pykaleidescape==1.0.1
@@ -2989,7 +2989,7 @@ xbox-webapi==2.0.11
 xiaomi-ble==0.32.0
 
 # homeassistant.components.knx
-xknx==3.1.1
+xknx==3.2.0
 
 # homeassistant.components.knx
 xknxproject==3.7.1
