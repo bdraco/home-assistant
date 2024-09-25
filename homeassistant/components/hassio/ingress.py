@@ -284,6 +284,13 @@ def _is_websocket(request: web.Request) -> bool:
     )
 
 
+_CLOSE_TYPES = {
+    aiohttp.WSMsgType.CLOSE,
+    aiohttp.WSMsgType.CLOSING,
+    aiohttp.WSMsgType.CLOSED,
+}
+
+
 async def _websocket_forward(
     ws_from: web.WebSocketResponse | ClientWebSocketResponse,
     ws_to: web.WebSocketResponse | ClientWebSocketResponse,
@@ -300,11 +307,7 @@ async def _websocket_forward(
                 await ws_to.ping()
             elif msg_type is aiohttp.WSMsgType.PONG:
                 await ws_to.pong()
-            elif msg_type in (
-                aiohttp.WSMsgType.CLOSE,
-                aiohttp.WSMsgType.CLOSING,
-                aiohttp.WSMsgType.CLOSED,
-            ):
+            elif msg_type in _CLOSE_TYPES:
                 await ws_to.close(code=ws_to.close_code, message=msg.extra)  # type: ignore[arg-type]
     except RuntimeError:
         _LOGGER.debug("Ingress Websocket runtime error")
