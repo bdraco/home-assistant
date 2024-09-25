@@ -309,6 +309,7 @@ async def _websocket_forward(
                 await ws_to.pong()
             elif msg_type in _CLOSE_TYPES:
                 await ws_to.close(code=ws_to.close_code, message=msg.extra)  # type: ignore[arg-type]
+                break
     except RuntimeError:
         _LOGGER.debug("Ingress Websocket runtime error")
     except ConnectionResetError:
