@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Generator
 from datetime import timedelta
-from functools import cached_property
 import logging
 from typing import Any, Self
 from unittest.mock import ANY, AsyncMock, Mock, patch
@@ -966,7 +965,7 @@ async def test_as_dict(snapshot: SnapshotAssertion) -> None:
         if (
             key.startswith("__")
             or callable(func)
-            or type(func) in (cached_property, property)
+            or type(func).__name__ in ("cached_property", "property")
         ):
             continue
         assert key in dict_repr or key in excluded_from_dict
@@ -6381,6 +6380,152 @@ async def test_async_has_matching_flow_not_implemented(
     # The flow does not implement is_matching
     with pytest.raises(NotImplementedError):
         manager.flow.async_has_matching_flow(flow)
+
+
+async def test_get_reauth_entry(
+    hass: HomeAssistant, manager: config_entries.ConfigEntries
+) -> None:
+    """Test _get_context_entry behavior."""
+    entry = MockConfigEntry(
+        title="test_title",
+        domain="test",
+        entry_id="01J915Q6T9F6G5V0QJX6HBC94T",
+        data={"host": "any", "port": 123},
+        unique_id=None,
+    )
+    entry.add_to_hass(hass)
+
+    mock_integration(hass, MockModule("test"))
+    mock_platform(hass, "test.config_flow", None)
+
+    class TestFlow(config_entries.ConfigFlow):
+        VERSION = 1
+
+        async def async_step_user(self, user_input=None):
+            """Test user step."""
+            return await self._async_step_confirm()
+
+        async def async_step_reauth(self, entry_data):
+            """Test reauth step."""
+            return await self._async_step_confirm()
+
+        async def async_step_reconfigure(self, entry_data):
+            """Test reauth step."""
+            return await self._async_step_confirm()
+
+        async def _async_step_confirm(self):
+            """Confirm input."""
+            try:
+                entry = self._get_reauth_entry()
+            except ValueError as err:
+                reason = str(err)
+            except config_entries.UnknownEntry:
+                reason = "Entry not found"
+            else:
+                reason = f"Found entry {entry.title}"
+            try:
+                entry_id = self._reauth_entry_id
+            except ValueError:
+                reason = f"{reason}: -"
+            else:
+                reason = f"{reason}: {entry_id}"
+            return self.async_abort(reason=reason)
+
+    # A reauth flow finds the config entry from context
+    with mock_config_flow("test", TestFlow):
+        result = await entry.start_reauth_flow(hass)
+        assert result["reason"] == "Found entry test_title: 01J915Q6T9F6G5V0QJX6HBC94T"
+
+    # The config entry is removed before the reauth flow is aborted
+    with mock_config_flow("test", TestFlow):
+        result = await entry.start_reauth_flow(hass, context={"entry_id": "01JRemoved"})
+        assert result["reason"] == "Entry not found: 01JRemoved"
+
+    # A reconfigure flow does not have access to the config entry
+    with mock_config_flow("test", TestFlow):
+        result = await entry.start_reconfigure_flow(hass)
+        assert result["reason"] == "Source is reconfigure, expected reauth: -"
+
+    # A user flow does not have access to the config entry
+    with mock_config_flow("test", TestFlow):
+        result = await manager.flow.async_init(
+            "test", context={"source": config_entries.SOURCE_USER}
+        )
+        assert result["reason"] == "Source is user, expected reauth: -"
+
+
+async def test_get_reconfigure_entry(
+    hass: HomeAssistant, manager: config_entries.ConfigEntries
+) -> None:
+    """Test _get_context_entry behavior."""
+    entry = MockConfigEntry(
+        title="test_title",
+        domain="test",
+        entry_id="01J915Q6T9F6G5V0QJX6HBC94T",
+        data={"host": "any", "port": 123},
+        unique_id=None,
+    )
+    entry.add_to_hass(hass)
+
+    mock_integration(hass, MockModule("test"))
+    mock_platform(hass, "test.config_flow", None)
+
+    class TestFlow(config_entries.ConfigFlow):
+        VERSION = 1
+
+        async def async_step_user(self, user_input=None):
+            """Test user step."""
+            return await self._async_step_confirm()
+
+        async def async_step_reauth(self, entry_data):
+            """Test reauth step."""
+            return await self._async_step_confirm()
+
+        async def async_step_reconfigure(self, entry_data):
+            """Test reauth step."""
+            return await self._async_step_confirm()
+
+        async def _async_step_confirm(self):
+            """Confirm input."""
+            try:
+                entry = self._get_reconfigure_entry()
+            except ValueError as err:
+                reason = str(err)
+            except config_entries.UnknownEntry:
+                reason = "Entry not found"
+            else:
+                reason = f"Found entry {entry.title}"
+            try:
+                entry_id = self._reconfigure_entry_id
+            except ValueError:
+                reason = f"{reason}: -"
+            else:
+                reason = f"{reason}: {entry_id}"
+            return self.async_abort(reason=reason)
+
+    # A reauth flow does not have access to the config entry from context
+    with mock_config_flow("test", TestFlow):
+        result = await entry.start_reauth_flow(hass)
+        assert result["reason"] == "Source is reauth, expected reconfigure: -"
+
+    # A reconfigure flow finds the config entry
+    with mock_config_flow("test", TestFlow):
+        result = await entry.start_reconfigure_flow(hass)
+        assert result["reason"] == "Found entry test_title: 01J915Q6T9F6G5V0QJX6HBC94T"
+
+    # A reconfigure flow finds the config entry
+    with mock_config_flow("test", TestFlow):
+        result = await entry.start_reconfigure_flow(
+            hass, context={"entry_id": "01JRemoved"}
+        )
+        assert result["reason"] == "Entry not found: 01JRemoved"
+
+    # A user flow does not have access to the config entry
+    with mock_config_flow("test", TestFlow):
+        result = await manager.flow.async_init(
+            "test", context={"source": config_entries.SOURCE_USER}
+        )
+        assert result["reason"] == "Source is user, expected reconfigure: -"
 
 
 async def test_reauth_helper_alignment(

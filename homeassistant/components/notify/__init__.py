@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from datetime import timedelta
 from enum import IntFlag
-from functools import cached_property, partial
+from functools import partial
 import logging
-from typing import Any, final
+from typing import Any, final, override
 
-from typing_extensions import override
+from propcache import cached_property
 import voluptuous as vol
 
 import homeassistant.components.persistent_notification as pn

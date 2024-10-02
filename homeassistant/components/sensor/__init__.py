@@ -8,11 +8,12 @@ from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal, InvalidOperation as DecimalInvalidOperation
-from functools import cached_property, partial
+from functools import partial
 import logging
 from math import ceil, floor, isfinite, log10
 from typing import Any, Final, Self, cast, final
 
+from propcache import cached_property
 from typing_extensions import override
 
 from homeassistant.config_entries import ConfigEntry

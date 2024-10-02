@@ -3,16 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any, Final
+from typing import Any, Final
 
 from aioshelly.block_device import BlockDevice
 from aioshelly.common import ConnectionOptions, get_info
-from aioshelly.const import (
-    BLOCK_GENERATIONS,
-    DEFAULT_HTTP_PORT,
-    MODEL_NAMES,
-    RPC_GENERATIONS,
-)
+from aioshelly.const import BLOCK_GENERATIONS, DEFAULT_HTTP_PORT, RPC_GENERATIONS
 from aioshelly.exceptions import (
     CustomPortNotSupported,
     DeviceConnectionError,
@@ -56,6 +51,7 @@ from .utils import (
     get_http_port,
     get_info_auth,
     get_info_gen,
+    get_model_name,
     get_rpc_device_wakeup_period,
     get_ws_context,
     mac_address_from_name,
@@ -67,6 +63,7 @@ CONFIG_SCHEMA: Final = vol.Schema(
         vol.Required(CONF_PORT, default=DEFAULT_HTTP_PORT): vol.Coerce(int),
     }
 )
+
 
 BLE_SCANNER_OPTIONS = [
     BLEScannerMode.DISABLED,
@@ -149,8 +146,7 @@ class ShellyConfigFlow(ConfigFlow, domain=DOMAIN):
     port: int = DEFAULT_HTTP_PORT
     info: dict[str, Any] = {}
     device_info: dict[str, Any] = {}
-    entry: ConfigEntry | None = None
-    discovery_info: ZeroconfServiceInfo | None = None
+    entry: ConfigEntry
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -286,7 +282,6 @@ class ShellyConfigFlow(ConfigFlow, domain=DOMAIN):
         if discovery_info.ip_address.version == 6:
             return self.async_abort(reason="ipv6_not_supported")
         host = discovery_info.host
-        self.discovery_info = discovery_info
         # First try to get the mac address from the name
         # so we can avoid making another connection to the
         # device if we already have it configured
@@ -308,7 +303,7 @@ class ShellyConfigFlow(ConfigFlow, domain=DOMAIN):
         self.host = host
         self.context.update(
             {
-                "title_placeholders": {"name": self._get_device_description()},
+                "title_placeholders": {"name": discovery_info.name.split(".")[0]},
                 "configuration_url": f"http://{discovery_info.host}",
             }
         )
@@ -325,39 +320,6 @@ class ShellyConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return await self.async_step_confirm_discovery()
 
-    def _get_device_description(self) -> str:
-        """Get the device description."""
-        model = self._get_model()
-        full_id = self._get_device_id()
-        short_id = full_id[-6:]
-        name = self.info.get("name")
-        if name:
-            if model:
-                return f"{name} ({short_id}) - {model}"
-            return f"{name} ({short_id})"
-        return f"{model} ({short_id})" if model else full_id
-
-    def _get_device_id(self) -> str:
-        """Get the device identifier."""
-        if discovery_info := self.discovery_info:
-            return discovery_info.name.partition(".")[0]
-        id_: str = self.info["id"]
-        return id_
-
-    def _get_model(self) -> str | None:
-        """Get the device model."""
-        info = self.info
-        gen = get_info_gen(info)
-        if (
-            gen in RPC_GENERATIONS
-            and (model := info.get("model"))
-            and model in MODEL_NAMES
-        ):
-            return MODEL_NAMES.get(model)
-        if (type_ := info.get("type")) and type_ in MODEL_NAMES:
-            return MODEL_NAMES.get(type_)
-        return None
-
     async def async_step_confirm_discovery(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
@@ -366,7 +328,9 @@ class ShellyConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if not self.device_info["model"]:
             errors["base"] = "firmware_not_fully_provisioned"
+            model = "Shelly"
         else:
+            model = get_model_name(self.info)
             if user_input is not None:
                 return self.async_create_entry(
                     title=self.device_info["title"],
@@ -382,7 +346,7 @@ class ShellyConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="confirm_discovery",
             description_placeholders={
-                "model": self._get_device_description(),
+                "model": model,
                 "host": self.host,
             },
             errors=errors,
@@ -392,7 +356,7 @@ class ShellyConfigFlow(ConfigFlow, domain=DOMAIN):
         self, entry_data: Mapping[str, Any]
     ) -> ConfigFlowResult:
         """Handle configuration by re-auth."""
-        self.entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
+        self.entry = self._get_reauth_entry()
         return await self.async_step_reauth_confirm()
 
     async def async_step_reauth_confirm(
@@ -400,7 +364,6 @@ class ShellyConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Dialog that informs the user that reauth is required."""
         errors: dict[str, str] = {}
-        assert self.entry is not None
         host = self.entry.data[CONF_HOST]
         port = get_http_port(self.entry.data)
 
@@ -439,14 +402,9 @@ class ShellyConfigFlow(ConfigFlow, domain=DOMAIN):
         self, entry_data: Mapping[str, Any]
     ) -> ConfigFlowResult:
         """Handle a reconfiguration flow initialized by the user."""
-        entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
-
-        if TYPE_CHECKING:
-            assert entry is not None
-
-        self.host = entry.data[CONF_HOST]
-        self.port = entry.data.get(CONF_PORT, DEFAULT_HTTP_PORT)
-        self.entry = entry
+        self.host = entry_data[CONF_HOST]
+        self.port = entry_data.get(CONF_PORT, DEFAULT_HTTP_PORT)
+        self.entry = self._get_reconfigure_entry()
 
         return await self.async_step_reconfigure_confirm()
 
@@ -455,9 +413,6 @@ class ShellyConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Handle a reconfiguration flow initialized by the user."""
         errors = {}
-
-        if TYPE_CHECKING:
-            assert self.entry is not None
 
         if user_input is not None:
             host = user_input[CONF_HOST]
