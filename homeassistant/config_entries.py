@@ -1712,7 +1712,7 @@ class ConfigEntryItems(UserDict[str, ConfigEntry]):
         return self._domain_unique_id_index.get(domain, {}).get(unique_id)
 
 
-class ConfigEntryStore(storage.Store[dict[str, list[json_fragment]]]):
+class ConfigEntryStore(storage.Store[dict[str, list[dict[str, Any]]]]):
     """Class to help storing config entry data."""
 
     def __init__(self, hass: HomeAssistant) -> None:
@@ -2353,10 +2353,11 @@ class ConfigEntries:
         self._store.async_delay_save(self._data_to_save, SAVE_DELAY)
 
     @callback
-    def _data_to_save(self) -> dict[str, list[json_fragment]]:
+    def _data_to_save(self) -> dict[str, list[dict[str, Any]]]:
         """Return data to save."""
+        # typing does not know that the storage fragment will serialize to a dict
         return {
-            "entries": [entry.as_storage_fragment for entry in self._entries.values()]
+            "entries": [entry.as_storage_fragment for entry in self._entries.values()]  # type: ignore[misc]
         }
 
     async def async_wait_component(self, entry: ConfigEntry) -> bool:
