@@ -1071,8 +1071,8 @@ class MockConfigEntry(config_entries.ConfigEntry):
     async def start_reconfigure_flow(
         self,
         hass: HomeAssistant,
-        context: dict[str, Any] | None = None,
-        data: dict[str, Any] | None = None,
+        *,
+        show_advanced_options: bool = False,
     ) -> ConfigFlowResult:
         """Start a reconfiguration flow."""
         return await hass.config_entries.flow.async_init(
@@ -1080,11 +1080,8 @@ class MockConfigEntry(config_entries.ConfigEntry):
             context={
                 "source": config_entries.SOURCE_RECONFIGURE,
                 "entry_id": self.entry_id,
-                "title_placeholders": {"name": self.title},
-                "unique_id": self.unique_id,
-            }
-            | (context or {}),
-            data=self.data | (data or {}),
+                "show_advanced_options": show_advanced_options,
+            },
         )
 
 
