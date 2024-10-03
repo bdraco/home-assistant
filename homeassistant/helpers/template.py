@@ -1109,7 +1109,7 @@ class TemplateStateBase(State):
         return self._state.object_id
 
     @property
-    def name(self) -> str:
+    def name(self) -> str:  # type: ignore[override]
         """Wrap State.name."""
         self._collect_state()
         return self._state.name
