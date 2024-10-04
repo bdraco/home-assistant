@@ -603,11 +603,6 @@ class ShellyRpcCoordinator(ShellyCoordinatorBase[RpcDevice]):
 
     async def _async_update_data(self) -> None:
         """Fetch data."""
-        LOGGER.warning(
-            "_async_update_data: %s (initialized=%s)",
-            self.name,
-            self.device.initialized,
-        )
         if self.update_sleep_period():
             return
 
@@ -621,7 +616,6 @@ class ShellyRpcCoordinator(ShellyCoordinatorBase[RpcDevice]):
             if self.device.connected:  # Already connected
                 return
 
-            LOGGER.error("Device %s not connected, trying to reconnect", self.name)
             if not await self._async_device_connect_task():
                 raise UpdateFailed("Device reconnect error")
 
@@ -637,7 +631,6 @@ class ShellyRpcCoordinator(ShellyCoordinatorBase[RpcDevice]):
             if self.sleep_period:
                 return
             self._async_run_disconnected_events()
-
         # Try to reconnect right away if triggered by disconnect event
         if reconnect:
             await self.async_request_refresh()
@@ -732,7 +725,6 @@ class ShellyRpcCoordinator(ShellyCoordinatorBase[RpcDevice]):
             self._came_online_once = True
             self._async_handle_rpc_device_online()
         elif update_type is RpcUpdateType.INITIALIZED:
-            LOGGER.error("Device %s initialized", self.name)
             self.entry.async_create_background_task(
                 self.hass, self._async_connected(), "rpc device init", eager_start=True
             )

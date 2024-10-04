@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from datetime import datetime, timedelta
 from ipaddress import IPv4Address, IPv6Address, ip_address
-import re
 from types import MappingProxyType
 from typing import Any, cast
 
@@ -550,7 +550,7 @@ def async_remove_orphaned_entities(
     config_entry_id: str,
     mac: str,
     platform: str,
-    keys: list[str],
+    keys: Iterable[str],
     key_suffix: str | None = None,
 ) -> None:
     """Remove orphaned entities."""
@@ -571,7 +571,7 @@ def async_remove_orphaned_entities(
         if key_suffix is not None and key_suffix not in entity.unique_id:
             continue
         # we are looking for the component ID, e.g. boolean:201, em1data:1
-        if not (match := re.search(COMPONENT_ID_PATTERN, entity.unique_id)):
+        if not (match := COMPONENT_ID_PATTERN.search(entity.unique_id)):
             continue
 
         key = match.group()
