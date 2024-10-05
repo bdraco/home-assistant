@@ -380,7 +380,7 @@ aiosolaredge==0.2.0
 aiosteamist==1.0.0
 
 # homeassistant.components.cambridge_audio
-aiostreammagic==2.3.1
+aiostreammagic==2.5.0
 
 # homeassistant.components.switcher_kis
 aioswitcher==4.0.3
@@ -496,7 +496,7 @@ asmog==0.0.6
 # homeassistant.components.ssdp
 # homeassistant.components.upnp
 # homeassistant.components.yeelight
-async-upnp-client==0.40.0
+async-upnp-client==0.41.0
 
 # homeassistant.components.arve
 asyncarve==0.1.1
@@ -1547,7 +1547,7 @@ openwrt-luci-rpc==1.1.17
 openwrt-ubus-rpc==0.0.2
 
 # homeassistant.components.opower
-opower==0.8.0
+opower==0.8.2
 
 # homeassistant.components.oralb
 oralb-ble==0.17.6
