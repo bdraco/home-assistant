@@ -13,7 +13,7 @@ AIOSomecomfort==0.0.25
 Adax-local==0.1.5
 
 # homeassistant.components.doorbird
-DoorBirdPy==3.0.3
+DoorBirdPy==3.0.4
 
 # homeassistant.components.homekit
 HAP-python==4.9.1
@@ -419,7 +419,7 @@ aiowithings==3.1.0
 aioymaps==1.2.5
 
 # homeassistant.components.airgradient
-airgradient==0.9.0
+airgradient==0.9.1
 
 # homeassistant.components.airly
 airly==1.1.0
@@ -933,7 +933,7 @@ freesms==0.2.0
 fritzconnection[qr]==1.13.2
 
 # homeassistant.components.fyta
-fyta_cli==0.6.6
+fyta_cli==0.6.7
 
 # homeassistant.components.google_translate
 gTTS==2.2.4
@@ -1662,7 +1662,7 @@ pushover_complete==1.1.1
 pvo==2.1.1
 
 # homeassistant.components.aosmith
-py-aosmith==1.0.8
+py-aosmith==1.0.10
 
 # homeassistant.components.canary
 py-canary==0.5.4
