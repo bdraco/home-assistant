@@ -326,7 +326,6 @@ class ConfigEntry(Generic[_DataT]):
     _on_unload: list[Callable[[], Coroutine[Any, Any, None] | None]] | None
     setup_lock: asyncio.Lock
     _reauth_lock: asyncio.Lock
-    _reconfigure_lock: asyncio.Lock
     _tasks: set[asyncio.Future[Any]]
     _background_tasks: set[asyncio.Future[Any]]
     _integration_for_domain: loader.Integration | None
@@ -430,8 +429,6 @@ class ConfigEntry(Generic[_DataT]):
         _setter(self, "setup_lock", asyncio.Lock())
         # Reauth lock to prevent concurrent reauth flows
         _setter(self, "_reauth_lock", asyncio.Lock())
-        # Reconfigure lock to prevent concurrent reconfigure flows
-        _setter(self, "_reconfigure_lock", asyncio.Lock())
 
         _setter(self, "_tasks", set())
         _setter(self, "_background_tasks", set())
@@ -1111,49 +1108,6 @@ class ConfigEntry(Generic[_DataT]):
             translation_key="config_entry_reauth",
             translation_placeholders={"name": self.title},
         )
-
-    @callback
-    def async_start_reconfigure(
-        self,
-        hass: HomeAssistant,
-        context: ConfigFlowContext | None = None,
-        data: dict[str, Any] | None = None,
-    ) -> None:
-        """Start a reconfigure flow."""
-        # We will check this again in the task when we hold the lock,
-        # but we also check it now to try to avoid creating the task.
-        if any(self.async_get_active_flows(hass, {SOURCE_RECONFIGURE, SOURCE_REAUTH})):
-            # Reconfigure or reauth flow already in progress for this entry
-            return
-        hass.async_create_task(
-            self._async_init_reconfigure(hass, context, data),
-            f"config entry reconfigure {self.title} {self.domain} {self.entry_id}",
-        )
-
-    async def _async_init_reconfigure(
-        self,
-        hass: HomeAssistant,
-        context: ConfigFlowContext | None = None,
-        data: dict[str, Any] | None = None,
-    ) -> None:
-        """Start a reconfigure flow."""
-        async with self._reconfigure_lock:
-            if any(
-                self.async_get_active_flows(hass, {SOURCE_RECONFIGURE, SOURCE_REAUTH})
-            ):
-                # Reconfigure or reauth flow already in progress for this entry
-                return
-            await hass.config_entries.flow.async_init(
-                self.domain,
-                context=ConfigFlowContext(
-                    source=SOURCE_RECONFIGURE,
-                    entry_id=self.entry_id,
-                    title_placeholders={"name": self.title},
-                    unique_id=self.unique_id,
-                )
-                | (context or {}),
-                data=self.data | (data or {}),
-            )
 
     @callback
     def async_get_active_flows(
@@ -2161,6 +2115,25 @@ class ConfigEntries:
         _setter = object.__setattr__
 
         if unique_id is not UNDEFINED and entry.unique_id != unique_id:
+            # Deprecated in 2024.11, should fail in 2025.11
+            if (
+                unique_id is not None
+                and self.async_entry_for_domain_unique_id(entry.domain, unique_id)
+                is not None
+            ):
+                report_issue = async_suggest_report_issue(
+                    self.hass, integration_domain=entry.domain
+                )
+                _LOGGER.error(
+                    (
+                        "Unique id of config entry '%s' from integration %s changed to"
+                        " '%s' which is already in use, please %s"
+                    ),
+                    entry.title,
+                    entry.domain,
+                    unique_id,
+                    report_issue,
+                )
             # Reindex the entry if the unique_id has changed
             self._entries.update_unique_id(entry, unique_id)
             changed = True
@@ -2772,6 +2745,20 @@ class ConfigFlow(ConfigEntryBaseFlow):
         options: Mapping[str, Any] | None = None,
     ) -> ConfigFlowResult:
         """Finish config flow and create a config entry."""
+        if self.source in {SOURCE_REAUTH, SOURCE_RECONFIGURE}:
+            report_issue = async_suggest_report_issue(
+                self.hass, integration_domain=self.handler
+            )
+            _LOGGER.warning(
+                (
+                    "Detected %s config flow creating a new entry, "
+                    "when it is expected to update an existing entry and abort. "
+                    "This will stop working in %s, please %s"
+                ),
+                self.source,
+                "2025.11",
+                report_issue,
+            )
         result = super().async_create_entry(
             title=title,
             data=data,
@@ -2793,11 +2780,30 @@ class ConfigFlow(ConfigEntryBaseFlow):
         unique_id: str | None | UndefinedType = UNDEFINED,
         title: str | UndefinedType = UNDEFINED,
         data: Mapping[str, Any] | UndefinedType = UNDEFINED,
+        data_updates: Mapping[str, Any] | UndefinedType = UNDEFINED,
         options: Mapping[str, Any] | UndefinedType = UNDEFINED,
         reason: str | UndefinedType = UNDEFINED,
         reload_even_if_entry_is_unchanged: bool = True,
     ) -> ConfigFlowResult:
-        """Update config entry, reload config entry and finish config flow."""
+        """Update config entry, reload config entry and finish config flow.
+
+        :param data: replace the entry data with new data
+        :param data_updates: add items from data_updates to entry data - existing keys
+        are overridden
+        :param options: replace the entry options with new options
+        :param title: replace the title of the entry
+        :param unique_id: replace the unique_id of the entry
+
+        :param reason: set the reason for the abort, defaults to
+        `reauth_successful` or `reconfigure_successful` based on flow source
+
+        :param reload_even_if_entry_is_unchanged: set this to `False` if the entry
+        should not be reloaded if it is unchanged
+        """
+        if data_updates is not UNDEFINED:
+            if data is not UNDEFINED:
+                raise ValueError("Cannot set both data and data_updates")
+            data = entry.data | data_updates
         result = self.hass.config_entries.async_update_entry(
             entry=entry,
             unique_id=unique_id,
