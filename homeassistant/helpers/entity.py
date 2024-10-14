@@ -337,7 +337,7 @@ class CachedProperties(type):
                 Also invalidates the corresponding cached_property by calling
                 delattr on it.
                 """
-                if getattr(o, private_attr_name, _SENTINEL) == val:
+                if getattr(o, private_attr_name, _SENTINEL) is val:
                     return
                 setattr(o, private_attr_name, val)
                 # Invalidate the cache of the cached property
