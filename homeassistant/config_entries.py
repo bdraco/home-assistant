@@ -2466,6 +2466,7 @@ class ConfigFlow(ConfigEntryBaseFlow):
         self,
         *,
         reason: str = "unique_id_mismatch",
+        description_placeholders: Mapping[str, str] | None = None,
     ) -> None:
         """Abort if the unique ID does not match the reauth/reconfigure context.
 
@@ -2479,7 +2480,7 @@ class ConfigFlow(ConfigEntryBaseFlow):
             self.source == SOURCE_RECONFIGURE
             and self._get_reconfigure_entry().unique_id != self.unique_id
         ):
-            raise data_entry_flow.AbortFlow(reason)
+            raise data_entry_flow.AbortFlow(reason, description_placeholders)
 
     @callback
     def _abort_if_unique_id_configured(
