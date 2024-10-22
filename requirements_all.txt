@@ -84,7 +84,7 @@ PyQRCode==1.2.1
 PyRMVtransport==0.3.3
 
 # homeassistant.components.switchbot
-PySwitchbot==0.49.0
+PySwitchbot==0.51.0
 
 # homeassistant.components.switchmate
 PySwitchmate==0.5.1
@@ -210,7 +210,7 @@ aiobafi6==0.9.0
 aiobotocore==2.13.1
 
 # homeassistant.components.comelit
-aiocomelit==0.9.0
+aiocomelit==0.9.1
 
 # homeassistant.components.dhcp
 aiodhcpwatcher==1.0.2
@@ -402,7 +402,7 @@ aiounifi==80
 aiovlc==0.5.1
 
 # homeassistant.components.vodafone_station
-aiovodafone==0.6.0
+aiovodafone==0.6.1
 
 # homeassistant.components.waqi
 aiowaqi==3.1.0
@@ -946,7 +946,7 @@ gardena-bluetooth==1.4.3
 gassist-text==0.0.11
 
 # homeassistant.components.google
-gcal-sync==6.1.6
+gcal-sync==6.2.0
 
 # homeassistant.components.geniushub
 geniushub-client==0.7.1
