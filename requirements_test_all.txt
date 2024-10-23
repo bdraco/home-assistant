@@ -1397,7 +1397,7 @@ pyCEC==0.5.2
 pyControl4==1.2.0
 
 # homeassistant.components.duotecno
-pyDuotecno==2024.10.0
+pyDuotecno==2024.10.1
 
 # homeassistant.components.electrasmart
 pyElectra==1.2.4
@@ -1841,7 +1841,7 @@ python-MotionMount==2.2.0
 python-awair==0.2.4
 
 # homeassistant.components.bsblan
-python-bsblan==0.6.2
+python-bsblan==0.6.4
 
 # homeassistant.components.ecobee
 python-ecobee-api==0.2.20
@@ -2416,7 +2416,7 @@ youless-api==2.1.2
 youtubeaio==1.1.5
 
 # homeassistant.components.media_extractor
-yt-dlp==2024.10.07
+yt-dlp==2024.10.22
 
 # homeassistant.components.zamg
 zamg==0.3.6
