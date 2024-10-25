@@ -155,6 +155,12 @@ async def _migrate_unique_ids(hass: HomeAssistant, entry: PowerviewConfigEntry) 
     if TYPE_CHECKING:
         assert entry.unique_id
     for reg_entry in registry_entries:
+        _LOGGER.warning(
+            "Checking %s: %s - unique: %s",
+            reg_entry.entity_id,
+            reg_entry,
+            reg_entry.unique_id,
+        )
         if isinstance(reg_entry.unique_id, int) or (
             isinstance(reg_entry.unique_id, str)
             and not reg_entry.unique_id.startswith(entry.unique_id)
