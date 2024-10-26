@@ -37,7 +37,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: PowerviewConfigEntry) ->
     """Set up Hunter Douglas PowerView from a config entry."""
     config = entry.data
     hub_address: str = config[CONF_HOST]
-    api_version: int | None = config.get(CONF_API_VERSION, None)
+    api_version: int | None = config.get(CONF_API_VERSION)
     _LOGGER.debug("Connecting %s at %s with v%s api", DOMAIN, hub_address, api_version)
 
     # default 15 second timeout for each call in upstream
@@ -138,7 +138,7 @@ async def _async_add_missing_entry_unique_id(
 ) -> None:
     """Add the unique id if its missing."""
     address: str = entry.data[CONF_HOST]
-    api_version: int | None = entry.data.get(CONF_API_VERSION, None)
+    api_version: int | None = entry.data.get(CONF_API_VERSION)
     api = await async_connect_hub(hass, address, api_version)
     hass.config_entries.async_update_entry(
         entry, unique_id=api.device_info.serial_number
@@ -154,12 +154,6 @@ async def _migrate_unique_ids(hass: HomeAssistant, entry: PowerviewConfigEntry) 
     if TYPE_CHECKING:
         assert entry.unique_id
     for reg_entry in registry_entries:
-        _LOGGER.warning(
-            "Checking %s: %s - unique: %s",
-            reg_entry.entity_id,
-            reg_entry,
-            reg_entry.unique_id,
-        )
         if isinstance(reg_entry.unique_id, int) or (
             isinstance(reg_entry.unique_id, str)
             and not reg_entry.unique_id.startswith(entry.unique_id)
