@@ -1,6 +1,5 @@
 """The go2rtc component."""
 
-import asyncio
 import logging
 import shutil
 
@@ -101,7 +100,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         url = "http://localhost:1984/"
 
     # Validate the server URL
-    await asyncio.sleep(1)  # ensure the server is up
     try:
         client = Go2RtcRestClient(async_get_clientsession(hass), url)
         await client.streams.list()
