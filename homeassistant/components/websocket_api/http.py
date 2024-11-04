@@ -36,6 +36,8 @@ from .error import Disconnect
 from .messages import message_to_json_bytes
 from .util import describe_request
 
+CLOSE_MSG_TYPES = {WSMsgType.CLOSE, WSMsgType.CLOSED, WSMsgType.CLOSING}
+
 if TYPE_CHECKING:
     from .connection import ActiveConnection
 
@@ -459,26 +461,26 @@ class WebSocketHandler:
         # Command phase
         while not wsock.closed:
             msg = await wsock.receive()
-            type_ = msg.type
-            data = msg.data
+            msg_type = msg.type
+            msg_data = msg.data
 
-            if type_ in (WSMsgType.CLOSE, WSMsgType.CLOSED, WSMsgType.CLOSING):
+            if msg_type in CLOSE_MSG_TYPES:
                 break
 
-            if type_ is WSMsgType.BINARY:
-                if len(data) < 1:
+            if msg_type is WSMsgType.BINARY:
+                if len(msg_data) < 1:
                     raise Disconnect("Received invalid binary message.")
 
-                handler = data[0]
-                payload = data[1:]
+                handler = msg_data[0]
+                payload = msg_data[1:]
                 async_handle_binary(handler, payload)
                 continue
 
-            if type_ is not WSMsgType.TEXT:
+            if msg_type is not WSMsgType.TEXT:
                 raise Disconnect("Received non-Text message.")
 
             try:
-                command_msg_data = json_loads(data)
+                command_msg_data = json_loads(msg_data)
             except ValueError as ex:
                 raise Disconnect("Received invalid JSON.") from ex
 
