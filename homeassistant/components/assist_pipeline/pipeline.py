@@ -1299,7 +1299,7 @@ class PipelineRun:
                 dirty_samples, BYTES_PER_CHUNK, self.audio_chunking_buffer
             ):
                 yield await self._loop.run_in_executor(
-                    self.audio_enhancer.enhance_chunk, dirty_chunk, timestamp_ms
+                    None, self.audio_enhancer.enhance_chunk, dirty_chunk, timestamp_ms
                 )
                 timestamp_ms += MS_PER_CHUNK
 
