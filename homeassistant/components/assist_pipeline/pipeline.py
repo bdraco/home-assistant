@@ -575,8 +575,11 @@ class PipelineRun:
     _device_id: str | None = None
     """Optional device id set during run start."""
 
+    _loop: asyncio.AbstractEventLoop | None = field(init=False, default=None)
+
     def __post_init__(self) -> None:
         """Set language for pipeline."""
+        self._loop = asyncio.get_running_loop()
         self.language = self.pipeline.language or self.hass.config.language
 
         # wake -> stt -> intent -> tts
@@ -1295,7 +1298,9 @@ class PipelineRun:
             for dirty_chunk in chunk_samples(
                 dirty_samples, BYTES_PER_CHUNK, self.audio_chunking_buffer
             ):
-                yield self.audio_enhancer.enhance_chunk(dirty_chunk, timestamp_ms)
+                yield await self._loop.run_in_executor(
+                    self.audio_enhancer.enhance_chunk, dirty_chunk, timestamp_ms
+                )
                 timestamp_ms += MS_PER_CHUNK
 
 
