@@ -166,7 +166,7 @@ def _async_event_entities(
     entity_mapping: dict[str, type[ProtectDeviceEntity]] = {
         "nfc": ProtectDeviceNFCEventEntity,
         "fingerprint": ProtectDeviceFingerprintEventEntity,
-        "ring": ProtectDeviceRingEventEntity,
+        "doorbell": ProtectDeviceRingEventEntity,
     }
 
     entities: list[ProtectDeviceEntity] = []
