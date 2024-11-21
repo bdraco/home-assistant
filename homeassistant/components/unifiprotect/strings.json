@@ -136,7 +136,7 @@
       }
     },
     "event": {
-      "ring": {
+      "doorbell": {
         "name": "Ring",
         "state_attributes": {
           "event_type": {

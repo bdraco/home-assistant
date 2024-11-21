@@ -32,8 +32,8 @@ class ProtectEventEntityDescription(ProtectEventMixin, EventEntityDescription):
 
 EVENT_DESCRIPTIONS: tuple[ProtectEventEntityDescription, ...] = (
     ProtectEventEntityDescription(
-        key="ring",
-        translation_key="ring",
+        key="doorbell",
+        translation_key="doorbell",
         device_class=EventDeviceClass.DOORBELL,
         icon="mdi:bell",
         ufp_required_field="feature_flags.is_doorbell",
