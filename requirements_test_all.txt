@@ -143,7 +143,7 @@ afsapi==0.2.7
 agent-py==0.0.24
 
 # homeassistant.components.geo_json_events
-aio-geojson-generic-client==0.4
+aio-geojson-generic-client==0.5
 
 # homeassistant.components.geonetnz_quakes
 aio-geojson-geonetnz-quakes==0.16
@@ -161,7 +161,7 @@ aio-geojson-usgs-earthquakes==0.3
 aio-georss-gdacs==0.10
 
 # homeassistant.components.acaia
-aioacaia==0.1.8
+aioacaia==0.1.9
 
 # homeassistant.components.airq
 aioairq==0.4.3
@@ -366,7 +366,7 @@ aiosolaredge==0.2.0
 aiosteamist==1.0.0
 
 # homeassistant.components.cambridge_audio
-aiostreammagic==2.8.6
+aiostreammagic==2.10.0
 
 # homeassistant.components.switcher_kis
 aioswitcher==5.0.0
@@ -625,7 +625,7 @@ dbus-fast==2.24.3
 debugpy==1.8.6
 
 # homeassistant.components.ecovacs
-deebot-client==8.4.1
+deebot-client==9.0.0
 
 # homeassistant.components.ihc
 # homeassistant.components.namecheapdns
@@ -1364,7 +1364,7 @@ pushover_complete==1.1.1
 pvo==2.1.1
 
 # homeassistant.components.aosmith
-py-aosmith==1.0.10
+py-aosmith==1.0.11
 
 # homeassistant.components.canary
 py-canary==0.5.4
@@ -1733,7 +1733,7 @@ pyotgw==2.2.2
 pyotp==2.8.0
 
 # homeassistant.components.overkiz
-pyoverkiz==1.14.1
+pyoverkiz==1.15.0
 
 # homeassistant.components.onewire
 pyownet==0.10.0.post1
@@ -1877,7 +1877,7 @@ python-fullykiosk==0.0.14
 python-homeassistant-analytics==0.8.0
 
 # homeassistant.components.homewizard
-python-homewizard-energy==v6.3.0
+python-homewizard-energy==v7.0.0
 
 # homeassistant.components.izone
 python-izone==1.2.9
@@ -2192,7 +2192,7 @@ steamodd==4.21
 stookalert==0.1.4
 
 # homeassistant.components.stookwijzer
-stookwijzer==1.3.0
+stookwijzer==1.5.1
 
 # homeassistant.components.streamlabswater
 streamlabswater==1.0.1
@@ -2307,7 +2307,7 @@ typedmonarchmoney==0.3.1
 uasiren==0.0.1
 
 # homeassistant.components.unifiprotect
-uiprotect==6.6.1
+uiprotect==6.6.2
 
 # homeassistant.components.landisgyr_heat_meter
 ultraheat-api==0.5.7
@@ -2342,7 +2342,7 @@ vallox-websocket-api==5.3.0
 vehicle==2.2.2
 
 # homeassistant.components.velbus
-velbus-aio==2024.11.0
+velbus-aio==2024.11.1
 
 # homeassistant.components.venstar
 venstarcolortouch==0.19
