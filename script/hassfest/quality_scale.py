@@ -78,7 +78,6 @@ RULES = {
 
 INTEGRATIONS_WITHOUT_QUALITY_SCALE_FILE = [
     "abode",
-    "acaia",
     "accuweather",
     "acer_projector",
     "acmeda",
@@ -939,7 +938,6 @@ INTEGRATIONS_WITHOUT_QUALITY_SCALE_FILE = [
     "snooz",
     "solaredge",
     "solaredge_local",
-    "solarlog",
     "solax",
     "soma",
     "somfy_mylink",
@@ -968,7 +966,6 @@ INTEGRATIONS_WITHOUT_QUALITY_SCALE_FILE = [
     "steamist",
     "stiebel_eltron",
     "stookalert",
-    "stookwijzer",
     "stream",
     "streamlabswater",
     "subaru",
