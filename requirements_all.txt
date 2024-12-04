@@ -1633,6 +1633,9 @@ pmsensor==0.4
 # homeassistant.components.poolsense
 poolsense==0.0.8
 
+# homeassistant.components.powerfox
+powerfox==1.0.0
+
 # homeassistant.components.reddit
 praw==7.5.0
 
@@ -2090,7 +2093,7 @@ pymsteams==0.1.12
 pymysensors==0.24.0
 
 # homeassistant.components.iron_os
-pynecil==1.0.1
+pynecil==2.0.2
 
 # homeassistant.components.netgear
 pynetgear==0.10.10
@@ -2837,7 +2840,7 @@ thermopro-ble==0.10.0
 thingspeak==1.0.0
 
 # homeassistant.components.lg_thinq
-thinqconnect==1.0.1
+thinqconnect==1.0.2
 
 # homeassistant.components.tikteck
 tikteck==0.4
