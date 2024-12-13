@@ -625,6 +625,7 @@ class UnitOfEnergy(StrEnum):
     KILO_JOULE = "kJ"
     MEGA_JOULE = "MJ"
     GIGA_JOULE = "GJ"
+    MILLIWATT_HOUR = "mWh"
     WATT_HOUR = "Wh"
     KILO_WATT_HOUR = "kWh"
     MEGA_WATT_HOUR = "MWh"
