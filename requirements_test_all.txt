@@ -684,6 +684,9 @@ eagle100==0.1.1
 # homeassistant.components.easyenergy
 easyenergy==2.1.2
 
+# homeassistant.components.eheimdigital
+eheimdigital==1.0.3
+
 # homeassistant.components.electric_kiwi
 electrickiwi-api==0.8.5
 
@@ -1225,7 +1228,7 @@ nextdns==4.0.0
 nibe==2.14.0
 
 # homeassistant.components.nice_go
-nice-go==0.3.10
+nice-go==1.0.0
 
 # homeassistant.components.niko_home_control
 niko-home-control==0.2.1
@@ -1264,6 +1267,9 @@ objgraph==3.5.0
 # homeassistant.components.garages_amsterdam
 odp-amsterdam==6.0.2
 
+# homeassistant.components.ohme
+ohme==1.1.1
+
 # homeassistant.components.ollama
 ollama==0.3.3
 
@@ -1292,7 +1298,7 @@ openerz-api==0.3.0
 openhomedevice==2.2.0
 
 # homeassistant.components.enigma2
-openwebifpy==4.2.7
+openwebifpy==4.3.0
 
 # homeassistant.components.opower
 opower==0.8.6
