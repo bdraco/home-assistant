@@ -11,6 +11,7 @@ from typing import Any, cast
 from sqlalchemy import (
     CompoundSelect,
     Select,
+    StatementLambdaElement,
     Subquery,
     and_,
     func,
@@ -25,15 +26,17 @@ from sqlalchemy.orm.session import Session
 from homeassistant.const import COMPRESSED_STATE_LAST_UPDATED, COMPRESSED_STATE_STATE
 from homeassistant.core import HomeAssistant, State, split_entity_id
 from homeassistant.helpers.recorder import get_instance
+from homeassistant.util.collection import chunked_or_all
 import homeassistant.util.dt as dt_util
 
-from ..const import LAST_REPORTED_SCHEMA_VERSION
+from ..const import LAST_REPORTED_SCHEMA_VERSION, MAX_IDS_FOR_START_TIME_QUERY
 from ..db_schema import SHARED_ATTR_OR_LEGACY_ATTRIBUTES, StateAttributes, States
 from ..filters import Filters
 from ..models import (
     LazyState,
     datetime_to_timestamp_or_none,
     extract_metadata_ids,
+    process_timestamp,
     row_to_compressed_state,
 )
 from ..util import execute_stmt_lambda_element, session_scope
@@ -245,15 +248,72 @@ def get_significant_states_with_session(
             if metadata_id is not None
             and split_entity_id(entity_id)[0] in SIGNIFICANT_DOMAINS
         ]
-    oldest_ts: float | None = None
+    run_start_ts: float | None = None
     if include_start_time_state and not (
-        oldest_ts := _get_oldest_possible_ts(hass, start_time)
+        run_start_ts := _get_run_start_ts_for_utc_point_in_time(hass, start_time)
     ):
         include_start_time_state = False
     start_time_ts = start_time.timestamp()
     end_time_ts = datetime_to_timestamp_or_none(end_time)
     single_metadata_id = metadata_ids[0] if len(metadata_ids) == 1 else None
-    stmt = lambda_stmt(
+
+    rows: list[Row] = []
+    if include_start_time_state:
+        # https://github.com/home-assistant/core/issues/132865
+        # If we include the start time state we need to limit the
+        # number of metadata_ids we query for at a time to avoid
+        # hitting limits in the MySQL/MariaDB optimizer that prevent
+        # the start time state query from using an index-only optimization
+        # to find the start time state.
+        iter_metadata_ids = chunked_or_all(metadata_ids, MAX_IDS_FOR_START_TIME_QUERY)
+    else:
+        iter_metadata_ids = (metadata_ids,)
+    for metadata_ids_chunk in iter_metadata_ids:
+        stmt = _generate_significant_states_with_session_stmt(
+            start_time_ts,
+            end_time_ts,
+            single_metadata_id,
+            metadata_ids_chunk,
+            metadata_ids_in_significant_domains,
+            significant_changes_only,
+            no_attributes,
+            include_start_time_state,
+            run_start_ts,
+        )
+        row_chunk = cast(
+            list[Row],
+            execute_stmt_lambda_element(session, stmt, None, end_time, orm_rows=False),
+        )
+        if rows:
+            rows += row_chunk
+        else:
+            # If we have no rows yet, we can just assign the chunk
+            # as this is the common case since its rare that
+            # we exceed the MAX_IDS_FOR_START_TIME_QUERY limit
+            rows = row_chunk
+    return _sorted_states_to_dict(
+        rows,
+        start_time_ts if include_start_time_state else None,
+        entity_ids,
+        entity_id_to_metadata_id,
+        minimal_response,
+        compressed_state_format,
+        no_attributes=no_attributes,
+    )
+
+
+def _generate_significant_states_with_session_stmt(
+    start_time_ts: float,
+    end_time_ts: float | None,
+    single_metadata_id: int | None,
+    metadata_ids: list[int],
+    metadata_ids_in_significant_domains: list[int],
+    significant_changes_only: bool,
+    no_attributes: bool,
+    include_start_time_state: bool,
+    run_start_ts: float | None,
+) -> StatementLambdaElement:
+    return lambda_stmt(
         lambda: _significant_states_stmt(
             start_time_ts,
             end_time_ts,
@@ -263,7 +323,7 @@ def get_significant_states_with_session(
             significant_changes_only,
             no_attributes,
             include_start_time_state,
-            oldest_ts,
+            run_start_ts,
         ),
         track_on=[
             bool(single_metadata_id),
@@ -273,15 +333,6 @@ def get_significant_states_with_session(
             no_attributes,
             include_start_time_state,
         ],
-    )
-    return _sorted_states_to_dict(
-        execute_stmt_lambda_element(session, stmt, None, end_time, orm_rows=False),
-        start_time_ts if include_start_time_state else None,
-        entity_ids,
-        entity_id_to_metadata_id,
-        minimal_response,
-        compressed_state_format,
-        no_attributes=no_attributes,
     )
 
 
@@ -410,9 +461,9 @@ def state_changes_during_period(
         entity_id_to_metadata_id: dict[str, int | None] = {
             entity_id: single_metadata_id
         }
-        oldest_ts: float | None = None
+        run_start_ts: float | None = None
         if include_start_time_state and not (
-            oldest_ts := _get_oldest_possible_ts(hass, start_time)
+            run_start_ts := _get_run_start_ts_for_utc_point_in_time(hass, start_time)
         ):
             include_start_time_state = False
         start_time_ts = start_time.timestamp()
@@ -425,7 +476,7 @@ def state_changes_during_period(
                 no_attributes,
                 limit,
                 include_start_time_state,
-                oldest_ts,
+                run_start_ts,
                 has_last_reported,
             ),
             track_on=[
@@ -599,17 +650,17 @@ def _get_start_time_state_for_entities_stmt(
     )
 
 
-def _get_oldest_possible_ts(
+def _get_run_start_ts_for_utc_point_in_time(
     hass: HomeAssistant, utc_point_in_time: datetime
 ) -> float | None:
-    """Return the oldest possible timestamp.
-
-    Returns None if there are no states as old as utc_point_in_time.
-    """
-
-    oldest_ts = get_instance(hass).states_manager.oldest_ts
-    if oldest_ts is not None and oldest_ts < utc_point_in_time.timestamp():
-        return oldest_ts
+    """Return the start time of a run."""
+    run = get_instance(hass).recorder_runs_manager.get(utc_point_in_time)
+    if (
+        run is not None
+        and (run_start := process_timestamp(run.start)) < utc_point_in_time
+    ):
+        return run_start.timestamp()
+    # History did not run before utc_point_in_time but we still
     return None
 
 
