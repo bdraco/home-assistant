@@ -3,64 +3,63 @@ rules:
   action-setup:
     status: exempt
     comment: |
-      No custom actions are defined.
+      This integration does not provide additional actions.
   appropriate-polling: done
   brands: done
-  common-modules: done
+  common-modules:
+    status: done
+    comment: |
+      Single platform only, so no entity.py file.
+      CoordinatorEntity is used.
   config-flow-test-coverage: done
   config-flow: done
   dependency-transparency: done
   docs-actions:
     status: exempt
     comment: |
-      No custom actions are defined.
+      This integration does not provide additional actions.
   docs-high-level-description: done
   docs-installation-instructions: done
   docs-removal-instructions: done
   entity-event-setup:
     status: exempt
     comment: |
-      No explicit event subscriptions.
+      This integration does not subscribe to events.
   entity-unique-id: done
   has-entity-name: done
   runtime-data: done
   test-before-configure: done
-  test-before-setup:
-    status: exempt
-    comment: |
-      Device is expected to be offline most of the time, but needs to connect quickly once available.
+  test-before-setup: done
   unique-config-entry: done
   # Silver
   action-exceptions:
     status: exempt
     comment: |
-      No custom actions are defined.
+      This integration does not provide additional actions.
   config-entry-unloading: done
-  docs-configuration-parameters: done
+  docs-configuration-parameters:
+    status: exempt
+    comment: |
+      This integration does not provide configuration options.
   docs-installation-parameters: done
   entity-unavailable: done
   integration-owner: done
-  log-when-unavailable:
+  log-when-unavailable: done
+  parallel-updates:
     status: done
     comment: |
-      Handled by coordinator.
-  parallel-updates: done
+      Coordinators are used and asyncio.Lock mutex across them ensure proper
+      rate limiting. Platforms are read-only.
   reauthentication-flow:
     status: exempt
     comment: |
-      No authentication required.
+      This integration doesn't require authentication.
   test-coverage: done
   # Gold
   devices: done
   diagnostics: done
-  discovery-update-info:
-    status: exempt
-    comment: |
-      No IP discovery.
-  discovery:
-    status: done
-    comment: |
-      Bluetooth discovery.
+  discovery-update-info: done
+  discovery: done
   docs-data-update: done
   docs-examples: done
   docs-known-limitations: done
@@ -68,39 +67,23 @@ rules:
   docs-supported-functions: done
   docs-troubleshooting: done
   docs-use-cases: done
-  dynamic-devices:
-    status: exempt
-    comment: |
-      Device type integration.
+  dynamic-devices: done
   entity-category: done
   entity-device-class: done
-  entity-disabled-by-default:
-    status: exempt
-    comment: |
-      No noisy/non-essential entities.
+  entity-disabled-by-default: done
   entity-translations: done
-  exception-translations:
-    status: exempt
-    comment: |
-      No custom exceptions.
+  exception-translations: done
   icon-translations: done
-  reconfiguration-flow:
-    status: exempt
-    comment: |
-      Only parameter that could be changed (MAC = unique_id) would force a new config entry.
+  reconfiguration-flow: done
   repair-issues:
     status: exempt
     comment: |
-      No repairs/issues.
-  stale-devices:
-    status: exempt
-    comment: |
-      Device type integration.
-
+      This integration doesn't have any known user-repairable issues.
+  stale-devices: done
   # Platinum
   async-dependency: done
-  inject-websession:
-    status: exempt
+  inject-websession: done
+  strict-typing:
+    status: todo
     comment: |
-      Bluetooth connection.
-  strict-typing: done
+      The pyfronius library isn't strictly typed and doesn't export type information.

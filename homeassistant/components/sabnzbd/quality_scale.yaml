@@ -1,92 +1,96 @@
 rules:
   # Bronze
   action-setup:
-    status: exempt
+    status: todo
     comment: |
-      The integration doesn't provide any additional service actions.
+      Do not remove services when all config entries are removed.
   appropriate-polling: done
   brands: done
-  common-modules: done
+  common-modules:
+    status: todo
+    comment: |
+      const.py has unused variables.
   config-flow-test-coverage: done
   config-flow: done
   dependency-transparency: done
   docs-actions:
     status: exempt
     comment: |
-      The integration doesn't provide any additional service actions.
+      The integration has deprecated the actions, thus the documentation has been removed.
   docs-high-level-description: done
   docs-installation-instructions: done
   docs-removal-instructions: todo
   entity-event-setup:
     status: exempt
     comment: |
-      The integration doesn't subscribe to any events.
+      Entities of this integration does not explicitly subscribe to events.
   entity-unique-id: done
   has-entity-name: done
   runtime-data: done
-  test-before-configure: todo
+  test-before-configure: done
   test-before-setup: done
-  unique-config-entry: todo
+  unique-config-entry: done
 
   # Silver
   action-exceptions:
+    status: todo
+    comment: |
+      Raise ServiceValidationError in async_get_entry_for_service_call.
+  config-entry-unloading: done
+  docs-configuration-parameters:
     status: exempt
     comment: |
-      This integration is read-only and doesn't provide any actions.
-  config-entry-unloading: done
-  docs-configuration-parameters: todo
+      The integration does not provide any additional options.
   docs-installation-parameters: todo
   entity-unavailable: done
   integration-owner: done
   log-when-unavailable: done
-  parallel-updates:
-    status: exempt
+  parallel-updates: todo
+  reauthentication-flow: todo
+  test-coverage:
+    status: todo
     comment: |
-      This integration is read-only and doesn't provide any actions. Querying
-      the service for data is handled centrally using a data update coordinator.
-  reauthentication-flow:
-    status: exempt
-    comment: |
-      This integration doesn't require re-authentication.
-  test-coverage: done
+      Coverage for loading and unloading config entries is missing.
+
   # Gold
   devices: done
-  diagnostics: done
+  diagnostics: todo
   discovery-update-info:
     status: exempt
     comment: |
-      The integration cannot be discovered, as it is an external service.
+      This integration cannot be discovered.
   discovery:
     status: exempt
     comment: |
-      The integration cannot be discovered, as it is an external service.
+      This integration cannot be discovered.
   docs-data-update: todo
   docs-examples: todo
   docs-known-limitations: todo
   docs-supported-devices: todo
-  docs-supported-functions: todo
+  docs-supported-functions:
+    status: todo
+    comment: |
+      Describe the state of the sensor and make it a enum sensor.
   docs-troubleshooting: todo
   docs-use-cases: todo
   dynamic-devices:
     status: exempt
     comment: |
-      This integration provides a single device entry for the service.
+      The integration connects to a single service per configuration entry.
   entity-category: done
   entity-device-class: done
   entity-disabled-by-default: done
   entity-translations: done
-  exception-translations: done
-  icon-translations: todo
-  reconfiguration-flow: todo
+  exception-translations: todo
+  icon-translations: done
+  reconfiguration-flow: done
   repair-issues: done
   stale-devices:
     status: exempt
     comment: |
-      This integration provides a single device entry for the service.
+      This integration connect to a single service per configuration entry.
+
   # Platinum
   async-dependency: done
   inject-websession: done
-  strict-typing:
-    status: todo
-    comment: |
-      Requirement 'stookwijzer==1.5.1' appears untyped
+  strict-typing: todo
