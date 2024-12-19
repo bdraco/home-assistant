@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Generator
 from copy import copy
 from datetime import datetime, timedelta
 import json
-from unittest.mock import patch, sentinel
+from unittest.mock import sentinel
 
 from freezegun import freeze_time
 import pytest
@@ -35,18 +34,6 @@ from .common import (
 )
 
 from tests.typing import RecorderInstanceGenerator
-
-
-@pytest.fixture
-def multiple_start_time_chunk_sizes(
-    ids_for_start_time_chunk_sizes: int,
-) -> Generator[None]:
-    """Fixture to test different chunk sizes for start time query."""
-    with patch(
-        "homeassistant.components.recorder.history.modern.MAX_IDS_FOR_START_TIME_QUERY",
-        ids_for_start_time_chunk_sizes,
-    ):
-        yield
 
 
 @pytest.fixture
@@ -442,7 +429,6 @@ async def test_ensure_state_can_be_copied(
     assert_states_equal_without_context(copy(hist[entity_id][1]), hist[entity_id][1])
 
 
-@pytest.mark.usefixtures("multiple_start_time_chunk_sizes")
 async def test_get_significant_states(hass: HomeAssistant) -> None:
     """Test that only significant states are returned.
 
@@ -457,7 +443,6 @@ async def test_get_significant_states(hass: HomeAssistant) -> None:
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
 
-@pytest.mark.usefixtures("multiple_start_time_chunk_sizes")
 async def test_get_significant_states_minimal_response(
     hass: HomeAssistant,
 ) -> None:
@@ -527,7 +512,6 @@ async def test_get_significant_states_minimal_response(
     )
 
 
-@pytest.mark.usefixtures("multiple_start_time_chunk_sizes")
 @pytest.mark.parametrize("time_zone", ["Europe/Berlin", "US/Hawaii", "UTC"])
 async def test_get_significant_states_with_initial(
     time_zone, hass: HomeAssistant
@@ -560,7 +544,6 @@ async def test_get_significant_states_with_initial(
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
 
-@pytest.mark.usefixtures("multiple_start_time_chunk_sizes")
 async def test_get_significant_states_without_initial(
     hass: HomeAssistant,
 ) -> None:
@@ -595,7 +578,6 @@ async def test_get_significant_states_without_initial(
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
 
-@pytest.mark.usefixtures("multiple_start_time_chunk_sizes")
 async def test_get_significant_states_entity_id(
     hass: HomeAssistant,
 ) -> None:
@@ -614,7 +596,6 @@ async def test_get_significant_states_entity_id(
     assert_dict_of_states_equal_without_context_and_last_changed(states, hist)
 
 
-@pytest.mark.usefixtures("multiple_start_time_chunk_sizes")
 async def test_get_significant_states_multiple_entity_ids(
     hass: HomeAssistant,
 ) -> None:
@@ -1033,3 +1014,127 @@ async def test_get_last_state_changes_with_non_existent_entity_ids_returns_empty
 ) -> None:
     """Test get_last_state_changes returns an empty dict when entities not in the db."""
     assert history.get_last_state_changes(hass, 1, "nonexistent.entity") == {}
+
+
+@pytest.mark.skip_on_db_engine(["sqlite", "mysql"])
+@pytest.mark.usefixtures("skip_by_db_engine")
+@pytest.mark.usefixtures("recorder_db_url")
+async def test_get_significant_states_with_session_uses_lateral_with_postgresql(
+    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test get_significant_states_with_session uses the lateral path with PostgreSQL."""
+    entity_id = "media_player.test"
+    hass.states.async_set("any.other", "on")
+    await async_wait_recording_done(hass)
+    hass.states.async_set(entity_id, "off")
+
+    def set_state(state):
+        """Set the state."""
+        hass.states.async_set(entity_id, state, {"any": 1})
+        return hass.states.get(entity_id)
+
+    start = dt_util.utcnow().replace(microsecond=0)
+    point = start + timedelta(seconds=1)
+    point2 = start + timedelta(seconds=1, microseconds=100)
+    point3 = start + timedelta(seconds=1, microseconds=200)
+    end = point + timedelta(seconds=1, microseconds=400)
+
+    with freeze_time(start) as freezer:
+        set_state("idle")
+        set_state("YouTube")
+
+        freezer.move_to(point)
+        states = [set_state("idle")]
+
+        freezer.move_to(point2)
+        states.append(set_state("Netflix"))
+
+        freezer.move_to(point3)
+        states.append(set_state("Plex"))
+
+        freezer.move_to(end)
+        set_state("Netflix")
+        set_state("Plex")
+    await async_wait_recording_done(hass)
+
+    start_time = point2 + timedelta(microseconds=10)
+    hist = history.get_significant_states(
+        hass=hass,
+        start_time=start_time,  # Pick a point where we will generate a start time state
+        end_time=end,
+        entity_ids=[entity_id, "any.other"],
+        include_start_time_state=True,
+    )
+    assert len(hist[entity_id]) == 2
+
+    sqlalchemy_logs = "".join(
+        [
+            record.getMessage()
+            for record in caplog.records
+            if record.name.startswith("sqlalchemy.engine")
+        ]
+    )
+    # We can't patch inside the lambda so we have to check the logs
+    assert "JOIN LATERAL" in sqlalchemy_logs
+
+
+@pytest.mark.skip_on_db_engine(["postgresql"])
+@pytest.mark.usefixtures("skip_by_db_engine")
+@pytest.mark.usefixtures("recorder_db_url")
+async def test_get_significant_states_with_session_uses_non_lateral_without_postgresql(
+    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test get_significant_states_with_session does not use a the lateral path without PostgreSQL."""
+    entity_id = "media_player.test"
+    hass.states.async_set("any.other", "on")
+    await async_wait_recording_done(hass)
+    hass.states.async_set(entity_id, "off")
+
+    def set_state(state):
+        """Set the state."""
+        hass.states.async_set(entity_id, state, {"any": 1})
+        return hass.states.get(entity_id)
+
+    start = dt_util.utcnow().replace(microsecond=0)
+    point = start + timedelta(seconds=1)
+    point2 = start + timedelta(seconds=1, microseconds=100)
+    point3 = start + timedelta(seconds=1, microseconds=200)
+    end = point + timedelta(seconds=1, microseconds=400)
+
+    with freeze_time(start) as freezer:
+        set_state("idle")
+        set_state("YouTube")
+
+        freezer.move_to(point)
+        states = [set_state("idle")]
+
+        freezer.move_to(point2)
+        states.append(set_state("Netflix"))
+
+        freezer.move_to(point3)
+        states.append(set_state("Plex"))
+
+        freezer.move_to(end)
+        set_state("Netflix")
+        set_state("Plex")
+    await async_wait_recording_done(hass)
+
+    start_time = point2 + timedelta(microseconds=10)
+    hist = history.get_significant_states(
+        hass=hass,
+        start_time=start_time,  # Pick a point where we will generate a start time state
+        end_time=end,
+        entity_ids=[entity_id, "any.other"],
+        include_start_time_state=True,
+    )
+    assert len(hist[entity_id]) == 2
+
+    sqlalchemy_logs = "".join(
+        [
+            record.getMessage()
+            for record in caplog.records
+            if record.name.startswith("sqlalchemy.engine")
+        ]
+    )
+    # We can't patch inside the lambda so we have to check the logs
+    assert "JOIN LATERAL" not in sqlalchemy_logs

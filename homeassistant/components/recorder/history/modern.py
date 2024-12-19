@@ -11,7 +11,6 @@ from typing import Any, cast
 from sqlalchemy import (
     CompoundSelect,
     Select,
-    StatementLambdaElement,
     Subquery,
     and_,
     func,
@@ -26,11 +25,15 @@ from sqlalchemy.orm.session import Session
 from homeassistant.const import COMPRESSED_STATE_LAST_UPDATED, COMPRESSED_STATE_STATE
 from homeassistant.core import HomeAssistant, State, split_entity_id
 from homeassistant.helpers.recorder import get_instance
-from homeassistant.util.collection import chunked_or_all
 import homeassistant.util.dt as dt_util
 
-from ..const import LAST_REPORTED_SCHEMA_VERSION, MAX_IDS_FOR_START_TIME_QUERY
-from ..db_schema import SHARED_ATTR_OR_LEGACY_ATTRIBUTES, StateAttributes, States
+from ..const import LAST_REPORTED_SCHEMA_VERSION, SupportedDialect
+from ..db_schema import (
+    SHARED_ATTR_OR_LEGACY_ATTRIBUTES,
+    StateAttributes,
+    States,
+    StatesMeta,
+)
 from ..filters import Filters
 from ..models import (
     LazyState,
@@ -147,6 +150,7 @@ def _significant_states_stmt(
     no_attributes: bool,
     include_start_time_state: bool,
     run_start_ts: float | None,
+    lateral_join_for_start_time: bool,
 ) -> Select | CompoundSelect:
     """Query the database for significant state changes."""
     include_last_changed = not significant_changes_only
@@ -186,6 +190,7 @@ def _significant_states_stmt(
                 metadata_ids,
                 no_attributes,
                 include_last_changed,
+                lateral_join_for_start_time,
             ).subquery(),
             no_attributes,
             include_last_changed,
@@ -256,64 +261,8 @@ def get_significant_states_with_session(
     start_time_ts = start_time.timestamp()
     end_time_ts = datetime_to_timestamp_or_none(end_time)
     single_metadata_id = metadata_ids[0] if len(metadata_ids) == 1 else None
-
-    rows: list[Row] = []
-    if include_start_time_state:
-        # https://github.com/home-assistant/core/issues/132865
-        # If we include the start time state we need to limit the
-        # number of metadata_ids we query for at a time to avoid
-        # hitting limits in the MySQL/MariaDB optimizer that prevent
-        # the start time state query from using an index-only optimization
-        # to find the start time state.
-        iter_metadata_ids = chunked_or_all(metadata_ids, MAX_IDS_FOR_START_TIME_QUERY)
-    else:
-        iter_metadata_ids = (metadata_ids,)
-    for metadata_ids_chunk in iter_metadata_ids:
-        stmt = _generate_significant_states_with_session_stmt(
-            start_time_ts,
-            end_time_ts,
-            single_metadata_id,
-            metadata_ids_chunk,
-            metadata_ids_in_significant_domains,
-            significant_changes_only,
-            no_attributes,
-            include_start_time_state,
-            run_start_ts,
-        )
-        row_chunk = cast(
-            list[Row],
-            execute_stmt_lambda_element(session, stmt, None, end_time, orm_rows=False),
-        )
-        if rows:
-            rows += row_chunk
-        else:
-            # If we have no rows yet, we can just assign the chunk
-            # as this is the common case since its rare that
-            # we exceed the MAX_IDS_FOR_START_TIME_QUERY limit
-            rows = row_chunk
-    return _sorted_states_to_dict(
-        rows,
-        start_time_ts if include_start_time_state else None,
-        entity_ids,
-        entity_id_to_metadata_id,
-        minimal_response,
-        compressed_state_format,
-        no_attributes=no_attributes,
-    )
-
-
-def _generate_significant_states_with_session_stmt(
-    start_time_ts: float,
-    end_time_ts: float | None,
-    single_metadata_id: int | None,
-    metadata_ids: list[int],
-    metadata_ids_in_significant_domains: list[int],
-    significant_changes_only: bool,
-    no_attributes: bool,
-    include_start_time_state: bool,
-    run_start_ts: float | None,
-) -> StatementLambdaElement:
-    return lambda_stmt(
+    lateral_join_for_start_time = instance.dialect_name == SupportedDialect.POSTGRESQL
+    stmt = lambda_stmt(
         lambda: _significant_states_stmt(
             start_time_ts,
             end_time_ts,
@@ -324,6 +273,7 @@ def _generate_significant_states_with_session_stmt(
             no_attributes,
             include_start_time_state,
             run_start_ts,
+            lateral_join_for_start_time,
         ),
         track_on=[
             bool(single_metadata_id),
@@ -333,6 +283,15 @@ def _generate_significant_states_with_session_stmt(
             no_attributes,
             include_start_time_state,
         ],
+    )
+    return _sorted_states_to_dict(
+        execute_stmt_lambda_element(session, stmt, None, end_time, orm_rows=False),
+        start_time_ts if include_start_time_state else None,
+        entity_ids,
+        entity_id_to_metadata_id,
+        minimal_response,
+        compressed_state_format,
+        no_attributes=no_attributes,
     )
 
 
@@ -606,30 +565,61 @@ def _get_start_time_state_for_entities_stmt(
     metadata_ids: list[int],
     no_attributes: bool,
     include_last_changed: bool,
+    lateral_join_for_start_time: bool,
 ) -> Select:
     """Baked query to get states for specific entities."""
     # We got an include-list of entities, accelerate the query by filtering already
     # in the inner and the outer query.
+    if lateral_join_for_start_time:
+        # PostgreSQL does not support index skip scan/loose index scan
+        # https://wiki.postgresql.org/wiki/Loose_indexscan
+        # so we need to do a lateral join to get the max last_updated_ts
+        # for each metadata_id as a group-by is too slow.
+        # https://github.com/home-assistant/core/issues/132865
+        max_metadata_id = StatesMeta.metadata_id.label("max_metadata_id")
+        max_last_updated = (
+            select(func.max(States.last_updated_ts))
+            .where(
+                (States.metadata_id == max_metadata_id)
+                & (States.last_updated_ts >= run_start_ts)
+                & (States.last_updated_ts < epoch_time)
+            )
+            .subquery()
+            .lateral()
+        )
+        most_recent_states_for_entities_by_date = (
+            select(max_metadata_id, max_last_updated.c[0].label("max_last_updated"))
+            .select_from(StatesMeta)
+            .join(
+                max_last_updated,
+                StatesMeta.metadata_id == max_metadata_id,
+            )
+            .where(StatesMeta.metadata_id.in_(metadata_ids))
+        ).subquery()
+    else:
+        # Simple group-by for MySQL and SQLite, must use less
+        # than 1000 metadata_ids in the IN clause for MySQL
+        # or it will optimize poorly.
+        most_recent_states_for_entities_by_date = (
+            select(
+                States.metadata_id.label("max_metadata_id"),
+                func.max(States.last_updated_ts).label("max_last_updated"),
+            )
+            .filter(
+                (States.last_updated_ts >= run_start_ts)
+                & (States.last_updated_ts < epoch_time)
+                & States.metadata_id.in_(metadata_ids)
+            )
+            .group_by(States.metadata_id)
+            .subquery()
+        )
+
     stmt = (
         _stmt_and_join_attributes_for_start_state(
             no_attributes, include_last_changed, False
         )
         .join(
-            (
-                most_recent_states_for_entities_by_date := (
-                    select(
-                        States.metadata_id.label("max_metadata_id"),
-                        func.max(States.last_updated_ts).label("max_last_updated"),
-                    )
-                    .filter(
-                        (States.last_updated_ts >= run_start_ts)
-                        & (States.last_updated_ts < epoch_time)
-                        & States.metadata_id.in_(metadata_ids)
-                    )
-                    .group_by(States.metadata_id)
-                    .subquery()
-                )
-            ),
+            most_recent_states_for_entities_by_date,
             and_(
                 States.metadata_id
                 == most_recent_states_for_entities_by_date.c.max_metadata_id,
@@ -671,6 +661,7 @@ def _get_start_time_state_stmt(
     metadata_ids: list[int],
     no_attributes: bool,
     include_last_changed: bool,
+    lateral_join_for_start_time: bool,
 ) -> Select:
     """Return the states at a specific point in time."""
     if single_metadata_id:
@@ -691,6 +682,7 @@ def _get_start_time_state_stmt(
         metadata_ids,
         no_attributes,
         include_last_changed,
+        lateral_join_for_start_time,
     )
 
 
