@@ -29,30 +29,36 @@ rules:
   unique-config-entry: done
 
   # Silver
-  action-exceptions: todo
-  config-entry-unloading: done
-  docs-configuration-parameters:
-    status: exempt
-    comment: No options to configure
-  docs-installation-parameters: todo
-  entity-unavailable: done
-  integration-owner: done
-  log-when-unavailable: done
-  parallel-updates: todo
-  reauthentication-flow:
+  action-exceptions:
     status: exempt
     comment: |
-      This integration does not require authentication.
-  test-coverage: todo
+      This integration does not provide additional actions.
+  config-entry-unloading: done
+  docs-configuration-parameters: todo
+  docs-installation-parameters: todo
+  entity-unavailable:
+    status: exempt
+    comment: |
+      This is handled by the coordinator.
+  integration-owner: done
+  log-when-unavailable:
+    status: done
+    comment: |
+      This is handled by the coordinator.
+  parallel-updates: todo
+  reauthentication-flow: todo
+  test-coverage: done
   # Gold
   devices: done
-  diagnostics: done
+  diagnostics: todo
   discovery-update-info:
-    status: todo
-    comment: DHCP is still possible
+    status: exempt
+    comment: |
+      This integration is a service and not discoverable.
   discovery:
-    status: todo
-    comment: DHCP is still possible
+    status: exempt
+    comment: |
+      This integration is a service and not discoverable.
   docs-data-update: todo
   docs-examples: todo
   docs-known-limitations: todo
@@ -60,11 +66,11 @@ rules:
   docs-supported-functions: todo
   docs-troubleshooting: todo
   docs-use-cases: todo
-  dynamic-devices:
-    status: exempt
+  dynamic-devices: todo
+  entity-category:
+    status: done
     comment: |
-      This integration has a fixed single device.
-  entity-category: done
+      The entities are categorized well by using default category.
   entity-device-class: done
   entity-disabled-by-default: done
   entity-translations: done
@@ -78,9 +84,9 @@ rules:
   stale-devices:
     status: exempt
     comment: |
-      This integration has a fixed single device.
+      Games can't be "unplayed".
 
   # Platinum
   async-dependency: done
   inject-websession: done
-  strict-typing: done
+  strict-typing: todo
