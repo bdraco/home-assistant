@@ -1,13 +1,15 @@
 """The tests for the tplink camera platform."""
 
-from datetime import timedelta
-from unittest.mock import patch
+import asyncio
+from unittest.mock import AsyncMock, patch
 
 from aiohttp.test_utils import make_mocked_request
 from freezegun.api import FrozenDateTimeFactory
 from kasa import Module
+import pytest
 from syrupy.assertion import SnapshotAssertion
 
+from homeassistant.components import stream
 from homeassistant.components.camera import (
     CameraEntityFeature,
     StreamType,
@@ -15,58 +17,72 @@ from homeassistant.components.camera import (
     async_get_mjpeg_stream,
     get_camera_from_entity_id,
 )
+from homeassistant.components.tplink.camera import TPLinkCameraEntity
 from homeassistant.components.websocket_api import TYPE_RESULT
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, HomeAssistantError
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 
-from . import _mocked_device, setup_platform_for_device, snapshot_platform
+from . import (
+    IP_ADDRESS3,
+    MAC_ADDRESS3,
+    SMALLEST_VALID_JPEG_BYTES,
+    _mocked_device,
+    setup_platform_for_device,
+    snapshot_platform,
+)
 
 from tests.common import MockConfigEntry, async_fire_time_changed
 from tests.typing import WebSocketGenerator
 
-SMALLEST_VALID_JPEG = (
-    "ffd8ffe000104a46494600010101004800480000ffdb00430003020202020203020202030303030406040404040408060"
-    "6050609080a0a090809090a0c0f0c0a0b0e0b09090d110d0e0f101011100a0c12131210130f101010ffc9000b08000100"
-    "0101011100ffcc000600101005ffda0008010100003f00d2cf20ffd9"
-)
-SMALLEST_VALID_JPEG_BYTES = bytes.fromhex(SMALLEST_VALID_JPEG)
-
 
 async def test_states(
     hass: HomeAssistant,
-    mock_config_entry: MockConfigEntry,
+    mock_camera_config_entry: MockConfigEntry,
     entity_registry: er.EntityRegistry,
     device_registry: dr.DeviceRegistry,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test states."""
-    mock_config_entry.add_to_hass(hass)
+    mock_camera_config_entry.add_to_hass(hass)
 
-    device = _mocked_device(modules=[Module.Camera], alias="my_camera")
+    mock_device = _mocked_device(
+        modules=[Module.Camera],
+        alias="my_camera",
+        ip_address=IP_ADDRESS3,
+        mac=MAC_ADDRESS3,
+    )
 
     # Patch getrandbits so the access_token doesn't change on camera attributes
     with patch("random.SystemRandom.getrandbits", return_value=123123123123):
         await setup_platform_for_device(
-            hass, mock_config_entry, Platform.CAMERA, device
+            hass, mock_camera_config_entry, Platform.CAMERA, mock_device
         )
 
     await snapshot_platform(
-        hass, entity_registry, device_registry, snapshot, mock_config_entry.entry_id
+        hass,
+        entity_registry,
+        device_registry,
+        snapshot,
+        mock_camera_config_entry.entry_id,
     )
 
 
 async def test_handle_mjpeg_stream(
     hass: HomeAssistant,
-    mock_config_entry: MockConfigEntry,
+    mock_camera_config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test handle_async_mjpeg_stream."""
-    mock_device = _mocked_device(modules=[Module.Camera], alias="my_camera")
-    mock_camera = mock_device.modules[Module.Camera]
+    mock_device = _mocked_device(
+        modules=[Module.Camera],
+        alias="my_camera",
+        ip_address=IP_ADDRESS3,
+        mac=MAC_ADDRESS3,
+    )
 
     await setup_platform_for_device(
-        hass, mock_config_entry, Platform.CAMERA, mock_device
+        hass, mock_camera_config_entry, Platform.CAMERA, mock_device
     )
 
     state = hass.states.get("camera.my_camera_live_view")
@@ -78,12 +94,28 @@ async def test_handle_mjpeg_stream(
     )
     assert stream is not None
 
+
+async def test_handle_mjpeg_stream_not_supported(
+    hass: HomeAssistant,
+    mock_camera_config_entry: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test handle_async_mjpeg_stream."""
+    mock_device = _mocked_device(
+        modules=[Module.Camera],
+        alias="my_camera",
+        ip_address=IP_ADDRESS3,
+        mac=MAC_ADDRESS3,
+    )
+    mock_camera = mock_device.modules[Module.Camera]
+
     mock_camera.stream_rtsp_url.return_value = None
 
-    freezer.tick(timedelta(seconds=5))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done(wait_background_tasks=True)
+    await setup_platform_for_device(
+        hass, mock_camera_config_entry, Platform.CAMERA, mock_device
+    )
 
+    mock_request = make_mocked_request("GET", "/", headers={"token": "x"})
     stream = await async_get_mjpeg_stream(
         hass, mock_request, "camera.my_camera_live_view"
     )
@@ -92,32 +124,218 @@ async def test_handle_mjpeg_stream(
 
 async def test_camera_image(
     hass: HomeAssistant,
-    mock_config_entry: MockConfigEntry,
+    mock_camera_config_entry: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test async_get_image."""
-    mock_device = _mocked_device(modules=[Module.Camera], alias="my_camera")
+    mock_device = _mocked_device(
+        modules=[Module.Camera],
+        alias="my_camera",
+        ip_address=IP_ADDRESS3,
+        mac=MAC_ADDRESS3,
+    )
 
     await setup_platform_for_device(
-        hass, mock_config_entry, Platform.CAMERA, mock_device
+        hass, mock_camera_config_entry, Platform.CAMERA, mock_device
     )
 
     state = hass.states.get("camera.my_camera_live_view")
     assert state is not None
 
+    with patch(
+        "homeassistant.components.ffmpeg.async_get_image",
+        return_value=SMALLEST_VALID_JPEG_BYTES,
+    ) as mock_get_image:
+        image = await async_get_image(hass, "camera.my_camera_live_view")
+        assert image
+        assert image.content == SMALLEST_VALID_JPEG_BYTES
+        mock_get_image.assert_called_once()
+
+        mock_get_image.reset_mock()
+        image = await async_get_image(hass, "camera.my_camera_live_view")
+        mock_get_image.assert_not_called()
+
+        freezer.tick(TPLinkCameraEntity.IMAGE_INTERVAL)
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done(wait_background_tasks=True)
+
+        mock_get_image.reset_mock()
+        image = await async_get_image(hass, "camera.my_camera_live_view")
+        mock_get_image.assert_called_once()
+
+        freezer.tick(TPLinkCameraEntity.IMAGE_INTERVAL)
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done(wait_background_tasks=True)
+
+    # Test image returns None
+    with patch(
+        "homeassistant.components.ffmpeg.async_get_image",
+        return_value=None,
+    ) as mock_get_image:
+        msg = f"None camera image returned for {IP_ADDRESS3}"
+        assert msg not in caplog.text
+
+        mock_get_image.reset_mock()
+        image = await async_get_image(hass, "camera.my_camera_live_view")
+        mock_get_image.assert_called_once()
+
+        assert msg in caplog.text
+
+
+async def test_no_camera_image_when_streaming(
+    hass: HomeAssistant,
+    mock_camera_config_entry: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test async_get_image."""
+    mock_device = _mocked_device(
+        modules=[Module.Camera],
+        alias="my_camera",
+        ip_address=IP_ADDRESS3,
+        mac=MAC_ADDRESS3,
+    )
+
+    await setup_platform_for_device(
+        hass, mock_camera_config_entry, Platform.CAMERA, mock_device
+    )
+
+    state = hass.states.get("camera.my_camera_live_view")
+    assert state is not None
+
+    with patch(
+        "homeassistant.components.ffmpeg.async_get_image",
+        return_value=SMALLEST_VALID_JPEG_BYTES,
+    ) as mock_get_image:
+        await async_get_image(hass, "camera.my_camera_live_view")
+        mock_get_image.assert_called_once()
+
+        freezer.tick(TPLinkCameraEntity.IMAGE_INTERVAL)
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done(wait_background_tasks=True)
+
+        start_event = asyncio.Event()
+        finish_event = asyncio.Event()
+
+        async def _waiter(*_, **__):
+            start_event.set()
+            await finish_event.wait()
+
+        async def _get_stream():
+            mock_request = make_mocked_request("GET", "/", headers={"token": "x"})
+            await async_get_mjpeg_stream(
+                hass, mock_request, "camera.my_camera_live_view"
+            )
+
+        mock_get_image.reset_mock()
+        with patch(
+            "homeassistant.components.tplink.camera.async_aiohttp_proxy_stream",
+            new=_waiter,
+        ):
+            task = asyncio.create_task(_get_stream())
+            await start_event.wait()
+            await async_get_image(hass, "camera.my_camera_live_view")
+            finish_event.set()
+            await task
+
+        mock_get_image.assert_not_called()
+
+
+async def test_no_concurrent_camera_image(
+    hass: HomeAssistant,
+    mock_camera_config_entry: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Test async_get_image."""
+    mock_device = _mocked_device(
+        modules=[Module.Camera],
+        alias="my_camera",
+        ip_address=IP_ADDRESS3,
+        mac=MAC_ADDRESS3,
+    )
+
+    await setup_platform_for_device(
+        hass, mock_camera_config_entry, Platform.CAMERA, mock_device
+    )
+
+    state = hass.states.get("camera.my_camera_live_view")
+    assert state is not None
+
+    finish_event = asyncio.Event()
+    call_count = 0
+
+    async def _waiter(*_, **__):
+        nonlocal call_count
+        call_count += 1
+        await finish_event.wait()
+        return SMALLEST_VALID_JPEG_BYTES
+
+    with patch(
+        "homeassistant.components.ffmpeg.async_get_image",
+        new=_waiter,
+    ):
+        tasks = asyncio.gather(
+            async_get_image(hass, "camera.my_camera_live_view"),
+            async_get_image(hass, "camera.my_camera_live_view"),
+        )
+        # Sleep to give both tasks chance to get to th asyncio.Lock()
+        await asyncio.sleep(0)
+        finish_event.set()
+        results = await tasks
+        assert len(results) == 2
+        assert all(img and img.content == SMALLEST_VALID_JPEG_BYTES for img in results)
+        assert call_count == 1
+
+
+async def test_camera_image_auth_error(
+    hass: HomeAssistant,
+    mock_camera_config_entry: MockConfigEntry,
+    mock_connect: AsyncMock,
+    mock_discovery: AsyncMock,
+) -> None:
+    """Test async_get_image."""
+    mock_device = _mocked_device(
+        modules=[Module.Camera],
+        alias="my_camera",
+        ip_address=IP_ADDRESS3,
+        mac=MAC_ADDRESS3,
+    )
+
+    await setup_platform_for_device(
+        hass, mock_camera_config_entry, Platform.CAMERA, mock_device
+    )
+
+    state = hass.states.get("camera.my_camera_live_view")
+    assert state is not None
+    flows = hass.config_entries.flow.async_progress()
+    assert len(flows) == 0
+
     with (
         patch(
-            "homeassistant.components.tplink.camera.ffmpeg.async_get_image",
-            return_value=SMALLEST_VALID_JPEG_BYTES,
+            "homeassistant.components.ffmpeg.async_get_image",
+            return_value=b"",
         ),
+        patch(
+            "homeassistant.components.stream.async_check_stream_client_error",
+            side_effect=stream.StreamOpenClientError(
+                stream_client_error=stream.StreamClientError.Unauthorized
+            ),
+        ),
+        pytest.raises(HomeAssistantError),
     ):
-        image = await async_get_image(hass, "camera.my_camera_live_view")
-    assert image
-    assert image.content == SMALLEST_VALID_JPEG_BYTES
+        await async_get_image(hass, "camera.my_camera_live_view")
+    await hass.async_block_till_done()
+
+    flows = hass.config_entries.flow.async_progress()
+    assert len(flows) == 1
+    [result] = flows
+
+    assert result["step_id"] == "camera_auth_confirm"
 
 
 async def test_camera_stream_source(
     hass: HomeAssistant,
-    mock_config_entry: MockConfigEntry,
+    mock_camera_config_entry: MockConfigEntry,
     hass_ws_client: WebSocketGenerator,
 ) -> None:
     """Test async_get_image.
@@ -125,10 +343,15 @@ async def test_camera_stream_source(
     This test would fail if the integration didn't properly
     put stream in the dependencies.
     """
-    mock_device = _mocked_device(modules=[Module.Camera], alias="my_camera")
+    mock_device = _mocked_device(
+        modules=[Module.Camera],
+        alias="my_camera",
+        ip_address=IP_ADDRESS3,
+        mac=MAC_ADDRESS3,
+    )
 
     await setup_platform_for_device(
-        hass, mock_config_entry, Platform.CAMERA, mock_device
+        hass, mock_camera_config_entry, Platform.CAMERA, mock_device
     )
 
     state = hass.states.get("camera.my_camera_live_view")
@@ -148,13 +371,18 @@ async def test_camera_stream_source(
 
 async def test_camera_stream_attributes(
     hass: HomeAssistant,
-    mock_config_entry: MockConfigEntry,
+    mock_camera_config_entry: MockConfigEntry,
 ) -> None:
     """Test stream attributes."""
-    mock_device = _mocked_device(modules=[Module.Camera], alias="my_camera")
+    mock_device = _mocked_device(
+        modules=[Module.Camera],
+        alias="my_camera",
+        ip_address=IP_ADDRESS3,
+        mac=MAC_ADDRESS3,
+    )
 
     await setup_platform_for_device(
-        hass, mock_config_entry, Platform.CAMERA, mock_device
+        hass, mock_camera_config_entry, Platform.CAMERA, mock_device
     )
 
     state = hass.states.get("camera.my_camera_live_view")
@@ -168,14 +396,19 @@ async def test_camera_stream_attributes(
 
 async def test_camera_turn_on_off(
     hass: HomeAssistant,
-    mock_config_entry: MockConfigEntry,
+    mock_camera_config_entry: MockConfigEntry,
 ) -> None:
     """Test camera turn on and off."""
-    mock_device = _mocked_device(modules=[Module.Camera], alias="my_camera")
+    mock_device = _mocked_device(
+        modules=[Module.Camera],
+        alias="my_camera",
+        ip_address=IP_ADDRESS3,
+        mac=MAC_ADDRESS3,
+    )
     mock_camera = mock_device.modules[Module.Camera]
 
     await setup_platform_for_device(
-        hass, mock_config_entry, Platform.CAMERA, mock_device
+        hass, mock_camera_config_entry, Platform.CAMERA, mock_device
     )
 
     state = hass.states.get("camera.my_camera_live_view")
