@@ -1651,7 +1651,7 @@ pykrakenapi==0.1.8
 pykulersky==0.5.2
 
 # homeassistant.components.lamarzocco
-pylamarzocco==1.4.1
+pylamarzocco==1.4.2
 
 # homeassistant.components.lastfm
 pylast==5.1.0
@@ -1755,7 +1755,7 @@ pyotgw==2.2.2
 pyotp==2.8.0
 
 # homeassistant.components.overkiz
-pyoverkiz==1.15.4
+pyoverkiz==1.15.5
 
 # homeassistant.components.onewire
 pyownet==0.10.0.post1
