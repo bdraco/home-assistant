@@ -52,14 +52,12 @@ def _async_integration_platform_component_loaded(
     # First filter out platforms that the integration already processed.
     integration_platforms_by_name: dict[str, IntegrationPlatform] = {}
     for integration_platform in integration_platforms:
-        platform_name = integration_platform.platform_name
-        if (
-            component_name in integration_platform.seen_components
-            or platform_name == integration.domain
-        ):
+        if component_name in integration_platform.seen_components:
             continue
         integration_platform.seen_components.add(component_name)
-        integration_platforms_by_name[platform_name] = integration_platform
+        integration_platforms_by_name[integration_platform.platform_name] = (
+            integration_platform
+        )
 
     if not integration_platforms_by_name:
         return
@@ -182,8 +180,6 @@ async def async_process_integration_platforms(
     # amount of import executor usage.
     async_register_preload_platform(hass, platform_name)
     top_level_components = hass.config.top_level_components.copy()
-    # Remove the platform itself from the list of components to process.
-    top_level_components.discard(platform_name)
     process_job = HassJob(
         catch_log_exception(
             process_platform,
@@ -213,7 +209,7 @@ async def async_process_integration_platforms(
     #
     future = hass.async_create_task_internal(
         _async_process_integration_platforms(
-            hass, platform_name, top_level_components, process_job
+            hass, platform_name, top_level_components.copy(), process_job
         ),
         eager_start=True,
     )
