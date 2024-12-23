@@ -625,7 +625,7 @@ dbus-fast==2.24.3
 debugpy==1.8.11
 
 # homeassistant.components.ecovacs
-deebot-client==9.4.0
+deebot-client==10.0.1
 
 # homeassistant.components.ihc
 # homeassistant.components.namecheapdns
@@ -960,7 +960,7 @@ hole==0.8.0
 holidays==0.63
 
 # homeassistant.components.frontend
-home-assistant-frontend==20241127.8
+home-assistant-frontend==20241223.1
 
 # homeassistant.components.conversation
 home-assistant-intents==2024.12.20
@@ -993,6 +993,9 @@ ibeacon-ble==1.2.0
 # homeassistant.components.local_calendar
 # homeassistant.components.local_todo
 ical==8.2.0
+
+# homeassistant.components.caldav
+icalendar==6.1.0
 
 # homeassistant.components.ping
 icmplib==3.0
