@@ -103,7 +103,6 @@ async def test_subscribe_advertisements(
     manager = _get_manager()
     freezer.tick(3600)
     manager._async_check_unavailable()
-    await hass.async_block_till_done()
     async with asyncio.timeout(1):
         response = await client.receive_json()
     assert response["event"] == {"remove": [{"address": "44:44:33:11:23:12"}]}
