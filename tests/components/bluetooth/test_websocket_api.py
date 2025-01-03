@@ -2,7 +2,8 @@
 
 import asyncio
 from datetime import timedelta
-from unittest.mock import ANY
+import time
+from unittest.mock import ANY, patch
 
 from freezegun import freeze_time
 import pytest
@@ -103,7 +104,14 @@ async def test_subscribe_advertisements(
     assert new_time > adv_time
     manager = _get_manager()
     future_time = utcnow() + timedelta(seconds=3600)
-    with freeze_time(future_time):
+    future_monotonic_time = time.monotonic() + 3600
+    with (
+        freeze_time(future_time),
+        patch(
+            "habluetooth.manager.monotonic_time_coarse",
+            return_value=future_monotonic_time,
+        ),
+    ):
         manager._async_check_unavailable()
         async_fire_time_changed(hass, future_time)
     async with asyncio.timeout(1):
