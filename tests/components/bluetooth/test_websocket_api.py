@@ -12,7 +12,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util.dt import utcnow
 
 from . import (
-    _get_manager,
     generate_advertisement_data,
     generate_ble_device,
     inject_advertisement_with_source,
@@ -102,7 +101,6 @@ async def test_subscribe_advertisements(
     }
     new_time = response["event"]["add"][0]["time"]
     assert new_time > adv_time
-    manager = _get_manager()
     future_time = utcnow() + timedelta(seconds=3600)
     future_monotonic_time = time.monotonic() + 3600
     with (
@@ -112,7 +110,6 @@ async def test_subscribe_advertisements(
             return_value=future_monotonic_time,
         ),
     ):
-        manager._async_check_unavailable()
         async_fire_time_changed(hass, future_time)
     async with asyncio.timeout(1):
         response = await client.receive_json()
