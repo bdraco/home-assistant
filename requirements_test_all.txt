@@ -189,7 +189,7 @@ aioaseko==1.0.0
 aioasuswrt==1.4.0
 
 # homeassistant.components.husqvarna_automower
-aioautomower==2024.12.0
+aioautomower==2025.1.0
 
 # homeassistant.components.azure_devops
 aioazuredevops==2.2.1
@@ -603,7 +603,7 @@ colorthief==0.2.1
 construct==2.10.68
 
 # homeassistant.components.cookidoo
-cookidoo-api==0.11.2
+cookidoo-api==0.12.2
 
 # homeassistant.components.backup
 # homeassistant.components.utility_meter
@@ -1096,6 +1096,9 @@ led-ble==1.1.1
 
 # homeassistant.components.lektrico
 lektricowifi==0.0.43
+
+# homeassistant.components.letpot
+letpot==0.2.0
 
 # homeassistant.components.foscam
 libpyfoscam==1.2.2
@@ -1603,7 +1606,7 @@ pygti==0.9.4
 pyhaversion==22.8.0
 
 # homeassistant.components.heos
-pyheos==0.8.0
+pyheos==0.9.0
 
 # homeassistant.components.hive
 pyhiveapi==0.5.16
@@ -1887,7 +1890,7 @@ pyspeex-noise==1.0.2
 pysqueezebox==0.11.1
 
 # homeassistant.components.suez_water
-pysuezV2==2.0.1
+pysuezV2==2.0.3
 
 # homeassistant.components.switchbee
 pyswitchbee==1.8.3
@@ -2495,7 +2498,7 @@ yt-dlp[default]==2024.12.23
 zamg==0.3.6
 
 # homeassistant.components.zeroconf
-zeroconf==0.137.2
+zeroconf==0.138.1
 
 # homeassistant.components.zeversolar
 zeversolar==0.3.2
