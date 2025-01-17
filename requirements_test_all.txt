@@ -690,7 +690,7 @@ eagle100==0.1.1
 easyenergy==2.1.2
 
 # homeassistant.components.eheimdigital
-eheimdigital==1.0.4
+eheimdigital==1.0.5
 
 # homeassistant.components.electric_kiwi
 electrickiwi-api==0.8.5
@@ -1016,7 +1016,7 @@ ifaddr==0.2.0
 igloohome-api==0.0.6
 
 # homeassistant.components.imgw_pib
-imgw_pib==1.0.7
+imgw_pib==1.0.9
 
 # homeassistant.components.incomfort
 incomfort-client==0.6.4
@@ -1854,7 +1854,7 @@ pysiaalarm==3.1.1
 pysignalclirestapi==0.3.24
 
 # homeassistant.components.sma
-pysma==0.7.3
+pysma==0.7.5
 
 # homeassistant.components.smappee
 pysmappee==0.2.29
@@ -2504,7 +2504,7 @@ yt-dlp[default]==2024.12.23
 zamg==0.3.6
 
 # homeassistant.components.zeroconf
-zeroconf==0.139.0
+zeroconf==0.140.1
 
 # homeassistant.components.zeversolar
 zeversolar==0.3.2

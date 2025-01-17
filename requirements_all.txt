@@ -815,7 +815,7 @@ ebusdpy==0.0.17
 ecoaliface==0.4.0
 
 # homeassistant.components.eheimdigital
-eheimdigital==1.0.4
+eheimdigital==1.0.5
 
 # homeassistant.components.electric_kiwi
 electrickiwi-api==0.8.5
@@ -1205,7 +1205,7 @@ igloohome-api==0.0.6
 ihcsdk==2.8.5
 
 # homeassistant.components.imgw_pib
-imgw_pib==1.0.7
+imgw_pib==1.0.9
 
 # homeassistant.components.incomfort
 incomfort-client==0.6.4
@@ -2285,7 +2285,7 @@ pysignalclirestapi==0.3.24
 pyskyqhub==0.1.4
 
 # homeassistant.components.sma
-pysma==0.7.3
+pysma==0.7.5
 
 # homeassistant.components.smappee
 pysmappee==0.2.29
@@ -3118,7 +3118,7 @@ zamg==0.3.6
 zengge==0.2
 
 # homeassistant.components.zeroconf
-zeroconf==0.139.0
+zeroconf==0.140.1
 
 # homeassistant.components.zeversolar
 zeversolar==0.3.2
