@@ -7,7 +7,6 @@ from pyisy import ISYConnectionError, ISYInvalidAuthError
 import pytest
 
 from homeassistant import config_entries
-from homeassistant.components import dhcp, ssdp
 from homeassistant.components.isy994.const import (
     CONF_TLS_VER,
     DOMAIN,
@@ -18,6 +17,12 @@ from homeassistant.config_entries import SOURCE_DHCP, SOURCE_IGNORE, SOURCE_SSDP
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from homeassistant.helpers.service_info.ssdp import (
+    ATTR_UPNP_FRIENDLY_NAME,
+    ATTR_UPNP_UDN,
+    SsdpServiceInfo,
+)
 
 from . import (
     MOCK_CONFIG_RESPONSE,
@@ -239,13 +244,13 @@ async def test_form_ssdp_already_configured(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_SSDP},
-        data=ssdp.SsdpServiceInfo(
+        data=SsdpServiceInfo(
             ssdp_usn="mock_usn",
             ssdp_st="mock_st",
             ssdp_location=f"http://{MOCK_HOSTNAME}{ISY_URL_POSTFIX}",
             upnp={
-                ssdp.ATTR_UPNP_FRIENDLY_NAME: "myisy",
-                ssdp.ATTR_UPNP_UDN: f"{UDN_UUID_PREFIX}{MOCK_UUID}",
+                ATTR_UPNP_FRIENDLY_NAME: "myisy",
+                ATTR_UPNP_UDN: f"{UDN_UUID_PREFIX}{MOCK_UUID}",
             },
         ),
     )
@@ -258,13 +263,13 @@ async def test_form_ssdp(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_SSDP},
-        data=ssdp.SsdpServiceInfo(
+        data=SsdpServiceInfo(
             ssdp_usn="mock_usn",
             ssdp_st="mock_st",
             ssdp_location=f"http://{MOCK_HOSTNAME}{ISY_URL_POSTFIX}",
             upnp={
-                ssdp.ATTR_UPNP_FRIENDLY_NAME: "myisy",
-                ssdp.ATTR_UPNP_UDN: f"{UDN_UUID_PREFIX}{MOCK_UUID}",
+                ATTR_UPNP_FRIENDLY_NAME: "myisy",
+                ATTR_UPNP_UDN: f"{UDN_UUID_PREFIX}{MOCK_UUID}",
             },
         ),
     )
@@ -306,13 +311,13 @@ async def test_form_ssdp_existing_entry(hass: HomeAssistant) -> None:
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_SSDP},
-            data=ssdp.SsdpServiceInfo(
+            data=SsdpServiceInfo(
                 ssdp_usn="mock_usn",
                 ssdp_st="mock_st",
                 ssdp_location=f"http://3.3.3.3{ISY_URL_POSTFIX}",
                 upnp={
-                    ssdp.ATTR_UPNP_FRIENDLY_NAME: "myisy",
-                    ssdp.ATTR_UPNP_UDN: f"{UDN_UUID_PREFIX}{MOCK_UUID}",
+                    ATTR_UPNP_FRIENDLY_NAME: "myisy",
+                    ATTR_UPNP_UDN: f"{UDN_UUID_PREFIX}{MOCK_UUID}",
                 },
             ),
         )
@@ -337,13 +342,13 @@ async def test_form_ssdp_existing_entry_with_no_port(hass: HomeAssistant) -> Non
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_SSDP},
-            data=ssdp.SsdpServiceInfo(
+            data=SsdpServiceInfo(
                 ssdp_usn="mock_usn",
                 ssdp_st="mock_st",
                 ssdp_location=f"http://3.3.3.3/{ISY_URL_POSTFIX}",
                 upnp={
-                    ssdp.ATTR_UPNP_FRIENDLY_NAME: "myisy",
-                    ssdp.ATTR_UPNP_UDN: f"{UDN_UUID_PREFIX}{MOCK_UUID}",
+                    ATTR_UPNP_FRIENDLY_NAME: "myisy",
+                    ATTR_UPNP_UDN: f"{UDN_UUID_PREFIX}{MOCK_UUID}",
                 },
             ),
         )
@@ -370,13 +375,13 @@ async def test_form_ssdp_existing_entry_with_alternate_port(
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_SSDP},
-            data=ssdp.SsdpServiceInfo(
+            data=SsdpServiceInfo(
                 ssdp_usn="mock_usn",
                 ssdp_st="mock_st",
                 ssdp_location=f"http://3.3.3.3:1443/{ISY_URL_POSTFIX}",
                 upnp={
-                    ssdp.ATTR_UPNP_FRIENDLY_NAME: "myisy",
-                    ssdp.ATTR_UPNP_UDN: f"{UDN_UUID_PREFIX}{MOCK_UUID}",
+                    ATTR_UPNP_FRIENDLY_NAME: "myisy",
+                    ATTR_UPNP_UDN: f"{UDN_UUID_PREFIX}{MOCK_UUID}",
                 },
             ),
         )
@@ -401,13 +406,13 @@ async def test_form_ssdp_existing_entry_no_port_https(hass: HomeAssistant) -> No
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_SSDP},
-            data=ssdp.SsdpServiceInfo(
+            data=SsdpServiceInfo(
                 ssdp_usn="mock_usn",
                 ssdp_st="mock_st",
                 ssdp_location=f"https://3.3.3.3/{ISY_URL_POSTFIX}",
                 upnp={
-                    ssdp.ATTR_UPNP_FRIENDLY_NAME: "myisy",
-                    ssdp.ATTR_UPNP_UDN: f"{UDN_UUID_PREFIX}{MOCK_UUID}",
+                    ATTR_UPNP_FRIENDLY_NAME: "myisy",
+                    ATTR_UPNP_UDN: f"{UDN_UUID_PREFIX}{MOCK_UUID}",
                 },
             ),
         )
@@ -424,7 +429,7 @@ async def test_form_dhcp(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_DHCP},
-        data=dhcp.DhcpServiceInfo(
+        data=DhcpServiceInfo(
             ip="1.2.3.4",
             hostname="isy994-ems",
             macaddress=MOCK_MAC,
@@ -460,7 +465,7 @@ async def test_form_dhcp_with_polisy(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_DHCP},
-        data=dhcp.DhcpServiceInfo(
+        data=DhcpServiceInfo(
             ip="1.2.3.4",
             hostname="polisy",
             macaddress=MOCK_POLISY_MAC,
@@ -500,7 +505,7 @@ async def test_form_dhcp_with_eisy(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(
         DOMAIN,
         context={"source": SOURCE_DHCP},
-        data=dhcp.DhcpServiceInfo(
+        data=DhcpServiceInfo(
             ip="1.2.3.4",
             hostname="eisy",
             macaddress=MOCK_MAC,
@@ -548,7 +553,7 @@ async def test_form_dhcp_existing_entry(hass: HomeAssistant) -> None:
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_DHCP},
-            data=dhcp.DhcpServiceInfo(
+            data=DhcpServiceInfo(
                 ip="1.2.3.4",
                 hostname="isy994-ems",
                 macaddress=MOCK_MAC,
@@ -578,7 +583,7 @@ async def test_form_dhcp_existing_entry_preserves_port(hass: HomeAssistant) -> N
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_DHCP},
-            data=dhcp.DhcpServiceInfo(
+            data=DhcpServiceInfo(
                 ip="1.2.3.4",
                 hostname="isy994-ems",
                 macaddress=MOCK_MAC,
@@ -604,7 +609,7 @@ async def test_form_dhcp_existing_ignored_entry(hass: HomeAssistant) -> None:
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
             context={"source": SOURCE_DHCP},
-            data=dhcp.DhcpServiceInfo(
+            data=DhcpServiceInfo(
                 ip="1.2.3.4",
                 hostname="isy994-ems",
                 macaddress=MOCK_MAC,
