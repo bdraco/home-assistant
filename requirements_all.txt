@@ -591,7 +591,7 @@ bizkaibus==0.1.1
 
 # homeassistant.components.eq3btsmart
 # homeassistant.components.esphome
-bleak-esphome==2.1.0
+bleak-esphome==2.1.1
 
 # homeassistant.components.bluetooth
 bleak-retry-connector==3.8.0
@@ -1208,7 +1208,7 @@ ihcsdk==2.8.5
 imgw_pib==1.0.9
 
 # homeassistant.components.incomfort
-incomfort-client==0.6.4
+incomfort-client==0.6.7
 
 # homeassistant.components.influxdb
 influxdb-client==1.24.0
@@ -1763,7 +1763,7 @@ pyEmby==1.10
 pyHik==0.3.2
 
 # homeassistant.components.homee
-pyHomee==1.2.0
+pyHomee==1.2.3
 
 # homeassistant.components.rfxtrx
 pyRFXtrx==0.31.1
@@ -3118,7 +3118,7 @@ zamg==0.3.6
 zengge==0.2
 
 # homeassistant.components.zeroconf
-zeroconf==0.140.1
+zeroconf==0.141.0
 
 # homeassistant.components.zeversolar
 zeversolar==0.3.2
