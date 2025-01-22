@@ -7,7 +7,7 @@ from functools import lru_cache, partial
 import time
 from typing import Any
 
-from habluetooth import BluetoothScanningMode
+from habluetooth import BluetoothScanningMode, HaBluetoothSlotAllocations
 from home_assistant_bluetooth import BluetoothServiceInfoBleak
 import voluptuous as vol
 
@@ -148,3 +148,36 @@ async def ws_subscribe_advertisements(
     _AdvertisementSubscription(
         hass, connection, msg["id"], BluetoothCallbackMatcher(connectable=False)
     ).async_start()
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "bluetooth/subscribe_connection_allocations",
+        vol.Optional("source"): str,
+    }
+)
+@websocket_api.async_response
+async def ws_subscribe_connections(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Handle subscribe advertisements websocket command."""
+    ws_msg_id = msg["id"]
+    source = msg.get("source")
+    manager = _get_manager(hass)
+    if source and not manager.async_scanner_by_source(source):
+        websocket_api.error_message(ws_msg_id, "invalid_source", "Invalid source")
+        return
+
+    def _async_allocations_changed(allocations: HaBluetoothSlotAllocations) -> None:
+        connection.send_message(
+            json_bytes(websocket_api.event_message(ws_msg_id, [allocations]))
+        )
+
+    connection.subscriptions[ws_msg_id] = manager.async_register_allocation_callback(
+        _async_allocations_changed, source
+    )
+    connection.send_message(json_bytes(websocket_api.result_message(ws_msg_id)))
+    if current_allocations := manager.async_current_allocations(source):
+        connection.send_message(
+            json_bytes(websocket_api.event_message(ws_msg_id, current_allocations))
+        )
