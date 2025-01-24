@@ -14,6 +14,7 @@ from synology_dsm.api.core.upgrade import SynoCoreUpgrade
 from synology_dsm.api.core.utilization import SynoCoreUtilization
 from synology_dsm.api.dsm.information import SynoDSMInformation
 from synology_dsm.api.dsm.network import SynoDSMNetwork
+from synology_dsm.api.file_station import SynoFileStation
 from synology_dsm.api.photos import SynoPhotos
 from synology_dsm.api.storage.storage import SynoStorage
 from synology_dsm.api.surveillance_station import SynoSurveillanceStation
@@ -62,11 +63,12 @@ class SynoApi:
             self.config_url = f"http://{entry.data[CONF_HOST]}:{entry.data[CONF_PORT]}"
 
         # DSM APIs
+        self.file_station: SynoFileStation | None = None
         self.information: SynoDSMInformation | None = None
         self.network: SynoDSMNetwork | None = None
+        self.photos: SynoPhotos | None = None
         self.security: SynoCoreSecurity | None = None
         self.storage: SynoStorage | None = None
-        self.photos: SynoPhotos | None = None
         self.surveillance_station: SynoSurveillanceStation | None = None
         self.system: SynoCoreSystem | None = None
         self.upgrade: SynoCoreUpgrade | None = None
@@ -74,10 +76,11 @@ class SynoApi:
 
         # Should we fetch them
         self._fetching_entities: dict[str, set[str]] = {}
+        self._with_file_station = True
         self._with_information = True
+        self._with_photos = True
         self._with_security = True
         self._with_storage = True
-        self._with_photos = True
         self._with_surveillance_station = True
         self._with_system = True
         self._with_upgrade = True
@@ -157,6 +160,26 @@ class SynoApi:
             self.dsm.reset(SynoCoreUpgrade.API_KEY)
             LOGGER.debug("Disabled fetching upgrade data during setup: %s", ex)
 
+        # check if file station is used and permitted
+        self._with_file_station = bool(self.dsm.apis.get(SynoFileStation.LIST_API_KEY))
+        if self._with_file_station:
+            shares: list | None = None
+            with suppress(*SYNOLOGY_CONNECTION_EXCEPTIONS):
+                shares = await self.dsm.file.get_shared_folders(only_writable=True)
+            if not shares:
+                self._with_file_station = False
+                self.dsm.reset(SynoFileStation.API_KEY)
+                LOGGER.debug(
+                    "File Station found, but disabled due to missing user"
+                    " permissions or no writable shared folders available"
+                )
+
+        LOGGER.debug(
+            "State of File Station during setup of '%s': %s",
+            self._entry.unique_id,
+            self._with_file_station,
+        )
+
         await self._fetch_device_configuration()
 
         try:
@@ -201,18 +224,21 @@ class SynoApi:
             self.dsm.reset(self.surveillance_station)
 
         # Determine if we should fetch an API
-        self._with_system = bool(self.dsm.apis.get(SynoCoreSystem.API_KEY))
+        self._with_file_station = bool(
+            self._fetching_entities.get(SynoFileStation.API_KEY)
+        )
+        self._with_information = bool(
+            self._fetching_entities.get(SynoDSMInformation.API_KEY)
+        )
+        self._with_photos = bool(self._fetching_entities.get(SynoStorage.API_KEY))
         self._with_security = bool(
             self._fetching_entities.get(SynoCoreSecurity.API_KEY)
         )
         self._with_storage = bool(self._fetching_entities.get(SynoStorage.API_KEY))
-        self._with_photos = bool(self._fetching_entities.get(SynoStorage.API_KEY))
+        self._with_system = bool(self.dsm.apis.get(SynoCoreSystem.API_KEY))
         self._with_upgrade = bool(self._fetching_entities.get(SynoCoreUpgrade.API_KEY))
         self._with_utilisation = bool(
             self._fetching_entities.get(SynoCoreUtilization.API_KEY)
-        )
-        self._with_information = bool(
-            self._fetching_entities.get(SynoDSMInformation.API_KEY)
         )
 
         # Reset not used API, information is not reset since it's used in device_info
@@ -224,6 +250,15 @@ class SynoApi:
             if self.security:
                 self.dsm.reset(self.security)
             self.security = None
+
+        if not self._with_file_station:
+            LOGGER.debug(
+                "Disable file station api from being updated or '%s'",
+                self._entry.unique_id,
+            )
+            if self.file_station:
+                self.dsm.reset(self.file_station)
+            self.file_station = None
 
         if not self._with_photos:
             LOGGER.debug(
@@ -271,6 +306,12 @@ class SynoApi:
         self.information = self.dsm.information
         self.network = self.dsm.network
         await self.network.update()
+
+        if self._with_file_station:
+            LOGGER.debug(
+                "Enable file station api updates for '%s'", self._entry.unique_id
+            )
+            self.file_station = self.dsm.file
 
         if self._with_security:
             LOGGER.debug("Enable security api updates for '%s'", self._entry.unique_id)
