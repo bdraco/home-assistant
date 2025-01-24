@@ -243,7 +243,7 @@ aiogithubapi==24.6.0
 aioguardian==2022.07.0
 
 # homeassistant.components.harmony
-aioharmony==0.2.10
+aioharmony==0.2.11
 
 # homeassistant.components.hassio
 aiohasupervisor==0.2.2b5
@@ -1372,7 +1372,7 @@ plumlightpad==0.0.11
 poolsense==0.0.8
 
 # homeassistant.components.powerfox
-powerfox==1.2.0
+powerfox==1.2.1
 
 # homeassistant.components.reddit
 praw==7.5.0
