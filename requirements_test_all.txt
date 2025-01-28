@@ -564,7 +564,7 @@ boschshcpy==0.2.91
 botocore==1.34.131
 
 # homeassistant.components.bring
-bring-api==0.9.1
+bring-api==1.0.0
 
 # homeassistant.components.broadlink
 broadlink==0.19.0
@@ -1203,6 +1203,9 @@ motioneye-client==0.3.14
 # homeassistant.components.bang_olufsen
 mozart-api==4.1.1.116.4
 
+# homeassistant.components.onedrive
+msgraph-sdk==1.16.0
+
 # homeassistant.components.mullvad
 mullvad-api==1.0.0
 
@@ -1252,7 +1255,7 @@ nhc==0.3.9
 nibe==2.14.0
 
 # homeassistant.components.nice_go
-nice-go==1.0.0
+nice-go==1.0.1
 
 # homeassistant.components.nfandroidtv
 notifications-android-tv==0.1.5
@@ -1289,7 +1292,7 @@ objgraph==3.5.0
 odp-amsterdam==6.0.2
 
 # homeassistant.components.ohme
-ohme==1.2.6
+ohme==1.2.8
 
 # homeassistant.components.ollama
 ollama==0.4.7
@@ -1927,7 +1930,7 @@ python-fullykiosk==0.0.14
 python-homeassistant-analytics==0.8.1
 
 # homeassistant.components.homewizard
-python-homewizard-energy==v8.1.1
+python-homewizard-energy==v8.2.0
 
 # homeassistant.components.izone
 python-izone==1.2.9
@@ -1973,7 +1976,7 @@ python-picnic-api==1.1.0
 python-rabbitair==0.0.8
 
 # homeassistant.components.roborock
-python-roborock==2.8.4
+python-roborock==2.9.7
 
 # homeassistant.components.smarttub
 python-smarttub==0.0.38
