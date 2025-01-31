@@ -582,7 +582,7 @@ brottsplatskartan==1.0.5
 brunt==1.2.0
 
 # homeassistant.components.bthome
-bthome-ble==3.9.1
+bthome-ble==3.11.0
 
 # homeassistant.components.buienradar
 buienradar==1.0.6
@@ -637,7 +637,7 @@ dbus-fast==2.30.2
 debugpy==1.8.11
 
 # homeassistant.components.ecovacs
-deebot-client==11.1.0b1
+deebot-client==11.1.0b2
 
 # homeassistant.components.ihc
 # homeassistant.components.namecheapdns
@@ -2511,7 +2511,7 @@ yt-dlp[default]==2025.01.26
 zamg==0.3.6
 
 # homeassistant.components.zeroconf
-zeroconf==0.142.0
+zeroconf==0.143.0
 
 # homeassistant.components.zeversolar
 zeversolar==0.3.2
