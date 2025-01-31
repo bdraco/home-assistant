@@ -1103,7 +1103,7 @@ ha-philipsjs==3.2.2
 habiticalib==0.3.3
 
 # homeassistant.components.bluetooth
-habluetooth==3.15.0
+habluetooth==3.17.0
 
 # homeassistant.components.cloud
 hass-nabucasa==0.88.1
@@ -1247,7 +1247,7 @@ israel-rail-api==0.1.2
 jaraco.abode==6.2.1
 
 # homeassistant.components.jellyfin
-jellyfin-apiclient-python==1.9.2
+jellyfin-apiclient-python==1.10.0
 
 # homeassistant.components.command_line
 # homeassistant.components.rest
@@ -1305,7 +1305,7 @@ led-ble==1.1.4
 lektricowifi==0.0.43
 
 # homeassistant.components.letpot
-letpot==0.3.0
+letpot==0.4.0
 
 # homeassistant.components.foscam
 libpyfoscam==1.2.2
@@ -1592,7 +1592,7 @@ openwrt-luci-rpc==1.1.17
 openwrt-ubus-rpc==0.0.2
 
 # homeassistant.components.opower
-opower==0.8.8
+opower==0.8.9
 
 # homeassistant.components.oralb
 oralb-ble==0.17.6
@@ -2346,7 +2346,7 @@ pytautulli==23.1.1
 pythinkingcleaner==0.0.3
 
 # homeassistant.components.motionmount
-python-MotionMount==2.2.0
+python-MotionMount==2.3.0
 
 # homeassistant.components.awair
 python-awair==0.2.4
@@ -2391,7 +2391,7 @@ python-google-drive-api==0.0.2
 python-homeassistant-analytics==0.8.1
 
 # homeassistant.components.homewizard
-python-homewizard-energy==v8.3.0
+python-homewizard-energy==v8.3.2
 
 # homeassistant.components.hp_ilo
 python-hpilo==4.4.3
@@ -2902,7 +2902,7 @@ tololib==1.1.0
 toonapi==0.3.0
 
 # homeassistant.components.totalconnect
-total-connect-client==2024.12
+total-connect-client==2025.1.4
 
 # homeassistant.components.tplink_lte
 tp-connected==0.0.4
