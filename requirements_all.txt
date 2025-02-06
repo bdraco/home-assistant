@@ -176,7 +176,7 @@ aio-georss-gdacs==0.10
 aioacaia==0.1.14
 
 # homeassistant.components.airq
-aioairq==0.4.3
+aioairq==0.4.4
 
 # homeassistant.components.airzone_cloud
 aioairzone-cloud==0.6.10
@@ -824,7 +824,7 @@ ecoaliface==0.4.0
 eheimdigital==1.0.5
 
 # homeassistant.components.electric_kiwi
-electrickiwi-api==0.8.5
+electrickiwi-api==0.9.12
 
 # homeassistant.components.elevenlabs
 elevenlabs==1.9.0
@@ -1112,7 +1112,7 @@ hass-nabucasa==0.89.0
 hass-splunk==0.1.1
 
 # homeassistant.components.conversation
-hassil==2.2.0
+hassil==2.2.3
 
 # homeassistant.components.jewish_calendar
 hdate==0.11.1
@@ -1143,13 +1143,13 @@ hole==0.8.0
 
 # homeassistant.components.holiday
 # homeassistant.components.workday
-holidays==0.65
+holidays==0.66
 
 # homeassistant.components.frontend
 home-assistant-frontend==20250205.0
 
 # homeassistant.components.conversation
-home-assistant-intents==2025.1.28
+home-assistant-intents==2025.2.5
 
 # homeassistant.components.homematicip_cloud
 homematicip==1.1.7
