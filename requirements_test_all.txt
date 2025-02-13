@@ -944,7 +944,7 @@ habiticalib==0.3.7
 habluetooth==3.21.1
 
 # homeassistant.components.cloud
-hass-nabucasa==0.90.0
+hass-nabucasa==0.91.0
 
 # homeassistant.components.conversation
 hassil==2.2.3
@@ -1328,7 +1328,7 @@ openhomedevice==2.2.0
 openwebifpy==4.3.1
 
 # homeassistant.components.opower
-opower==0.8.9
+opower==0.9.0
 
 # homeassistant.components.oralb
 oralb-ble==0.17.6
