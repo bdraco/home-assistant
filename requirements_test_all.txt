@@ -94,7 +94,7 @@ PyTransportNSW==0.1.1
 PyTurboJPEG==1.7.5
 
 # homeassistant.components.vicare
-PyViCare==2.42.0
+PyViCare==2.42.1
 
 # homeassistant.components.xiaomi_aqara
 PyXiaomiGateway==0.14.3
@@ -404,7 +404,7 @@ aiowaqi==3.1.0
 aiowatttime==0.1.1
 
 # homeassistant.components.webostv
-aiowebostv==0.6.1
+aiowebostv==0.6.2
 
 # homeassistant.components.withings
 aiowithings==3.1.5
@@ -2523,7 +2523,7 @@ zeroconf==0.144.1
 zeversolar==0.3.2
 
 # homeassistant.components.zha
-zha==0.0.48
+zha==0.0.49
 
 # homeassistant.components.zwave_js
 zwave-js-server-python==0.60.0
