@@ -1304,7 +1304,7 @@ omnilogic==0.4.5
 ondilo==0.5.0
 
 # homeassistant.components.onedrive
-onedrive-personal-sdk==0.0.10
+onedrive-personal-sdk==0.0.11
 
 # homeassistant.components.onvif
 onvif-zeep-async==3.2.5
@@ -2474,7 +2474,7 @@ xbox-webapi==2.1.0
 xiaomi-ble==0.33.0
 
 # homeassistant.components.knx
-xknx==3.5.0
+xknx==3.6.0
 
 # homeassistant.components.knx
 xknxproject==3.8.1
