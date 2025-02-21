@@ -1,7 +1,8 @@
-"""Demo platform that offers a fake button entity."""
+"""Thermopro button platform."""
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable, Coroutine
 from dataclasses import dataclass
 from typing import Any
@@ -17,6 +18,7 @@ from homeassistant.components.button import ButtonEntity, ButtonEntityDescriptio
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.dispatcher import (
     async_dispatcher_connect,
@@ -124,6 +126,7 @@ class ThermoProButtonEntity(ButtonEntity):
             identifiers={(DOMAIN, address)},
             connections={(dr.CONNECTION_BLUETOOTH, address)},
         )
+        self._action_lock = asyncio.Lock()
 
     async def async_added_to_hass(self) -> None:
         """Connect availability dispatcher."""
@@ -152,4 +155,8 @@ class ThermoProButtonEntity(ButtonEntity):
 
     async def async_press(self) -> None:
         """Execute the press action for the entity."""
-        await self.entity_description.press_action_fn(self.hass, self._address)
+        if self._action_lock.locked():
+            raise HomeAssistantError(f"Connecting to {self.name} already in progress")
+        async with self._action_lock:
+            # Only one connection at a time
+            await self.entity_description.press_action_fn(self.hass, self._address)
