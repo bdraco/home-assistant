@@ -161,7 +161,11 @@ LOGGING_AND_HTTP_DEPS_INTEGRATIONS = {
     "system_log",
     "sentry",
 }
-BACKUP_HASSIO_INTEGRATIONS = {
+FRONTEND_INTEGRATIONS = {
+    # Get the frontend up and running as soon as possible so problem
+    # integrations can be removed and database migration status is
+    # visible in frontend
+    "frontend",
     # Hassio is an after dependency of backup, after dependencies
     # are not promoted from stage 2 to earlier stages, so we need to
     # add it here. Hassio needs to be setup before backup, otherwise
@@ -183,20 +187,16 @@ STAGE_0_INTEGRATIONS = (
     # Load logging and http deps as soon as possible
     ("logging, http deps", LOGGING_AND_HTTP_DEPS_INTEGRATIONS, None),
     # Setup frontend
-    ("frontend", {"frontend"}, None),
-    # Setup recorder and Zeroconf
-    # Zeroconf is used for mdns resolution in aiohttp client helper.
-    # Make sure its setup before hassio or any other
-    # integration creates an aio session.
-    # Make sure the recorder is setup before hassio or any other
-    # integration that might create an entity or access the database.
-    ("recorder, mDNS", {"recorder", "zeroconf"}, None),
-    # Setup backup and hassio, this must happen after recorder
-    ("backup, hassio", BACKUP_HASSIO_INTEGRATIONS, STAGE_0_SUBSTAGE_TIMEOUT),
+    ("frontend", FRONTEND_INTEGRATIONS, None),
+    # Setup recorder
+    ("recorder", {"recorder"}, None),
     # Start up debuggers. Start these first in case they want to wait.
     ("debugger", {"debugpy"}, STAGE_0_SUBSTAGE_TIMEOUT),
+    # Zeroconf is used for mdns resolution in aiohttp client helper.
+    ("zeroconf", {"zeroconf"}, STAGE_0_SUBSTAGE_TIMEOUT),
 )
 
+DISCOVERY_INTEGRATIONS = ("bluetooth", "dhcp", "ssdp", "usb")
 # Stage 1 integrations are not to be preimported in bootstrap.
 STAGE_1_INTEGRATIONS = {
     # We need to make sure discovery integrations
@@ -204,10 +204,7 @@ STAGE_1_INTEGRATIONS = {
     # load them inadvertently before their deps have
     # been updated which leads to using an old version
     # of the dep, or worse (import errors).
-    "bluetooth",
-    "dhcp",
-    "ssdp",
-    "usb",
+    *DISCOVERY_INTEGRATIONS,
     # To make sure we forward data to other instances
     "mqtt_eventstream",
     # To provide account link implementations
