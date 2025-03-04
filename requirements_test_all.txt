@@ -249,7 +249,7 @@ aioharmony==0.4.1
 aiohasupervisor==0.3.0
 
 # homeassistant.components.home_connect
-aiohomeconnect==0.15.1
+aiohomeconnect==0.16.2
 
 # homeassistant.components.homekit_controller
 aiohomekit==3.2.8
@@ -889,7 +889,7 @@ google-cloud-texttospeech==2.17.2
 google-genai==1.1.0
 
 # homeassistant.components.nest
-google-nest-sdm==7.1.3
+google-nest-sdm==7.1.4
 
 # homeassistant.components.google_photos
 google-photos-library-api==0.12.1
@@ -1243,7 +1243,7 @@ netmap==0.7.0.2
 nettigo-air-monitor==4.0.0
 
 # homeassistant.components.nexia
-nexia==2.0.9
+nexia==2.1.1
 
 # homeassistant.components.nextcloud
 nextcloudmonitor==1.5.1
@@ -1879,7 +1879,7 @@ pysma==0.7.5
 pysmappee==0.2.29
 
 # homeassistant.components.smartthings
-pysmartthings==2.4.1
+pysmartthings==2.5.0
 
 # homeassistant.components.smarty
 pysmarty2==0.10.2
