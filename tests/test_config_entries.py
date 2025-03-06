@@ -5802,7 +5802,6 @@ async def test_reauth_reconfigure_missing_entry(
 
 
 @pytest.mark.usefixtures("mock_integration_frame")
-@patch.object(frame, "_REPORTED_INTEGRATIONS", set())
 @pytest.mark.parametrize(
     "source", [config_entries.SOURCE_REAUTH, config_entries.SOURCE_RECONFIGURE]
 )
@@ -6049,7 +6048,6 @@ async def test_options_flow_with_config_entry_core() -> None:
 
 @pytest.mark.parametrize("integration_frame_path", ["custom_components/my_integration"])
 @pytest.mark.usefixtures("hass", "mock_integration_frame")
-@patch.object(frame, "_REPORTED_INTEGRATIONS", set())
 async def test_options_flow_with_config_entry(caplog: pytest.LogCaptureFixture) -> None:
     """Test that OptionsFlowWithConfigEntry doesn't mutate entry options."""
     entry = MockConfigEntry(
@@ -8828,7 +8826,6 @@ async def test_options_flow_config_entry(
 
 @pytest.mark.parametrize("integration_frame_path", ["custom_components/my_integration"])
 @pytest.mark.usefixtures("mock_integration_frame")
-@patch.object(frame, "_REPORTED_INTEGRATIONS", set())
 async def test_options_flow_deprecated_config_entry_setter(
     hass: HomeAssistant,
     manager: config_entries.ConfigEntries,
