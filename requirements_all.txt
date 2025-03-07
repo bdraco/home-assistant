@@ -264,7 +264,7 @@ aioharmony==0.4.1
 aiohasupervisor==0.3.0
 
 # homeassistant.components.home_connect
-aiohomeconnect==0.16.2
+aiohomeconnect==0.16.3
 
 # homeassistant.components.homekit_controller
 aiohomekit==3.2.8
@@ -747,7 +747,7 @@ datapoint==0.9.9
 dbus-fast==2.39.3
 
 # homeassistant.components.debugpy
-debugpy==1.8.11
+debugpy==1.8.13
 
 # homeassistant.components.decora_wifi
 # decora-wifi==1.4
@@ -1755,7 +1755,7 @@ py-schluter==0.1.7
 py-sucks==0.9.10
 
 # homeassistant.components.synology_dsm
-py-synologydsm-api==2.7.0
+py-synologydsm-api==2.7.1
 
 # homeassistant.components.atome
 pyAtome==0.1.1
@@ -2310,7 +2310,7 @@ pysma==0.7.5
 pysmappee==0.2.29
 
 # homeassistant.components.smartthings
-pysmartthings==2.6.1
+pysmartthings==2.7.0
 
 # homeassistant.components.smarty
 pysmarty2==0.10.2
@@ -2694,7 +2694,7 @@ sendgrid==6.8.2
 
 # homeassistant.components.emulated_kasa
 # homeassistant.components.sense
-sense-energy==0.13.6
+sense-energy==0.13.7
 
 # homeassistant.components.sensirion_ble
 sensirion-ble==0.1.1
@@ -3061,7 +3061,7 @@ webmin-xmlrpc==0.0.2
 weheat==2025.2.26
 
 # homeassistant.components.whirlpool
-whirlpool-sixth-sense==0.18.12
+whirlpool-sixth-sense==0.19.1
 
 # homeassistant.components.whois
 whois==0.9.27
