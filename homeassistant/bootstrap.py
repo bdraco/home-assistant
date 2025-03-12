@@ -305,14 +305,6 @@ async def async_setup_hass(
 
         return hass
 
-    async def stop_hass(hass: core.HomeAssistant) -> None:
-        """Stop hass."""
-        # Ask integrations to shut down. It's messy but we can't
-        # do a clean stop without knowing what is broken
-        with contextlib.suppress(TimeoutError):
-            async with hass.timeout.async_timeout(10):
-                await hass.async_stop()
-
     hass = await create_hass()
 
     if runtime_config.skip_pip or runtime_config.skip_pip_packages:
@@ -351,7 +343,7 @@ async def async_setup_hass(
 
         if config_dict is None:
             recovery_mode = True
-            await stop_hass(hass)
+            await hass.async_stop(force=True)
             hass = await create_hass()
 
         elif not basic_setup_success:
@@ -359,7 +351,7 @@ async def async_setup_hass(
                 "Unable to set up core integrations. Activating recovery mode"
             )
             recovery_mode = True
-            await stop_hass(hass)
+            await hass.async_stop(force=True)
             hass = await create_hass()
 
         elif any(
@@ -374,7 +366,7 @@ async def async_setup_hass(
             old_logging = hass.data.get(DATA_LOGGING)
 
             recovery_mode = True
-            await stop_hass(hass)
+            await hass.async_stop(force=True)
             hass = await create_hass()
 
             if old_logging:
@@ -731,9 +723,10 @@ async def _async_resolve_domains_and_preload(
     """Resolve all dependencies and return integrations to set up.
 
     The return value is a tuple of two dictionaries:
-    - The first dictionary contains integrations specified by the configuration (including config entries).
-    - The second dictionary contains the same integrations as the first dictionary together
-      with all their dependencies.
+    - The first dictionary contains integrations
+      specified by the configuration (including config entries).
+    - The second dictionary contains the same integrations as the first dictionary
+      together with all their dependencies.
     """
     domains_to_setup = _get_domains(hass, config)
     platform_integrations = conf_util.extract_platform_integrations(
@@ -762,7 +755,8 @@ async def _async_resolve_domains_and_preload(
     # to list them as dependencies.
     # We want to later avoid lock contention when multiple integrations try to load
     # their manifests at once.
-    # Also process integrations that are defined under base platforms to speed things up.
+    # Also process integrations that are defined under base platforms
+    # to speed things up.
     additional_domains_to_process = {
         *BASE_PLATFORMS,
         *chain.from_iterable(platform_integrations.values()),
@@ -793,7 +787,7 @@ async def _async_resolve_domains_and_preload(
         if domain in domains_to_setup
     }
     all_integrations_to_setup = integrations_to_setup.copy()
-    all_integrations_to_setup |= (
+    all_integrations_to_setup.update(
         (dep, loader.async_get_loaded_integration(hass, dep))
         for domain in integrations_to_setup
         for dep in integrations_dependencies[domain].difference(
@@ -801,15 +795,19 @@ async def _async_resolve_domains_and_preload(
         )
     )
 
-    integrations_requirements = {
-        domain: itg.requirements for domain, itg in integrations_to_process.items()
-    }
+    # Gather requirements for all integrations,
+    # their dependencies and after dependencies.
+    # To gather all the requirements we must ignore exceptions here.
+    # The exceptions will be detected and handled later in the bootstrap process.
     integrations_after_dependencies = (
         await loader.resolve_integrations_after_dependencies(
             hass, integrations_to_process.values(), ignore_exceptions=True
         )
     )
-    integrations_requirements |= (
+    integrations_requirements = {
+        domain: itg.requirements for domain, itg in integrations_to_process.items()
+    }
+    integrations_requirements.update(
         (dep, loader.async_get_loaded_integration(hass, dep).requirements)
         for deps in integrations_after_dependencies.values()
         for dep in deps.difference(integrations_requirements)
