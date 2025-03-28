@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from functools import lru_cache, partial
+from itertools import chain
 import json
 import logging
 from typing import Any, cast
@@ -479,7 +480,8 @@ def _send_handle_entities_init_response(
                 b'{"id":',
                 message_id_as_bytes,
                 b',"type":"event","event":{"a":{',
-                b",".join(serialized_states),
+                *(chain.from_iterable((x, b",") for x in serialized_states[:-1])),
+                serialized_states[-1] if serialized_states else b"",
                 b"}}}",
             )
         )
