@@ -858,6 +858,7 @@ RUN_PY_SPY = True
 RUN_PY_SPY_AFTER_SETUP = False
 RUN_PROFILE = False
 ASYNCIO_DEBUG = False
+PY_SPY_BIN = "/usr/local/bin/py-spy"
 
 
 async def _async_set_up_integrations(
@@ -869,7 +870,7 @@ async def _async_set_up_integrations(
     with contextlib.suppress(Exception):
         if RUN_PY_SPY:
             proc = await asyncio.create_subprocess_exec(
-                "/config/py_spy-0.3.14.data/scripts/py-spy",
+                PY_SPY_BIN,
                 "record",
                 "--pid",
                 str(os.getpid()),
@@ -1001,7 +1002,7 @@ async def _async_set_up_integrations(
     with contextlib.suppress(Exception):
         if RUN_PY_SPY_AFTER_SETUP:
             proc = await asyncio.create_subprocess_exec(
-                "/config/py_spy-0.3.14.data/scripts/py-spy",
+                PY_SPY_BIN,
                 "record",
                 "--pid",
                 str(os.getpid()),
