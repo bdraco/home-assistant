@@ -854,7 +854,7 @@ async def _async_resolve_domains_and_preload(
     return integrations_to_setup, all_integrations_to_setup
 
 
-RUN_PY_SPY = False
+RUN_PY_SPY = True
 RUN_PY_SPY_AFTER_SETUP = False
 RUN_PROFILE = False
 ASYNCIO_DEBUG = False
