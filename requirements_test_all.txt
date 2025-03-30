@@ -1418,7 +1418,7 @@ pushbullet.py==0.11.0
 pushover_complete==1.1.1
 
 # homeassistant.components.pvoutput
-pvo==2.2.0
+pvo==2.2.1
 
 # homeassistant.components.aosmith
 py-aosmith==1.0.12
@@ -1665,7 +1665,7 @@ pyiskra==0.1.15
 pyiss==1.0.1
 
 # homeassistant.components.isy994
-pyisy==3.2.0
+pyisy==3.3.0
 
 # homeassistant.components.ituran
 pyituran==0.1.4
