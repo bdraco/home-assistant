@@ -1525,7 +1525,7 @@ class ConfigEntriesFlowManager(
                 _remove_reauth_issue(self.hass, entry.domain, entry_id)
 
         if result["type"] != data_entry_flow.FlowResultType.CREATE_ENTRY:
-            # If there's an ignored config entry with a matching unique ID,
+            # If there's a config entry with a matching unique ID,
             # update the discovery key.
             if (
                 (discovery_key := flow.context.get("discovery_key"))
@@ -1611,7 +1611,11 @@ class ConfigEntriesFlowManager(
                 result["handler"], flow.unique_id
             )
 
-        if existing_entry is not None and flow.handler != "mobile_app":
+        if (
+            existing_entry is not None
+            and flow.handler != "mobile_app"
+            and existing_entry.source != SOURCE_IGNORE
+        ):
             # This causes the old entry to be removed and replaced, when the flow
             # should instead be aborted.
             # In case of manual flows, integrations should implement options, reauth,
