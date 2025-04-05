@@ -33,6 +33,10 @@
     {
       "local_name": "ITH-21-B",
       "connectable": false
+    },
+    {
+      "local_name": "Ink@IAM-T1",
+      "connectable": true
     }
   ],
   "codeowners": ["@bdraco"],
