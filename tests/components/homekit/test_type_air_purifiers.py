@@ -36,6 +36,7 @@ from homeassistant.const import (
     ATTR_SUPPORTED_FEATURES,
     STATE_OFF,
     STATE_ON,
+    STATE_UNAVAILABLE,
 )
 from homeassistant.core import Event, HomeAssistant
 
@@ -43,29 +44,29 @@ from tests.common import async_mock_service
 
 
 @pytest.mark.parametrize(
-    "auto_preset",
+    ("auto_preset", "preset_modes"),
     [
-        None,
-        "auto",
-        "Auto",
+        ("auto", ["sleep", "smart", "auto"]),
+        ("Auto", ["sleep", "smart", "Auto"]),
     ],
 )
 async def test_fan_auto_manual(
-    hass: HomeAssistant, hk_driver, events: list[Event], auto_preset: str | None
+    hass: HomeAssistant,
+    hk_driver,
+    events: list[Event],
+    auto_preset: str,
+    preset_modes: list[str],
 ) -> None:
     """Test switching between Auto and Manual."""
     entity_id = "fan.demo"
 
-    preset_modes = ["sleep", "smart"]
-    if auto_preset:
-        preset_modes.append(auto_preset)
     hass.states.async_set(
         entity_id,
         STATE_ON,
         {
             ATTR_SUPPORTED_FEATURES: FanEntityFeature.PRESET_MODE
             | FanEntityFeature.SET_SPEED,
-            ATTR_PRESET_MODE: auto_preset or "smart",
+            ATTR_PRESET_MODE: auto_preset,
             ATTR_PRESET_MODES: preset_modes,
         },
     )
@@ -73,16 +74,9 @@ async def test_fan_auto_manual(
     acc = AirPurifier(hass, hk_driver, "Air Purifier", entity_id, 1, None)
     hk_driver.add_accessory(acc)
 
-    if auto_preset:
-        assert acc.preset_mode_chars["smart"].value == 0
-    else:
-        assert acc.preset_mode_chars["smart"].value == 1
+    assert acc.preset_mode_chars["smart"].value == 0
     assert acc.preset_mode_chars["sleep"].value == 0
-
-    if auto_preset:
-        assert acc.auto_preset is not None
-    else:
-        assert acc.auto_preset is None
+    assert acc.auto_preset is not None
 
     # Auto presets are handled as the target air purifier state, so
     # not supposed to be exposed as a separate switch
@@ -91,21 +85,18 @@ async def test_fan_auto_manual(
         if service.display_name == "Switch":
             switches.add(service.unique_id)
 
-    if auto_preset:
-        assert len(switches) == len(preset_modes) - 1
-    else:
-        assert len(switches) == len(preset_modes)
-    assert "smart" in switches
-    assert "sleep" in switches
-    if auto_preset:
-        assert auto_preset not in switches
+    assert len(switches) == len(preset_modes) - 1
+    for preset in preset_modes:
+        if preset != auto_preset:
+            assert preset in switches
+        else:
+            # Auto preset should not be in switches
+            assert preset not in switches
 
     acc.run()
     await hass.async_block_till_done()
 
-    assert acc.char_target_air_purifier_state.value == (
-        TARGET_STATE_AUTO if auto_preset else TARGET_STATE_MANUAL
-    )
+    assert acc.char_target_air_purifier_state.value == TARGET_STATE_AUTO
 
     hass.states.async_set(
         entity_id,
@@ -121,10 +112,6 @@ async def test_fan_auto_manual(
 
     assert acc.preset_mode_chars["smart"].value == 1
     assert acc.char_target_air_purifier_state.value == TARGET_STATE_MANUAL
-
-    if not auto_preset:
-        # Don't need to test toggling auto mode from HomeKit if not set
-        return
 
     # Set from HomeKit
     call_set_preset_mode = async_mock_service(hass, FAN_DOMAIN, "set_preset_mode")
@@ -170,6 +157,66 @@ async def test_fan_auto_manual(
     assert call_set_percentage[0].data[ATTR_ENTITY_ID] == entity_id
     assert events[-1].data["service"] == "set_percentage"
     assert len(events) == 2
+
+
+async def test_fan_presets_no_auto(
+    hass: HomeAssistant,
+    hk_driver,
+    events: list[Event],
+) -> None:
+    """Test switching between Auto and Manual."""
+    entity_id = "fan.demo"
+
+    preset_modes = ["sleep", "smart"]
+    hass.states.async_set(
+        entity_id,
+        STATE_ON,
+        {
+            ATTR_SUPPORTED_FEATURES: FanEntityFeature.PRESET_MODE
+            | FanEntityFeature.SET_SPEED,
+            ATTR_PRESET_MODE: "smart",
+            ATTR_PRESET_MODES: preset_modes,
+        },
+    )
+    await hass.async_block_till_done()
+    acc = AirPurifier(hass, hk_driver, "Air Purifier", entity_id, 1, None)
+    hk_driver.add_accessory(acc)
+
+    assert acc.preset_mode_chars["smart"].value == 1
+    assert acc.preset_mode_chars["sleep"].value == 0
+    assert acc.auto_preset is None
+
+    # Auto presets are handled as the target air purifier state, so
+    # not supposed to be exposed as a separate switch
+    switches = set()
+    for service in acc.services:
+        if service.display_name == "Switch":
+            switches.add(service.unique_id)
+
+    assert len(switches) == len(preset_modes)
+    for preset in preset_modes:
+        assert preset in switches
+
+    acc.run()
+    await hass.async_block_till_done()
+
+    assert acc.char_target_air_purifier_state.value == TARGET_STATE_MANUAL
+
+    hass.states.async_set(
+        entity_id,
+        STATE_ON,
+        {
+            ATTR_SUPPORTED_FEATURES: FanEntityFeature.PRESET_MODE
+            | FanEntityFeature.SET_SPEED,
+            ATTR_PRESET_MODE: "sleep",
+            ATTR_PRESET_MODES: preset_modes,
+        },
+    )
+    await hass.async_block_till_done()
+
+    assert acc.preset_mode_chars["smart"].value == 0
+    assert acc.preset_mode_chars["sleep"].value == 1
+    assert acc.char_target_air_purifier_state.value == TARGET_STATE_MANUAL
 
 
 async def test_air_purifier_single_preset_mode(
@@ -334,14 +381,27 @@ async def test_expose_linked_sensors(
     # Updated humidity should reflect in HomeKit
     broker = MagicMock()
     acc.char_current_humidity.broker = broker
-    hass.states.async_set(humidity_entity_id, 60)
+    hass.states.async_set(
+        humidity_entity_id,
+        60,
+        {
+            ATTR_DEVICE_CLASS: SensorDeviceClass.HUMIDITY,
+        },
+    )
     await hass.async_block_till_done()
     assert acc.char_current_humidity.value == 60
     assert len(broker.mock_calls) == 2
     broker.reset_mock()
 
     # Change to same state should not trigger update in HomeKit
-    hass.states.async_set(humidity_entity_id, 60, force_update=True)
+    hass.states.async_set(
+        humidity_entity_id,
+        60,
+        {
+            ATTR_DEVICE_CLASS: SensorDeviceClass.HUMIDITY,
+        },
+        force_update=True,
+    )
     await hass.async_block_till_done()
     assert acc.char_current_humidity.value == 60
     assert len(broker.mock_calls) == 0
@@ -350,7 +410,13 @@ async def test_expose_linked_sensors(
     broker = MagicMock()
     acc.char_pm25_density.broker = broker
     acc.char_air_quality.broker = broker
-    hass.states.async_set(pm25_entity_id, 5)
+    hass.states.async_set(
+        pm25_entity_id,
+        5,
+        {
+            ATTR_DEVICE_CLASS: SensorDeviceClass.PM25,
+        },
+    )
     await hass.async_block_till_done()
     assert acc.char_pm25_density.value == 5
     assert acc.char_air_quality.value == 1
@@ -358,7 +424,14 @@ async def test_expose_linked_sensors(
     broker.reset_mock()
 
     # Change to same state should not trigger update in HomeKit
-    hass.states.async_set(pm25_entity_id, 5, force_update=True)
+    hass.states.async_set(
+        pm25_entity_id,
+        5,
+        {
+            ATTR_DEVICE_CLASS: SensorDeviceClass.PM25,
+        },
+        force_update=True,
+    )
     await hass.async_block_till_done()
     assert acc.char_pm25_density.value == 5
     assert acc.char_air_quality.value == 1
@@ -367,17 +440,58 @@ async def test_expose_linked_sensors(
     # Updated temperature should reflect in HomeKit
     broker = MagicMock()
     acc.char_current_temperature.broker = broker
-    hass.states.async_set(temperature_entity_id, 30)
+    hass.states.async_set(
+        temperature_entity_id,
+        30,
+        {
+            ATTR_DEVICE_CLASS: SensorDeviceClass.TEMPERATURE,
+        },
+    )
     await hass.async_block_till_done()
     assert acc.char_current_temperature.value == 30
     assert len(broker.mock_calls) == 2
     broker.reset_mock()
 
     # Change to same state should not trigger update in HomeKit
-    hass.states.async_set(temperature_entity_id, 30, force_update=True)
+    hass.states.async_set(
+        temperature_entity_id,
+        30,
+        {
+            ATTR_DEVICE_CLASS: SensorDeviceClass.TEMPERATURE,
+        },
+        force_update=True,
+    )
     await hass.async_block_till_done()
     assert acc.char_current_temperature.value == 30
     assert len(broker.mock_calls) == 0
+
+    # Should handle unavailable state, show last known value
+    hass.states.async_set(
+        humidity_entity_id,
+        STATE_UNAVAILABLE,
+        {
+            ATTR_DEVICE_CLASS: SensorDeviceClass.HUMIDITY,
+        },
+    )
+    hass.states.async_set(
+        pm25_entity_id,
+        STATE_UNAVAILABLE,
+        {
+            ATTR_DEVICE_CLASS: SensorDeviceClass.PM25,
+        },
+    )
+    hass.states.async_set(
+        temperature_entity_id,
+        STATE_UNAVAILABLE,
+        {
+            ATTR_DEVICE_CLASS: SensorDeviceClass.TEMPERATURE,
+        },
+    )
+    await hass.async_block_till_done()
+    assert acc.char_current_humidity.value == 60
+    assert acc.char_pm25_density.value == 5
+    assert acc.char_air_quality.value == 1
+    assert acc.char_current_temperature.value == 30
 
     # Check that all goes well if we remove the linked sensors
     hass.states.async_remove(humidity_entity_id)
@@ -473,6 +587,13 @@ async def test_filter_maintenance_linked_sensors(
     await hass.async_block_till_done()
     assert acc.char_filter_life_level.value == 25
     assert len(broker.mock_calls) == 0
+
+    # Should handle unavailable state, show last known value
+    hass.states.async_set(filter_change_indicator_entity_id, STATE_UNAVAILABLE)
+    hass.states.async_set(filter_life_level_entity_id, STATE_UNAVAILABLE)
+    await hass.async_block_till_done()
+    assert acc.char_filter_change_indication.value == FILTER_CHANGE_FILTER
+    assert acc.char_filter_life_level.value == 25
 
     # Check that all goes well if we remove the linked sensors
     hass.states.async_remove(filter_change_indicator_entity_id)
