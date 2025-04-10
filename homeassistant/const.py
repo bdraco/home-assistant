@@ -609,6 +609,7 @@ class UnitOfReactivePower(StrEnum):
     """Reactive power units."""
 
     VOLT_AMPERE_REACTIVE = "var"
+    KILO_VOLT_AMPERE_REACTIVE = "kvar"
 
 
 _DEPRECATED_POWER_VOLT_AMPERE_REACTIVE: Final = DeprecatedConstantEnum(
