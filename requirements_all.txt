@@ -243,7 +243,7 @@ aioelectricitymaps==0.4.0
 aioemonitor==1.0.5
 
 # homeassistant.components.esphome
-aioesphomeapi==29.9.0
+aioesphomeapi==29.10.0
 
 # homeassistant.components.flo
 aioflo==2021.11.0
@@ -1096,7 +1096,7 @@ gstreamer-player==1.1.2
 guppy3==3.1.5
 
 # homeassistant.components.iaqualink
-h2==4.1.0
+h2==4.2.0
 
 # homeassistant.components.ffmpeg
 ha-ffmpeg==3.2.2
