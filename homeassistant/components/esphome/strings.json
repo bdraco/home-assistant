@@ -9,7 +9,8 @@
       "mqtt_missing_mac": "Missing MAC address in MQTT properties.",
       "mqtt_missing_api": "Missing API port in MQTT properties.",
       "mqtt_missing_ip": "Missing IP address in MQTT properties.",
-      "mqtt_missing_payload": "Missing MQTT Payload."
+      "mqtt_missing_payload": "Missing MQTT Payload.",
+      "name_conflict_migrated": "The device `{name}` has been migrated to a new device with MAC address `{mac}` from `{existing_mac}`."
     },
     "error": {
       "resolve_error": "Can't resolve address of the ESP. If this error persists, please set a static IP address",
@@ -23,7 +24,7 @@
           "host": "[%key:common::config_flow::data::host%]",
           "port": "[%key:common::config_flow::data::port%]"
         },
-        "description": "Please enter connection settings of your [ESPHome]({esphome_url}) node."
+        "description": "Please enter connection settings of your ESPHome device."
       },
       "authenticate": {
         "data": {
@@ -47,8 +48,16 @@
         "description": "The ESPHome device {name} disabled transport encryption. Please confirm that you want to remove the encryption key and allow unencrypted connections."
       },
       "discovery_confirm": {
-        "description": "Do you want to add the ESPHome node `{name}` to Home Assistant?",
-        "title": "Discovered ESPHome node"
+        "description": "Do you want to add the device `{name}` to Home Assistant?",
+        "title": "Discovered ESPHome device"
+      },
+      "name_conflict": {
+        "title": "Name conflict for {name}",
+        "description": "**The name `{name}` is already being used by another device: {existing_title} (MAC address: `{existing_mac}`)**\n\nTo continue, please choose one of the following options:\n\n- **Migrate Configuration to New Device:** If this is a replacement, transfer the existing settings to the new device (`{mac}`).\n- **Overwrite the Existing Configuration:** If this is not a replacement, delete the old configuration and use the new device instead.",
+        "menu_options": {
+          "name_conflict_migrate": "Migrate configuration to new device",
+          "name_conflict_overwrite": "Overwrite the existing configuration"
+        }
       }
     },
     "flow_title": "{name}"
