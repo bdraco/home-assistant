@@ -705,7 +705,7 @@ eagle100==0.1.1
 easyenergy==2.1.2
 
 # homeassistant.components.eheimdigital
-eheimdigital==1.0.6
+eheimdigital==1.1.0
 
 # homeassistant.components.electric_kiwi
 electrickiwi-api==0.9.14
@@ -953,7 +953,7 @@ ha-silabs-firmware-client==0.2.0
 habiticalib==0.3.7
 
 # homeassistant.components.bluetooth
-habluetooth==3.38.1
+habluetooth==3.39.0
 
 # homeassistant.components.cloud
 hass-nabucasa==0.94.0
