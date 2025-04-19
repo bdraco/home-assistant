@@ -765,7 +765,7 @@ def _async_setup_device_registry(
         config_entry_id=entry.entry_id,
         configuration_url=configuration_url,
         connections={(dr.CONNECTION_NETWORK_MAC, device_info.mac_address)},
-        name=entry_data.friendly_name,
+        name=entry_data.friendly_name or entry_data.name,
         manufacturer=manufacturer,
         model=model,
         sw_version=sw_version,
