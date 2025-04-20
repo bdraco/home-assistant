@@ -297,6 +297,7 @@ async def test_user_with_password(
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "authenticate"
+    assert result["description_placeholders"] == {"name": "test"}
 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], user_input={CONF_PASSWORD: "password1"}
@@ -326,6 +327,7 @@ async def test_user_invalid_password(hass: HomeAssistant, mock_client) -> None:
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "authenticate"
+    assert result["description_placeholders"] == {"name": "test"}
 
     mock_client.connect.side_effect = InvalidAuthAPIError
 
@@ -335,6 +337,7 @@ async def test_user_invalid_password(hass: HomeAssistant, mock_client) -> None:
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "authenticate"
+    assert result["description_placeholders"] == {"name": "test"}
     assert result["errors"] == {"base": "invalid_auth"}
 
 
@@ -348,7 +351,7 @@ async def test_user_dashboard_has_wrong_key(
     """Test user step with key from dashboard that is incorrect."""
     mock_client.device_info.side_effect = [
         RequiresEncryptionAPIError,
-        InvalidEncryptionKeyAPIError,
+        InvalidEncryptionKeyAPIError("Wrong key", "test"),
         DeviceInfo(
             uses_password=False,
             name="test",
@@ -369,6 +372,7 @@ async def test_user_dashboard_has_wrong_key(
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "encryption_key"
+    assert result["description_placeholders"] == {"name": "test"}
 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], user_input={CONF_NOISE_PSK: VALID_NOISE_PSK}
@@ -477,6 +481,7 @@ async def test_user_discovers_name_and_gets_key_from_dashboard_fails(
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "encryption_key"
+    assert result["description_placeholders"] == {"name": "test"}
 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], user_input={CONF_NOISE_PSK: VALID_NOISE_PSK}
@@ -532,6 +537,7 @@ async def test_user_discovers_name_and_dashboard_is_unavailable(
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "encryption_key"
+    assert result["description_placeholders"] == {"name": "test"}
 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], user_input={CONF_NOISE_PSK: VALID_NOISE_PSK}
@@ -563,6 +569,7 @@ async def test_login_connection_error(
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "authenticate"
+    assert result["description_placeholders"] == {"name": "test"}
 
     mock_client.connect.side_effect = APIConnectionError
 
@@ -572,6 +579,7 @@ async def test_login_connection_error(
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "authenticate"
+    assert result["description_placeholders"] == {"name": "test"}
     assert result["errors"] == {"base": "connection_error"}
 
 
@@ -742,6 +750,7 @@ async def test_user_requires_psk(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "encryption_key"
     assert result["errors"] == {}
+    assert result["description_placeholders"] == {"name": "ESPHome"}
 
     assert len(mock_client.connect.mock_calls) == 2
     assert len(mock_client.device_info.mock_calls) == 2
@@ -764,6 +773,7 @@ async def test_encryption_key_valid_psk(
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "encryption_key"
+    assert result["description_placeholders"] == {"name": "ESPHome"}
 
     mock_client.device_info = AsyncMock(
         return_value=DeviceInfo(uses_password=False, name="test")
@@ -799,6 +809,7 @@ async def test_encryption_key_invalid_psk(
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "encryption_key"
+    assert result["description_placeholders"] == {"name": "ESPHome"}
 
     mock_client.device_info.side_effect = InvalidEncryptionKeyAPIError
     result = await hass.config_entries.flow.async_configure(
@@ -808,6 +819,7 @@ async def test_encryption_key_invalid_psk(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "encryption_key"
     assert result["errors"] == {"base": "invalid_psk"}
+    assert result["description_placeholders"] == {"name": "ESPHome"}
     assert mock_client.noise_psk == INVALID_NOISE_PSK
 
 
@@ -823,6 +835,9 @@ async def test_reauth_initiation(hass: HomeAssistant, mock_client) -> None:
     result = await entry.start_reauth_flow(hass)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
+    assert result["description_placeholders"] == {
+        "name": "Mock Title - test",
+    }
 
 
 @pytest.mark.usefixtures("mock_zeroconf")
@@ -1025,6 +1040,9 @@ async def test_reauth_fixed_via_dashboard_at_confirm(
 
     assert result["type"] is FlowResultType.FORM, result
     assert result["step_id"] == "reauth_confirm"
+    assert result["description_placeholders"] == {
+        "name": "Mock Title - test",
+    }
 
     mock_dashboard["configured"].append(
         {
@@ -1070,6 +1088,9 @@ async def test_reauth_confirm_invalid(
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
+    assert result["description_placeholders"] == {
+        "name": "Mock Title - test",
+    }
     assert result["errors"]
     assert result["errors"]["base"] == "invalid_psk"
 
@@ -1108,6 +1129,9 @@ async def test_reauth_confirm_invalid_with_unique_id(
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_confirm"
+    assert result["description_placeholders"] == {
+        "name": "Mock Title - test",
+    }
     assert result["errors"]
     assert result["errors"]["base"] == "invalid_psk"
 
@@ -1145,6 +1169,9 @@ async def test_reauth_encryption_key_removed(
     result = await entry.start_reauth_flow(hass)
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "reauth_encryption_removed_confirm"
+    assert result["description_placeholders"] == {
+        "name": "Mock Title - test",
+    }
 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], user_input={}
@@ -1513,6 +1540,7 @@ async def test_zeroconf_no_encryption_key_via_dashboard(
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "encryption_key"
+    assert result["description_placeholders"] == {"name": "test8266"}
 
 
 async def test_option_flow_allow_service_calls(
@@ -1625,6 +1653,7 @@ async def test_user_discovers_name_no_dashboard(
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "encryption_key"
+    assert result["description_placeholders"] == {"name": "test"}
 
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], user_input={CONF_NOISE_PSK: VALID_NOISE_PSK}
