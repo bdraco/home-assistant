@@ -1308,7 +1308,7 @@ lakeside==0.13
 laundrify-aio==1.2.2
 
 # homeassistant.components.lcn
-lcn-frontend==0.2.3
+lcn-frontend==0.2.4
 
 # homeassistant.components.ld2410_ble
 ld2410-ble==0.1.1
@@ -2089,7 +2089,7 @@ pykwb==0.0.8
 pylacrosse==0.4
 
 # homeassistant.components.lamarzocco
-pylamarzocco==2.0.0b1
+pylamarzocco==2.0.0b2
 
 # homeassistant.components.lastfm
 pylast==5.1.0
@@ -2893,7 +2893,7 @@ tesla-powerwall==0.5.2
 tesla-wall-connector==1.0.2
 
 # homeassistant.components.teslemetry
-teslemetry-stream==0.7.1
+teslemetry-stream==0.7.5
 
 # homeassistant.components.tessie
 tessie-api==0.1.1
