@@ -36,7 +36,6 @@ class KemEntity(CoordinatorEntity[KemUpdateCoordinator], Entity):
     ) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
-        self.coordinator = coordinator
         self.entity_description = description
         self._device_id = device_id
         self._attr_unique_id = f"{self._device_id}_{description.key}"
@@ -49,9 +48,9 @@ class KemEntity(CoordinatorEntity[KemUpdateCoordinator], Entity):
             manufacturer=KOHLER,
         )
         # The format of the key is device:key or key. Parse it.
-        splits = self.entity_description.key.split(":")
-        self.use_device_key = len(splits) > 1
-        self.key = splits[1] if self.use_device_key else self.entity_description.key
+        split_key = self.entity_description.key.split(":")
+        self._use_device_key = len(split_key) > 1
+        self.key = split_key[1] if self._use_device_key else self.entity_description.key
         self._attr_translation_key = self.entity_description.translation_key
 
         try:
@@ -63,20 +62,18 @@ class KemEntity(CoordinatorEntity[KemUpdateCoordinator], Entity):
         }
 
     @property
+    def _device_data(self) -> dict:
+        """Return the device data."""
+        return self.coordinator.data[GD_DEVICE]
+
+    @property
     def _kem_value(self) -> str:
         """Return the sensor value."""
-        generator_data = self.coordinator.data
-        if self.use_device_key:
-            value = generator_data[GD_DEVICE][self.key]
-        else:
-            value = generator_data[self.key]
-        return value
+        if self._use_device_key:
+            return self._device_data[self.key]
+        return self.coordinator.data[self.key]
 
     @property
     def available(self) -> bool:
         """Return if entity is available."""
-        if not self.coordinator.last_update_success:
-            return False
-        if not self.coordinator.data[GD_DEVICE][DD_IS_CONNECTED]:
-            return False
-        return super().available
+        return super().available and self._device_data[DD_IS_CONNECTED]

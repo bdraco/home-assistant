@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from aiokem import AioKem, AuthenticationError
+from aiokem import AuthenticationError
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
@@ -25,7 +25,7 @@ from .const import (
 from .coordinator import KemUpdateCoordinator
 from .kem import HAAioKem
 
-PLATFORMS: list[str] = [Platform.SENSOR]
+PLATFORMS = [Platform.SENSOR]
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -36,16 +36,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     try:
         await kem.login()
     except AuthenticationError as ex:
-        raise ConfigEntryAuthFailed from ex
+        raise ConfigEntryAuthFailed from ex  # TODO: make this translatable
     except CONNECTION_EXCEPTIONS as ex:
-        raise ConfigEntryNotReady from ex
-
-    entry.runtime_data = {}
-    entry.runtime_data[CE_RT_COORDINATORS] = {}
-    entry.runtime_data[CE_RT_KEM] = kem
+        raise ConfigEntryNotReady from ex  # TODO: make this translatable
 
     homes = await kem.get_homes()
     entry.runtime_data[CE_RT_HOMES] = homes
+    coordinators: dict[str, KemUpdateCoordinator] = {}
     for home_data in homes:
         for device_data in home_data[DD_DEVICES]:
             device_id = device_data[DD_ID]
@@ -59,15 +56,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 kem=kem,
                 name=f"{DOMAIN} {device_data[DD_DISPLAY_NAME]}",
             )
+            # Intentionally done in series to avoid overloading
+            # the KEM API with requests
             await coordinator.async_config_entry_first_refresh()
-            entry.runtime_data[CE_RT_COORDINATORS][device_id] = coordinator
+            coordinators[device_id] = coordinator
+
+    entry.runtime_data = {  # TODO: use a dataclass here instead
+        CE_RT_COORDINATORS: coordinators,
+        CE_RT_KEM: kem,
+    }
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    kem: AioKem = entry.runtime_data.get(CE_RT_KEM)
-    if kem:
+    if kem := entry.runtime_data.get(
+        CE_RT_KEM
+    ):  # use a dataclass here so we don't have to type this out
         await kem.close()
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)

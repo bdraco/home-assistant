@@ -1,7 +1,8 @@
-"""Derivce class for KEM API integration with Home Assistant."""
+"""Device class for KEM API integration with Home Assistant."""
 
 from __future__ import annotations
 
+import contextlib
 import logging
 
 from aiohttp import ClientSession
@@ -15,6 +16,8 @@ from .const import CONF_REFRESH_TOKEN
 
 _LOGGER = logging.getLogger(__name__)
 
+# TODO: probably rename this data.py to be more consistent with the rest of the codebase
+
 
 class HAAioKem(AioKem):
     """Custom AioKem class to handle refresh token updates."""
@@ -27,7 +30,6 @@ class HAAioKem(AioKem):
     ) -> None:
         """Initialize the HAAioKem class."""
         self.config_entry = config_entry
-        assert config_entry is not None, "ConfigEntry cannot be None"
         self.hass = hass
         super().__init__(session=session)
 
@@ -42,15 +44,11 @@ class HAAioKem(AioKem):
 
     async def login(self):
         """Login to the KEM API."""
-
         # Authenticate using the refresh token if available
-        refresh_token = self.config_entry.data.get(CONF_REFRESH_TOKEN)
-        try:
-            if refresh_token:
+        if refresh_token := self.config_entry.data.get(CONF_REFRESH_TOKEN):
+            with contextlib.suppress(AuthenticationError):
                 await self.authenticate_with_refresh_token(refresh_token)
                 return
-        except AuthenticationError:
-            pass
         # If refresh token is not available or authentication fails, use username and password
         await self.authenticate(
             self.config_entry.data[CONF_USERNAME], self.config_entry.data[CONF_PASSWORD]
