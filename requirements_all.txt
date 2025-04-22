@@ -267,7 +267,7 @@ aiohasupervisor==0.3.1b1
 aiohomeconnect==0.17.0
 
 # homeassistant.components.homekit_controller
-aiohomekit==3.2.13
+aiohomekit==3.2.14
 
 # homeassistant.components.mcp_server
 aiohttp_sse==2.2.0
@@ -362,7 +362,7 @@ aioridwell==2024.01.0
 aioruckus==0.42
 
 # homeassistant.components.russound_rio
-aiorussound==4.5.0
+aiorussound==4.5.2
 
 # homeassistant.components.ruuvi_gateway
 aioruuvigateway==0.1.0
