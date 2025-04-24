@@ -190,6 +190,10 @@ async def test_dli_device_info(
 
     assert device_entries[0].configuration_url == "http://127.0.0.1"
     assert device_entries[0].identifiers == {(DOMAIN, "123456789")}
+    assert device_entries[0].connections == {
+        (dr.CONNECTION_NETWORK_MAC, "00:00:00:00:00:01"),
+        (dr.CONNECTION_UPNP, "uuid:LightSwitch-1_0-WemoSerialNumber"),
+    }
 
 
 async def test_options_enable_subscription_false(

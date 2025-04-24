@@ -21,6 +21,7 @@ MOCK_FIRMWARE_VERSION = "WeMo_WW_2.00.XXXXX.PVT-OWRT"
 MOCK_INSIGHT_CURRENT_WATTS = 0.01
 MOCK_INSIGHT_TODAY_KWH = 3.33
 MOCK_INSIGHT_STATE_THRESHOLD_POWER = 8.0
+MOCK_MAC_ADDRESS = "00:00:00:00:00:01"
 
 
 @pytest.fixture(name="pywemo_model")
@@ -65,6 +66,7 @@ def create_pywemo_device(
     device.name = MOCK_NAME
     device.serial_number = MOCK_SERIAL_NUMBER
     device.model_name = pywemo_model.replace("LongPress", "")
+    device.mac = MOCK_MAC_ADDRESS
     device.model = device.model_name
     device.udn = f"uuid:{device.model_name}-1_0-{device.serial_number}"
     device.firmware_version = MOCK_FIRMWARE_VERSION

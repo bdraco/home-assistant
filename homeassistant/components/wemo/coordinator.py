@@ -16,6 +16,7 @@ from pywemo.subscribe import EVENT_TYPE_LONG_PRESS, SubscriptionRegistry
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     ATTR_CONFIGURATION_URL,
+    ATTR_CONNECTIONS,
     ATTR_IDENTIFIERS,
     CONF_DEVICE_ID,
     CONF_NAME,
@@ -270,6 +271,8 @@ def _create_device_info(wemo: WeMoDevice) -> DeviceInfo:
     if wemo.model_name.lower() == "dli emulated belkin socket":
         _dev_info[ATTR_CONFIGURATION_URL] = f"http://{wemo.host}"
         _dev_info[ATTR_IDENTIFIERS] = {(DOMAIN, wemo.serial_number[:-1])}
+    if mac_address := wemo.mac:
+        _dev_info[ATTR_CONNECTIONS].add((dr.CONNECTION_NETWORK_MAC, mac_address))
     return _dev_info
 
 
