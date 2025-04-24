@@ -1405,7 +1405,6 @@ INTEGRATIONS_WITHOUT_SCALE = [
     "epson",
     "eq3btsmart",
     "escea",
-    "esphome",
     "etherscan",
     "eufy",
     "eufylife_ble",
