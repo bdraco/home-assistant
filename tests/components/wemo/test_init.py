@@ -201,6 +201,7 @@ async def test_discovery(
         device.name = f"{MOCK_NAME}_{counter}"
         device.serial_number = f"{MOCK_SERIAL_NUMBER}_{counter}"
         device.model_name = "Motion"
+        device.mac = f"00:00:00:00:00:{counter}"
         device.model = "Motion"
         device.udn = f"uuid:{device.model_name}-1_0-{device.serial_number}"
         device.firmware_version = MOCK_FIRMWARE_VERSION
