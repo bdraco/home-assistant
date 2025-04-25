@@ -18,8 +18,10 @@ from .const import DOMAIN
 from .coordinator import MieleConfigEntry, MieleDataUpdateCoordinator
 
 PLATFORMS: list[Platform] = [
+    Platform.BUTTON,
     Platform.LIGHT,
     Platform.SENSOR,
+    Platform.SWITCH,
 ]
 
 
