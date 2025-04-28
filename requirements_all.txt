@@ -607,7 +607,7 @@ bizkaibus==0.1.1
 
 # homeassistant.components.eq3btsmart
 # homeassistant.components.esphome
-bleak-esphome==2.13.1
+bleak-esphome==2.14.0
 
 # homeassistant.components.bluetooth
 bleak-retry-connector==3.9.0
@@ -2138,7 +2138,7 @@ pymeteoclimatic==0.1.0
 pymicro-vad==1.0.1
 
 # homeassistant.components.miele
-pymiele==0.3.6
+pymiele==0.4.0
 
 # homeassistant.components.xiaomi_tv
 pymitv==1.4.3
@@ -2909,7 +2909,7 @@ tessie-api==0.1.1
 thermobeacon-ble==0.8.1
 
 # homeassistant.components.thermopro
-thermopro-ble==0.11.0
+thermopro-ble==0.12.0
 
 # homeassistant.components.thingspeak
 thingspeak==1.0.0
