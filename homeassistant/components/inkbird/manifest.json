@@ -39,8 +39,17 @@
       "connectable": true
     },
     {
+      "local_name": "Ink@IAM-T2",
+      "connectable": true
+    },
+    {
       "manufacturer_id": 12628,
       "manufacturer_data_start": [65, 67, 45],
+      "connectable": true
+    },
+    {
+      "manufacturer_id": 12884,
+      "manufacturer_data_start": [0, 62, 0],
       "connectable": true
     }
   ],
