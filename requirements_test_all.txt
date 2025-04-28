@@ -357,7 +357,7 @@ aioruuvigateway==0.1.0
 aiosenz==1.0.0
 
 # homeassistant.components.shelly
-aioshelly==13.5.0
+aioshelly==13.6.0
 
 # homeassistant.components.skybell
 aioskybell==22.7.0
@@ -912,7 +912,7 @@ goslide-api==0.7.0
 gotailwind==0.3.0
 
 # homeassistant.components.govee_ble
-govee-ble==0.43.1
+govee-ble==0.44.0
 
 # homeassistant.components.govee_light_local
 govee-local-api==2.1.0
