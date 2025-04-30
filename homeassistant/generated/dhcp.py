@@ -484,11 +484,6 @@ DHCP: Final[list[dict[str, str | bool]]] = [
         "registered_devices": True,
     },
     {
-        "domain": "rheklo",
-        "hostname": "kohlergen*",
-        "macaddress": "00146F*",
-    },
-    {
         "domain": "ring",
         "hostname": "ring*",
         "macaddress": "0CAE7D*",

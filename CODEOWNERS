@@ -1280,8 +1280,6 @@ build.json @home-assistant/supervisor
 /tests/components/rfxtrx/ @danielhiversen @elupus @RobBie1221
 /homeassistant/components/rhasspy/ @balloob @synesthesiam
 /tests/components/rhasspy/ @balloob @synesthesiam
-/homeassistant/components/rheklo/ @bdraco @peterager
-/tests/components/rheklo/ @bdraco @peterager
 /homeassistant/components/ridwell/ @bachya
 /tests/components/ridwell/ @bachya
 /homeassistant/components/ring/ @sdb9696

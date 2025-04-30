@@ -524,7 +524,6 @@ FLOWS = {
         "reolink",
         "rfxtrx",
         "rhasspy",
-        "rheklo",
         "ridwell",
         "ring",
         "risco",
