@@ -1,4 +1,4 @@
-"""Config flow for KEM integration."""
+"""Config flow for Rheklo integration."""
 
 from __future__ import annotations
 
@@ -18,8 +18,8 @@ from .const import CONNECTION_EXCEPTIONS, DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 
-class KemConfigFlow(ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Kem."""
+class RhekloConfigFlow(ConfigFlow, domain=DOMAIN):
+    """Handle a config flow for Rheklo."""
 
     VERSION = 1
 
@@ -55,10 +55,9 @@ class KemConfigFlow(ConfigFlow, domain=DOMAIN):
         """Validate the user input."""
         errors: dict[str, str] = {}
         token_subject = None
+        rheklo = AioKem(session=async_get_clientsession(self.hass))
         try:
-            kem = AioKem(session=async_get_clientsession(self.hass))
-            await kem.authenticate(config[CONF_EMAIL], config[CONF_PASSWORD])
-            token_subject = kem.get_token_subject()
+            await rheklo.authenticate(config[CONF_EMAIL], config[CONF_PASSWORD])
         except CONNECTION_EXCEPTIONS:
             errors["base"] = "cannot_connect"
         except AuthenticationError:
@@ -66,6 +65,8 @@ class KemConfigFlow(ConfigFlow, domain=DOMAIN):
         except Exception:
             _LOGGER.exception("Unexpected exception")
             errors["base"] = "unknown"
+        else:
+            token_subject = rheklo.get_token_subject()
         return errors, token_subject
 
     async def async_step_reauth(
@@ -85,12 +86,13 @@ class KemConfigFlow(ConfigFlow, domain=DOMAIN):
             CONF_EMAIL: existing_data[CONF_EMAIL]
         }
         if user_input is not None:
-            new_config = {**existing_data, CONF_PASSWORD: user_input[CONF_PASSWORD]}
-            errors, _ = await self._async_validate_or_error(new_config)
+            errors, _ = await self._async_validate_or_error(
+                {**existing_data, **user_input}
+            )
             if not errors:
                 return self.async_update_reload_and_abort(
                     reauth_entry,
-                    data_updates={CONF_PASSWORD: user_input[CONF_PASSWORD]},
+                    data_updates=user_input,
                 )
 
         return self.async_show_form(
