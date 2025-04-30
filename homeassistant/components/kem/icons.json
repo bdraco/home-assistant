@@ -1,0 +1,18 @@
+{
+  "entity": {
+    "sensor": {
+      "engine_speed": {
+        "default": "mdi:speedometer"
+      },
+      "engine_state": {
+        "default": "mdi:engine"
+      },
+      "generator_status": {
+        "default": "mdi:home-lightning-bolt"
+      },
+      "power_source": {
+        "default": "mdi:transmission-tower"
+      }
+    }
+  }
+}
