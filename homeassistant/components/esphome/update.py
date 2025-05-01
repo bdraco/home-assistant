@@ -80,6 +80,15 @@ async def async_setup_entry(
     @callback
     def _async_setup_update_entity() -> None:
         """Set up the update entity."""
+        _LOGGER.debug(
+            "_async_setup_update_entity %s (%s) - "
+            "entry available: %s, dashboard available: %s, device in dashboard: %s",
+            device_name,
+            mac_address,
+            entry_data.available,
+            dashboard.last_update_success,
+            dashboard.data is not None and device_name in dashboard.data,
+        )
         # Keep listening until device is available
         if not entry_data.available or not dashboard.last_update_success:
             return
