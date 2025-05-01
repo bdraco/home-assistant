@@ -101,6 +101,11 @@ async def async_setup_entry(
             unsub()
         unsubs.clear()
 
+        _LOGGER.debug(
+            "Adding update entity for %s (%s)",
+            device_name,
+            mac_address,
+        )
         async_add_entities([ESPHomeDashboardUpdateEntity(entry_data, dashboard)])
 
     if (
