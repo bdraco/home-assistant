@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Any
 
 from aioesphomeapi import (
@@ -29,7 +30,6 @@ from homeassistant.util.enum import try_parse_enum
 from .const import DOMAIN
 from .coordinator import ESPHomeDashboardCoordinator
 from .dashboard import async_get_dashboard
-from .domain_data import DomainData
 from .entity import (
     EsphomeEntity,
     convert_api_error_ha_error,
@@ -43,6 +43,8 @@ PARALLEL_UPDATES = 0
 KEY_UPDATE_LOCK = "esphome_update_lock"
 
 NO_FEATURES = UpdateEntityFeature(0)
+
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
@@ -59,18 +61,25 @@ async def async_setup_entry(
         entity_type=ESPHomeUpdateEntity,
         state_type=UpdateState,
     )
+    entry_data = entry.runtime_data
+    device_info = entry_data.device_info
+    assert device_info is not None
+    device_name = device_info.name
+    mac_address = device_info.mac_address
 
     if (dashboard := async_get_dashboard(hass)) is None:
+        _LOGGER.debug(
+            "No dashboard available for %s (%s), skipping update entity",
+            device_name,
+            mac_address,
+        )
         return
-    entry_data = DomainData.get(hass).get_entry_data(entry)
-    assert entry_data.device_info is not None
-    device_name = entry_data.device_info.name
+
     unsubs: list[CALLBACK_TYPE] = []
 
     @callback
     def _async_setup_update_entity() -> None:
         """Set up the update entity."""
-        assert dashboard is not None
         # Keep listening until device is available
         if not entry_data.available or not dashboard.last_update_success:
             return
@@ -91,9 +100,17 @@ async def async_setup_entry(
         and dashboard.data is not None
         and dashboard.data.get(device_name)
     ):
+        _LOGGER.debug(
+            "Adding update entity for %s (%s)",
+            device_name,
+            mac_address,
+        )
         _async_setup_update_entity()
         return
 
+    # If the device is not available, we need to wait for it to be available
+    # before we can add the update entity.
+    _LOGGER.debug("Waiting for update entity for %s (%s)", device_name, mac_address)
     unsubs.extend(
         [
             entry_data.async_subscribe_device_updated(_async_setup_update_entity),
