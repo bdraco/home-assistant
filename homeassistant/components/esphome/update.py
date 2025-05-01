@@ -100,17 +100,21 @@ async def async_setup_entry(
         and dashboard.data is not None
         and dashboard.data.get(device_name)
     ):
-        _LOGGER.debug(
-            "Adding update entity for %s (%s)",
-            device_name,
-            mac_address,
-        )
+        _LOGGER.debug("Adding update entity for %s (%s)", device_name, mac_address)
         _async_setup_update_entity()
         return
 
     # If the device is not available, we need to wait for it to be available
     # before we can add the update entity.
-    _LOGGER.debug("Waiting for update entity for %s (%s)", device_name, mac_address)
+    _LOGGER.debug(
+        "Waiting for update entity for %s (%s) - "
+        "entry available: %s, dashboard available: %s, device in dashboard: %s",
+        device_name,
+        mac_address,
+        entry_data.available,
+        dashboard.last_update_success,
+        dashboard.data is not None and device_name in dashboard.data,
+    )
     unsubs.extend(
         [
             entry_data.async_subscribe_device_updated(_async_setup_update_entity),
