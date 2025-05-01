@@ -772,6 +772,14 @@ class EntityPlatform:
         config_subentry_id: str | None,
     ) -> None:
         """Add an entity to the platform."""
+        _LOGGER.warning(
+            "Adding entity %s with unique (%s) (%s) (update_before_add=%s) to platform %s",
+            entity,
+            entity.unique_id,
+            entity_registry,
+            update_before_add,
+            self.platform_name,
+        )
         if entity is None:
             raise ValueError("Entity cannot be None")
 
