@@ -106,7 +106,14 @@ async def async_setup_entry(
             device_name,
             mac_address,
         )
-        async_add_entities([ESPHomeDashboardUpdateEntity(entry_data, dashboard)])
+        new_entity = ESPHomeDashboardUpdateEntity(entry_data, dashboard)
+        _LOGGER.debug(
+            "Adding update entity for %s (%s) - %s",
+            device_name,
+            mac_address,
+            new_entity,
+        )
+        async_add_entities([new_entity])
 
     if (
         entry_data.available
