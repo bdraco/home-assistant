@@ -772,15 +772,6 @@ class EntityPlatform:
         config_subentry_id: str | None,
     ) -> None:
         """Add an entity to the platform."""
-        _LOGGER.warning(
-            "Adding entity %s with unique (%s) (%s) (update_before_add=%s) to platform %s domain %s",
-            entity,
-            entity.unique_id,
-            entity_registry,
-            update_before_add,
-            self.platform_name,
-            self.domain,
-        )
         if entity is None:
             raise ValueError("Entity cannot be None")
 
@@ -985,9 +976,6 @@ class EntityPlatform:
 
         entity.async_on_remove(remove_entity_cb)
 
-        _LOGGER.debug(
-            "Adding entity %s to platform %s", entity.entity_id, self.platform_name
-        )
         await entity.add_to_platform_finish()
 
     async def async_reset(self) -> None:
