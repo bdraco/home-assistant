@@ -985,6 +985,9 @@ class EntityPlatform:
 
         entity.async_on_remove(remove_entity_cb)
 
+        _LOGGER.debug(
+            "Adding entity %s to platform %s", entity.entity_id, self.platform_name
+        )
         await entity.add_to_platform_finish()
 
     async def async_reset(self) -> None:
