@@ -189,7 +189,7 @@ aioaseko==1.0.0
 aioasuswrt==1.4.0
 
 # homeassistant.components.husqvarna_automower
-aioautomower==2025.4.4
+aioautomower==2025.5.1
 
 # homeassistant.components.azure_devops
 aioazuredevops==2.2.1
@@ -535,7 +535,7 @@ bimmer-connected[china]==0.17.2
 
 # homeassistant.components.eq3btsmart
 # homeassistant.components.esphome
-bleak-esphome==2.14.0
+bleak-esphome==2.15.1
 
 # homeassistant.components.bluetooth
 bleak-retry-connector==3.9.0
@@ -988,7 +988,7 @@ hole==0.8.0
 holidays==0.70
 
 # homeassistant.components.frontend
-home-assistant-frontend==20250430.2
+home-assistant-frontend==20250502.0
 
 # homeassistant.components.conversation
 home-assistant-intents==2025.4.30
@@ -2096,7 +2096,7 @@ pywilight==0.0.74
 pywizlight==0.6.2
 
 # homeassistant.components.wmspro
-pywmspro==0.2.1
+pywmspro==0.2.2
 
 # homeassistant.components.ws66i
 pyws66i==1.1
@@ -2338,7 +2338,7 @@ tesla-powerwall==0.5.2
 tesla-wall-connector==1.0.2
 
 # homeassistant.components.teslemetry
-teslemetry-stream==0.7.5
+teslemetry-stream==0.7.7
 
 # homeassistant.components.tessie
 tessie-api==0.1.1
