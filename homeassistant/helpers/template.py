@@ -578,7 +578,6 @@ class Template:
         if self.is_static or self._compiled_code is not None:
             return
 
-        _LOGGER.warning("ensure_valid called on template %s", self.template)
         if compiled := self._env.template_cache.get(self.template):
             self._compiled_code = compiled
             return
