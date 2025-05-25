@@ -286,7 +286,7 @@ aiokafka==0.10.0
 aiokef==0.2.16
 
 # homeassistant.components.rehlko
-aiokem==0.5.11
+aiokem==0.5.12
 
 # homeassistant.components.lifx
 aiolifx-effects==0.3.2
@@ -2093,7 +2093,7 @@ pykwb==0.0.8
 pylacrosse==0.4
 
 # homeassistant.components.lamarzocco
-pylamarzocco==2.0.4
+pylamarzocco==2.0.5
 
 # homeassistant.components.lastfm
 pylast==5.1.0
