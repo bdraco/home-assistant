@@ -28,9 +28,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: EnphaseConfigEntry) -> b
     force_close = options.get(
         OPTION_DISABLE_KEEP_ALIVE, OPTION_DISABLE_KEEP_ALIVE_DEFAULT_VALUE
     )
-    session = async_create_clientsession(
-        hass, verify_ssl=False, force_close=force_close
-    )
+    session = async_create_clientsession(hass, verify_ssl=False, force_close=True)
     envoy = Envoy(host, session)
     coordinator = EnphaseUpdateCoordinator(hass, envoy, entry)
 
