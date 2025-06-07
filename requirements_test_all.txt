@@ -1004,7 +1004,7 @@ hole==0.8.0
 
 # homeassistant.components.holiday
 # homeassistant.components.workday
-holidays==0.73
+holidays==0.74
 
 # homeassistant.components.frontend
 home-assistant-frontend==20250531.0
@@ -1316,7 +1316,7 @@ numato-gpio==0.13.0
 # homeassistant.components.stream
 # homeassistant.components.tensorflow
 # homeassistant.components.trend
-numpy==2.2.6
+numpy==2.3.0
 
 # homeassistant.components.nyt_games
 nyt_games==0.4.4
