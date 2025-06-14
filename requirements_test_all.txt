@@ -1013,7 +1013,7 @@ home-assistant-frontend==20250531.3
 home-assistant-intents==2025.6.10
 
 # homeassistant.components.homematicip_cloud
-homematicip==2.0.4
+homematicip==2.0.5
 
 # homeassistant.components.remember_the_milk
 httplib2==0.20.4
@@ -1482,7 +1482,7 @@ py-madvr2==1.6.32
 py-melissa-climate==2.1.4
 
 # homeassistant.components.nextbus
-py-nextbusnext==2.2.0
+py-nextbusnext==2.3.0
 
 # homeassistant.components.nightscout
 py-nightscout==1.2.2
@@ -2007,7 +2007,7 @@ python-google-drive-api==0.1.0
 python-homeassistant-analytics==0.9.0
 
 # homeassistant.components.homewizard
-python-homewizard-energy==8.3.3
+python-homewizard-energy==9.1.1
 
 # homeassistant.components.izone
 python-izone==1.2.9
