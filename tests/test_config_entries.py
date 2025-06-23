@@ -6536,9 +6536,7 @@ async def test_update_subentry_and_abort(
     err: Exception
     with mock_config_flow("comp", TestFlow):
         try:
-            result = await entry.start_subentry_reconfigure_flow(
-                hass, "test", subentry_id
-            )
+            result = await entry.start_subentry_reconfigure_flow(hass, subentry_id)
         except Exception as ex:  # noqa: BLE001
             err = ex
 
@@ -6595,7 +6593,7 @@ async def test_reconfigure_subentry_create_subentry(hass: HomeAssistant) -> None
         mock_config_flow("comp", TestFlow),
         pytest.raises(ValueError, match="Source is reconfigure, expected user"),
     ):
-        await entry.start_subentry_reconfigure_flow(hass, "test", subentry_id)
+        await entry.start_subentry_reconfigure_flow(hass, subentry_id)
 
     await hass.async_block_till_done()
 
@@ -8118,7 +8116,7 @@ async def test_subentry_get_entry(
 
     # A reconfigure flow finds the config entry and subentry
     with mock_config_flow("test", TestFlow):
-        result = await entry.start_subentry_reconfigure_flow(hass, "test", subentry_id)
+        result = await entry.start_subentry_reconfigure_flow(hass, subentry_id)
         assert (
             result["reason"]
             == "Found entry entry_title: mock_entry_id/Found subentry Test: mock_subentry_id"
