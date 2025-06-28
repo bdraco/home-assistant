@@ -1168,8 +1168,8 @@ build.json @home-assistant/supervisor
 /tests/components/ping/ @jpbede
 /homeassistant/components/plaato/ @JohNan
 /tests/components/plaato/ @JohNan
-/homeassistant/components/playstation_network/ @jackjpowell
-/tests/components/playstation_network/ @jackjpowell
+/homeassistant/components/playstation_network/ @jackjpowell @tr4nt0r
+/tests/components/playstation_network/ @jackjpowell @tr4nt0r
 /homeassistant/components/plex/ @jjlawren
 /tests/components/plex/ @jjlawren
 /homeassistant/components/plugwise/ @CoMPaTech @bouwew
@@ -1552,6 +1552,8 @@ build.json @home-assistant/supervisor
 /tests/components/technove/ @Moustachauve
 /homeassistant/components/tedee/ @patrickhilker @zweckj
 /tests/components/tedee/ @patrickhilker @zweckj
+/homeassistant/components/telegram_bot/ @hanwg
+/tests/components/telegram_bot/ @hanwg
 /homeassistant/components/tellduslive/ @fredrike
 /tests/components/tellduslive/ @fredrike
 /homeassistant/components/template/ @Petro31 @home-assistant/core
