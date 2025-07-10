@@ -337,6 +337,9 @@ async def async_setup_hass(
             if not is_virtual_env():
                 await async_mount_local_lib_path(runtime_config.config_dir)
 
+            if hass.config.safe_mode:
+                _LOGGER.info("Starting in safe mode")
+
             basic_setup_success = (
                 await async_from_config_dict(config_dict, hass) is not None
             )
@@ -389,8 +392,6 @@ async def async_setup_hass(
             {"recovery_mode": {}, "http": http_conf},
             hass,
         )
-    elif hass.config.safe_mode:
-        _LOGGER.info("Starting in safe mode")
 
     if runtime_config.open_ui:
         hass.add_job(open_hass_ui, hass)
@@ -906,9 +907,9 @@ async def _async_set_up_integrations(
     domains = set(integrations) & all_domains
 
     _LOGGER.info(
-        "Domains to be set up: %s | %s",
-        domains,
-        all_domains - domains,
+        "Domains to be set up: %s\nDependencies: %s",
+        domains or "{}",
+        (all_domains - domains) or "{}",
     )
 
     async_set_domains_to_be_loaded(hass, all_domains)
@@ -949,12 +950,13 @@ async def _async_set_up_integrations(
         stage_all_domains = stage_domains | stage_dep_domains
 
         _LOGGER.info(
-            "Setting up stage %s: %s | %s\nDependencies: %s | %s",
+            "Setting up stage %s: %s; already set up: %s\n"
+            "Dependencies: %s; already set up: %s",
             name,
             stage_domains,
-            stage_domains_unfiltered - stage_domains,
-            stage_dep_domains,
-            stage_dep_domains_unfiltered - stage_dep_domains,
+            (stage_domains_unfiltered - stage_domains) or "{}",
+            stage_dep_domains or "{}",
+            (stage_dep_domains_unfiltered - stage_dep_domains) or "{}",
         )
 
         if timeout is None:
