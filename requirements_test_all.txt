@@ -1826,7 +1826,7 @@ pynzbgetapi==0.2.0
 pyobihai==1.4.2
 
 # homeassistant.components.octoprint
-pyoctoprintapi==0.1.12
+pyoctoprintapi==0.1.14
 
 # homeassistant.components.openuv
 pyopenuv==2023.02.0
@@ -2241,7 +2241,7 @@ samsungtvws[async,encrypted]==2.7.2
 sanix==1.0.6
 
 # homeassistant.components.screenlogic
-screenlogicpy==0.10.0
+screenlogicpy==0.10.2
 
 # homeassistant.components.backup
 securetar==2025.2.1
