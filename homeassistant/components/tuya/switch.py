@@ -85,6 +85,14 @@ SWITCHES: dict[str, tuple[SwitchEntityDescription, ...]] = {
             entity_category=EntityCategory.CONFIG,
         ),
     ),
+    # Smart Odor Eliminator-Pro
+    # Undocumented, see https://github.com/orgs/home-assistant/discussions/79
+    "cwjwq": (
+        SwitchEntityDescription(
+            key=DPCode.SWITCH,
+            translation_key="switch",
+        ),
+    ),
     # Smart Pet Feeder
     # https://developer.tuya.com/en/docs/iot/categorycwwsq?id=Kaiuz2b6vydld
     "cwwsq": (
@@ -429,6 +437,14 @@ SWITCHES: dict[str, tuple[SwitchEntityDescription, ...]] = {
             key=DPCode.LOCK,
             translation_key="child_lock",
             entity_category=EntityCategory.CONFIG,
+        ),
+    ),
+    # Undocumented tower fan
+    # https://github.com/orgs/home-assistant/discussions/329
+    "ks": (
+        SwitchEntityDescription(
+            key=DPCode.ANION,
+            translation_key="ionizer",
         ),
     ),
     # Alarm Host
