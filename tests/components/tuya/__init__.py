@@ -74,6 +74,10 @@ DEVICE_MOCKS = {
         Platform.SENSOR,
         Platform.SWITCH,
     ],
+    "dj_smart_light_bulb": [
+        # https://github.com/home-assistant/core/pull/126242
+        Platform.LIGHT
+    ],
     "dlq_earu_electric_eawcpt": [
         # https://github.com/home-assistant/core/issues/102769
         Platform.SENSOR,
@@ -112,6 +116,10 @@ DEVICE_MOCKS = {
         # https://github.com/home-assistant/core/issues/108301
         Platform.BINARY_SENSOR,
         Platform.SENSOR,
+    ],
+    "qccdz_ac_charging_control": [
+        # https://github.com/home-assistant/core/issues/136207
+        Platform.SWITCH,
     ],
     "qxj_temp_humidity_external_probe": [
         # https://github.com/home-assistant/core/issues/136472
