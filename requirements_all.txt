@@ -223,7 +223,7 @@ aiocomelit==0.12.3
 aiodhcpwatcher==1.2.0
 
 # homeassistant.components.dhcp
-aiodiscover==2.7.0
+aiodiscover==2.7.1
 
 # homeassistant.components.dnsip
 aiodns==3.5.0
@@ -765,7 +765,7 @@ datadog==0.52.0
 datapoint==0.12.1
 
 # homeassistant.components.bluetooth
-dbus-fast==2.44.2
+dbus-fast==2.44.3
 
 # homeassistant.components.debugpy
 debugpy==1.8.14
