@@ -573,7 +573,7 @@ av==13.1.0
 # avion==0.10
 
 # homeassistant.components.axis
-axis==64
+axis==65
 
 # homeassistant.components.fujitsu_fglair
 ayla-iot-unofficial==1.4.7
@@ -1130,7 +1130,7 @@ ha-silabs-firmware-client==0.2.0
 habiticalib==0.4.1
 
 # homeassistant.components.bluetooth
-habluetooth==4.0.1
+habluetooth==4.0.2
 
 # homeassistant.components.cloud
 hass-nabucasa==0.111.0
@@ -2805,7 +2805,7 @@ smart-meter-texas==0.5.5
 snapcast==2.3.6
 
 # homeassistant.components.sonos
-soco==0.30.9
+soco==0.30.11
 
 # homeassistant.components.solaredge_local
 solaredge-local==0.2.3
