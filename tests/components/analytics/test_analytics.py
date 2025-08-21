@@ -986,6 +986,7 @@ async def test_devices_payload(
     assert await async_setup_component(hass, "analytics", {})
     assert await async_devices_payload(hass) == {
         "version": "home-assistant:1",
+        "home_assistant": MOCK_VERSION,
         "devices": [],
     }
 
@@ -1053,6 +1054,7 @@ async def test_devices_payload(
 
     assert await async_devices_payload(hass) == {
         "version": "home-assistant:1",
+        "home_assistant": MOCK_VERSION,
         "devices": [
             {
                 "manufacturer": "test-manufacturer",
