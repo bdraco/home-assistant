@@ -777,7 +777,7 @@ decora-wifi==1.4
 # decora==0.6
 
 # homeassistant.components.ecovacs
-deebot-client==13.6.0
+deebot-client==13.7.0
 
 # homeassistant.components.ihc
 # homeassistant.components.namecheapdns
@@ -1133,7 +1133,7 @@ ha-silabs-firmware-client==0.2.0
 habiticalib==0.4.3
 
 # homeassistant.components.bluetooth
-habluetooth==5.1.0
+habluetooth==5.2.0
 
 # homeassistant.components.cloud
 hass-nabucasa==1.0.0
@@ -1177,7 +1177,7 @@ hole==0.9.0
 holidays==0.79
 
 # homeassistant.components.frontend
-home-assistant-frontend==20250827.0
+home-assistant-frontend==20250828.0
 
 # homeassistant.components.conversation
 home-assistant-intents==2025.8.27
