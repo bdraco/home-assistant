@@ -850,7 +850,7 @@ freebox-api==1.2.2
 
 # homeassistant.components.fritz
 # homeassistant.components.fritzbox_callmonitor
-fritzconnection[qr]==1.14.0
+fritzconnection[qr]==1.15.0
 
 # homeassistant.components.fyta
 fyta_cli==0.7.2
@@ -1289,7 +1289,7 @@ netmap==0.7.0.2
 nettigo-air-monitor==5.0.0
 
 # homeassistant.components.nexia
-nexia==2.10.0
+nexia==2.11.0
 
 # homeassistant.components.nextcloud
 nextcloudmonitor==1.5.1
