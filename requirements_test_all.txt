@@ -192,7 +192,7 @@ aioaseko==1.0.0
 aioasuswrt==1.4.0
 
 # homeassistant.components.husqvarna_automower
-aioautomower==2.2.0
+aioautomower==2.2.1
 
 # homeassistant.components.azure_devops
 aioazuredevops==2.2.2
@@ -1381,7 +1381,7 @@ openhomedevice==2.2.0
 openwebifpy==4.3.1
 
 # homeassistant.components.opower
-opower==0.15.3
+opower==0.15.4
 
 # homeassistant.components.oralb
 oralb-ble==0.17.6
