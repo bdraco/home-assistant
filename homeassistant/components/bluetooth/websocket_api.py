@@ -64,7 +64,7 @@ def _async_get_source_from_config_entry(
         connection.send_error(
             msg_id,
             "invalid_config_entry_id",
-            f"Invalid config entry id: {config_entry_id}",
+            f"Config entry {config_entry_id} not found",
         )
         return None
     return entry.unique_id
@@ -309,7 +309,7 @@ async def ws_subscribe_scanner_state(
     ws_msg_id = msg["id"]
     config_entry_id = msg.get("config_entry_id")
     source = _async_get_source_from_config_entry(
-        hass, connection, ws_msg_id, config_entry_id
+        hass, connection, ws_msg_id, config_entry_id, validate_source=False
     )
     if config_entry_id and source is None:
         return  # Error already sent by helper
