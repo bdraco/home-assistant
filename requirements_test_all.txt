@@ -247,7 +247,7 @@ aiogithubapi==24.6.0
 aioguardian==2022.07.0
 
 # homeassistant.components.harmony
-aioharmony==0.5.2
+aioharmony==0.5.3
 
 # homeassistant.components.hassio
 aiohasupervisor==0.3.2
@@ -986,7 +986,7 @@ ha-ffmpeg==3.2.2
 ha-iotawattpy==0.1.2
 
 # homeassistant.components.philips_js
-ha-philipsjs==3.2.2
+ha-philipsjs==3.2.4
 
 # homeassistant.components.homeassistant_hardware
 ha-silabs-firmware-client==0.2.0
@@ -1618,7 +1618,7 @@ pydexcom==0.2.3
 pydiscovergy==3.0.2
 
 # homeassistant.components.hydrawise
-pydrawise==2025.7.0
+pydrawise==2025.9.0
 
 # homeassistant.components.android_ip_webcam
 pydroid-ipcam==3.0.0
@@ -2643,7 +2643,7 @@ zamg==0.3.6
 zcc-helper==3.6
 
 # homeassistant.components.zeroconf
-zeroconf==0.147.0
+zeroconf==0.147.2
 
 # homeassistant.components.zeversolar
 zeversolar==0.3.2
