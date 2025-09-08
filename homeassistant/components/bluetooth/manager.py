@@ -323,9 +323,6 @@ class HomeAssistantBluetoothManager(BluetoothManager):
         """
         super().on_scanner_start(scanner)
 
-        _LOGGER.warning("Scanner started: %s", scanner)
-        _LOGGER.warning("Scanner details: %s", scanner.adapter)
-
         # Only handle repair issues for local adapters (HaScanner instances)
         if not isinstance(scanner, HaScanner):
             return
@@ -333,7 +330,7 @@ class HomeAssistantBluetoothManager(BluetoothManager):
         issue_id = f"bluetooth_adapter_missing_permissions_{scanner.source}"
 
         # Delete any existing issue if not in degraded mode
-        if False and not self.is_operating_degraded():
+        if not self.is_operating_degraded():
             ir.async_delete_issue(self.hass, DOMAIN, issue_id)
             return
 
