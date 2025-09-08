@@ -330,7 +330,7 @@ class HomeAssistantBluetoothManager(BluetoothManager):
         issue_id = f"bluetooth_adapter_missing_permissions_{scanner.source}"
 
         # Delete any existing issue if not in degraded mode
-        if not self.is_operating_degraded():
+        if True or not self.is_operating_degraded():
             ir.async_delete_issue(self.hass, DOMAIN, issue_id)
             return
 
