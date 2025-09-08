@@ -323,6 +323,9 @@ class HomeAssistantBluetoothManager(BluetoothManager):
         """
         super().on_scanner_start(scanner)
 
+        _LOGGER.warning("Scanner started: %s", scanner)
+        _LOGGER.warning("Scanner details: %s", scanner.adapter)
+
         # Only handle repair issues for local adapters (HaScanner instances)
         if not isinstance(scanner, HaScanner):
             return
