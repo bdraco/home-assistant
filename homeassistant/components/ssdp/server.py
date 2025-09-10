@@ -92,26 +92,17 @@ async def _async_find_next_available_port(
 ) -> tuple[int, socket.socket]:
     """Get a free TCP port."""
     family = socket.AF_INET if is_ipv4_address(source) else socket.AF_INET6
-    # We use an ExitStack to ensure the socket is closed if we fail to find a port.
-    with ExitStack() as stack:
-        test_socket = stack.enter_context(socket.socket(family, socket.SOCK_STREAM))
+    test_socket = socket.socket(family, socket.SOCK_STREAM)
+    try:
         test_socket.setblocking(False)
 
-        for i in range(100):
-            addr = (source[0], 0, *source[2:])
-            try:
-                test_socket.bind(addr)
-            except OSError:
-                if i == 100 - 1:
-                    raise
-            else:
-                port = test_socket.getsockname()[1]
-                # The socket will be dealt by the caller, so we detach it from the stack
-                # before returning it to prevent it from being closed.
-                stack.pop_all()
-                return port, test_socket
-
-    raise RuntimeError("unreachable")
+        addr = (source[0], 0, *source[2:])
+        test_socket.bind(addr)
+        port = test_socket.getsockname()[1]
+    except BaseException:
+        test_socket.close()
+        raise
+    return port, test_socket
 
 
 class Server:
