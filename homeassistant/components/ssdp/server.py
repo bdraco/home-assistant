@@ -31,9 +31,6 @@ from homeassistant.helpers.system_info import async_get_system_info
 
 from .common import async_build_source_set
 
-UPNP_SERVER_MIN_PORT = 40000
-UPNP_SERVER_MAX_PORT = 40100
-
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -99,16 +96,16 @@ async def _async_find_next_available_port(
     with ExitStack() as stack:
         test_socket = stack.enter_context(socket.socket(family, socket.SOCK_STREAM))
         test_socket.setblocking(False)
-        test_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-        for port in range(UPNP_SERVER_MIN_PORT, UPNP_SERVER_MAX_PORT):
-            addr = (source[0], port, *source[2:])
+        for i in range(100):
+            addr = (source[0], 0, *source[2:])
             try:
                 test_socket.bind(addr)
             except OSError:
-                if port == UPNP_SERVER_MAX_PORT - 1:
+                if i == 100 - 1:
                     raise
             else:
+                port = test_socket.getsockname()[1]
                 # The socket will be dealt by the caller, so we detach it from the stack
                 # before returning it to prevent it from being closed.
                 stack.pop_all()
