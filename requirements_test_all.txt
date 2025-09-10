@@ -81,7 +81,7 @@ PyQRCode==1.2.1
 PyRMVtransport==0.3.3
 
 # homeassistant.components.switchbot
-PySwitchbot==0.69.0
+PySwitchbot==0.70.0
 
 # homeassistant.components.syncthru
 PySyncThru==0.8.0
@@ -812,7 +812,7 @@ faadelays==2023.9.1
 fastdotcom==0.0.3
 
 # homeassistant.components.feedreader
-feedparser==6.0.11
+feedparser==6.0.12
 
 # homeassistant.components.file
 file-read-backwards==2.0.0
@@ -1105,7 +1105,7 @@ iometer==0.1.0
 iottycloud==0.3.0
 
 # homeassistant.components.isal
-isal==1.7.1
+isal==1.8.0
 
 # homeassistant.components.gogogate2
 ismartgate==5.0.2
@@ -1622,6 +1622,9 @@ pydrawise==2025.9.0
 
 # homeassistant.components.android_ip_webcam
 pydroid-ipcam==3.0.0
+
+# homeassistant.components.droplet
+pydroplet==2.3.2
 
 # homeassistant.components.ecoforest
 pyecoforest==0.4.0
