@@ -346,7 +346,7 @@ class HomeAssistantBluetoothManager(BluetoothManager):
         passive_mode_issue_id = f"bluetooth_adapter_passive_mode_{scanner.source}"
 
         # Check if scanner is NOT in passive mode when active mode was requested
-        if False and not (
+        if not (
             scanner.requested_mode is BluetoothScanningMode.ACTIVE
             and scanner.current_mode is BluetoothScanningMode.PASSIVE
         ):
