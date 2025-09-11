@@ -470,7 +470,7 @@ async def test_poll_all_on_startup_refreshes_stale_values(
     # Track what gets polled during setup
     polled_chars: list[tuple[int, int]] = []
 
-    # Setup the test accessories
+    # Set up the test accessories
     fake_controller = await setup_platform(hass)
 
     # Mock get_characteristics to track polling and return fresh temperature
@@ -513,7 +513,7 @@ async def test_poll_all_on_startup_refreshes_stale_values(
     pairing = fake_controller.pairings["00:00:00:00:00:00"]
 
     with mock.patch.object(pairing, "get_characteristics", mock_get_characteristics):
-        # Setup the config entry (this should trigger poll_all=True)
+        # Set up the config entry (this should trigger poll_all=True)
         await hass.config_entries.async_setup(config_entry.entry_id)
         await hass.async_block_till_done()
 
