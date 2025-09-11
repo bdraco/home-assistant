@@ -17,7 +17,9 @@ from switchbot import (
 import voluptuous as vol
 
 from homeassistant.components.bluetooth import (
+    BluetoothScanningMode,
     BluetoothServiceInfoBleak,
+    async_current_scanners,
     async_discovered_service_info,
 )
 from homeassistant.config_entries import (
@@ -179,9 +181,9 @@ class SwitchbotConfigFlow(ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle the SwitchBot API auth step."""
-        errors = {}
+        errors: dict[str, str] = {}
         assert self._discovered_adv is not None
-        description_placeholders = {}
+        description_placeholders: dict[str, str] = {}
 
         # If we have saved credentials from cloud login, try them first
         if user_input is None and self._cloud_username and self._cloud_password:
@@ -253,7 +255,7 @@ class SwitchbotConfigFlow(ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle the encryption key step."""
-        errors = {}
+        errors: dict[str, str] = {}
         assert self._discovered_adv is not None
         if user_input is not None:
             model: SwitchbotModel = self._discovered_adv.data["modelName"]
@@ -323,6 +325,15 @@ class SwitchbotConfigFlow(ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle the user step to choose cloud login or direct discovery."""
+        # Check if all scanners are in active mode
+        # If so, skip the menu and go directly to device selection
+        scanners = async_current_scanners(self.hass)
+        if scanners and all(
+            scanner.current_mode == BluetoothScanningMode.ACTIVE for scanner in scanners
+        ):
+            # All scanners are active, skip the menu
+            return await self.async_step_select_device()
+
         return self.async_show_menu(
             step_id="user",
             menu_options=["cloud_login", "select_device"],
@@ -332,8 +343,8 @@ class SwitchbotConfigFlow(ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle the cloud login step."""
-        errors = {}
-        description_placeholders = {}
+        errors: dict[str, str] = {}
+        description_placeholders: dict[str, str] = {}
 
         if user_input is not None:
             try:
@@ -354,7 +365,9 @@ class SwitchbotConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors = {"base": "auth_failed"}
                 description_placeholders = {"error_detail": str(ex)}
             else:
-                # Save credentials for potential encrypted device auth
+                # Save credentials temporarily for the duration of this flow
+                # to avoid re-prompting if encrypted device auth is needed
+                # These will be discarded when the flow completes
                 self._cloud_username = user_input[CONF_USERNAME]
                 self._cloud_password = user_input[CONF_PASSWORD]
                 return await self.async_step_select_device()
