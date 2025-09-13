@@ -193,14 +193,21 @@ class HKDevice:
         This is used during startup to poll all readable characteristics
         before entities have registered what they care about.
         """
-        return {
-            (accessory.aid, char.iid)
-            for accessory in self.entity_map.accessories
-            for service in accessory.services
-            for char in service.characteristics
-            if CharacteristicPermissions.paired_read in char.perms
-            and char.type not in EVENT_CHARACTERISTICS
-        }
+        pollable_chars = set()
+        for accessory in self.entity_map.accessories:
+            for service in accessory.services:
+                for char in service.characteristics:
+                    if (
+                        CharacteristicPermissions.paired_read in char.perms
+                        and char.type not in EVENT_CHARACTERISTICS
+                    ):
+                        pollable_chars.add((accessory.aid, char.iid))
+                        _LOGGER.debug(
+                            "Pollable char for %s: %s",
+                            self.unique_id,
+                            char.to_accessory_and_service_list(),
+                        )
+        return pollable_chars
 
     def add_watchable_characteristics(
         self, characteristics: list[tuple[int, int]]
