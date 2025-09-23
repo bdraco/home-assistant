@@ -235,7 +235,7 @@ aioelectricitymaps==1.1.1
 aioemonitor==1.0.5
 
 # homeassistant.components.esphome
-aioesphomeapi==41.5.0
+aioesphomeapi==41.6.0
 
 # homeassistant.components.flo
 aioflo==2021.11.0
@@ -1211,7 +1211,7 @@ mbddns==0.1.2
 
 # homeassistant.components.mcp
 # homeassistant.components.mcp_server
-mcp==1.5.0
+mcp==1.14.1
 
 # homeassistant.components.minecraft_server
 mcstatus==12.0.1
@@ -1819,7 +1819,7 @@ pymonoprice==0.4
 pymysensors==0.26.0
 
 # homeassistant.components.iron_os
-pynecil==4.1.1
+pynecil==4.2.0
 
 # homeassistant.components.netgear
 pynetgear==0.10.10
@@ -2234,7 +2234,7 @@ renault-api==0.4.0
 renson-endura-delta==1.7.2
 
 # homeassistant.components.reolink
-reolink-aio==0.15.1
+reolink-aio==0.15.2
 
 # homeassistant.components.rflink
 rflink==0.0.67
