@@ -1,12 +1,10 @@
 """ESPHome discovery data."""
 
 from dataclasses import dataclass
-from typing import Final
 
 from yarl import URL
 
 from homeassistant.data_entry_flow import BaseServiceInfo
-
 
 
 @dataclass(slots=True)
@@ -14,7 +12,7 @@ class ESPHomeServiceInfo(BaseServiceInfo):
     """Prepared info from ESPHome entries."""
 
     name: str
-    zwave_home_id: int
+    zwave_home_id: int | None
     ip_address: str
     port: int
     noise_psk: str | None = None

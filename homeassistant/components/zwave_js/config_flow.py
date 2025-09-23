@@ -748,13 +748,12 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
         """Ask for config for Z-Wave JS add-on."""
 
         if user_input is not None:
-            self.usb_path = user_input[CONF_USB_PATH]
+            self.usb_path = user_input.get(CONF_USB_PATH)
+            self.socket_path = user_input.get(CONF_SOCKET_PATH)
             return await self.async_step_network_type()
 
         if self._adapter_discovered:
             return await self.async_step_network_type()
-
-        usb_path = self.usb_path or ""
 
         try:
             ports = await async_get_usb_ports(self.hass)
@@ -764,7 +763,13 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
 
         data_schema = vol.Schema(
             {
-                vol.Required(CONF_USB_PATH, default=usb_path): vol.In(ports),
+                vol.Optional(
+                    CONF_USB_PATH, description={"suggested_value": self.usb_path}
+                ): vol.In(ports),
+                vol.Optional(
+                    CONF_SOCKET_PATH,
+                    description={"suggested_value": self.socket_path or ""},
+                ): str,
             }
         )
 
@@ -1078,10 +1083,10 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
         """Instruct the user to unplug the old controller."""
 
         if user_input is not None:
-            if self.usb_path:
-                # USB discovery was used, so the device is already known.
+            if self._adapter_discovered:
+                # Discovery was used, so the device is already known.
                 self._addon_config_updates[CONF_ADDON_DEVICE] = self.usb_path
-                self._addon_config_updates[CONF_ADDON_SOCKET] = None
+                self._addon_config_updates[CONF_ADDON_SOCKET] = self.socket_path
                 return await self.async_step_start_addon()
             # Now that the old controller is gone, we can scan for serial ports again
             return await self.async_step_choose_serial_port()
@@ -1465,13 +1470,15 @@ class ZWaveJSConfigFlow(ConfigFlow, domain=DOMAIN):
         if not is_hassio(self.hass):
             return self.async_abort(reason="not_hassio")
 
-        await self.async_set_unique_id(str(discovery_info.zwave_home_id))
-        self._abort_if_unique_id_configured(
-            {
-                CONF_USB_PATH: None,
-                CONF_SOCKET_PATH: discovery_info.socket_path,
-            }
-        )
+        if discovery_info.zwave_home_id:
+            await self.async_set_unique_id(str(discovery_info.zwave_home_id))
+            self._abort_if_unique_id_configured(
+                {
+                    CONF_USB_PATH: None,
+                    CONF_SOCKET_PATH: discovery_info.socket_path,
+                }
+            )
+
         self.socket_path = discovery_info.socket_path
         self.context["title_placeholders"] = {
             CONF_NAME: f"{discovery_info.name} via ESPHome"
