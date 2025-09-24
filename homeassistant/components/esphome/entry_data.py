@@ -491,8 +491,6 @@ class RuntimeEntryData:
 
         assert self.client.connected_address
 
-        _LOGGER.warning("ZWave Device Info: %s", device_info)
-
         discovery_flow.async_create_flow(
             hass,
             "zwave_js",
