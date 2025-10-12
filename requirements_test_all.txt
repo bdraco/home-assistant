@@ -173,7 +173,7 @@ aioairzone-cloud==0.7.2
 aioairzone==1.0.1
 
 # homeassistant.components.alexa_devices
-aioamazondevices==6.4.1
+aioamazondevices==6.4.3
 
 # homeassistant.components.ambient_network
 # homeassistant.components.ambient_station
@@ -235,7 +235,7 @@ aioelectricitymaps==1.1.1
 aioemonitor==1.0.5
 
 # homeassistant.components.esphome
-aioesphomeapi==41.13.0
+aioesphomeapi==41.14.0
 
 # homeassistant.components.flo
 aioflo==2021.11.0
@@ -366,7 +366,7 @@ aioruuvigateway==0.1.0
 aiosenz==1.0.0
 
 # homeassistant.components.shelly
-aioshelly==13.12.0
+aioshelly==13.13.0
 
 # homeassistant.components.skybell
 aioskybell==22.7.0
@@ -774,7 +774,7 @@ energyzero==2.1.1
 enocean==0.50
 
 # homeassistant.components.environment_canada
-env-canada==0.11.3
+env-canada==0.12.1
 
 # homeassistant.components.season
 ephem==4.1.6
@@ -1325,7 +1325,7 @@ nextcord==3.1.0
 nextdns==4.1.0
 
 # homeassistant.components.niko_home_control
-nhc==0.6.1
+nhc==0.7.0
 
 # homeassistant.components.nibe_heatpump
 nibe==2.19.0
@@ -1458,7 +1458,7 @@ plexauth==0.0.6
 plexwebsocket==0.0.14
 
 # homeassistant.components.plugwise
-plugwise==1.7.8
+plugwise==1.8.0
 
 # homeassistant.components.poolsense
 poolsense==0.0.8
@@ -1476,7 +1476,7 @@ prayer-times-calculator-offline==1.0.3
 prometheus-client==0.21.0
 
 # homeassistant.components.prowl
-prowlpy==1.0.2
+prowlpy==1.1.1
 
 # homeassistant.components.hardware
 # homeassistant.components.recorder
@@ -1535,7 +1535,7 @@ py-synologydsm-api==2.7.3
 pyCEC==0.5.2
 
 # homeassistant.components.control4
-pyControl4==1.2.0
+pyControl4==1.5.0
 
 # homeassistant.components.duotecno
 pyDuotecno==2024.10.1
@@ -1890,7 +1890,7 @@ pyotgw==2.2.2
 pyotp==2.9.0
 
 # homeassistant.components.overkiz
-pyoverkiz==1.17.2
+pyoverkiz==1.19.0
 
 # homeassistant.components.onewire
 pyownet==0.10.0.post1
@@ -1920,7 +1920,7 @@ pypoint==3.0.0
 pyportainer==1.0.3
 
 # homeassistant.components.probe_plus
-pyprobeplus==1.0.1
+pyprobeplus==1.1.0
 
 # homeassistant.components.profiler
 pyprof2calltree==1.4.5
@@ -2471,7 +2471,7 @@ thermopro-ble==0.13.1
 thinqconnect==1.0.8
 
 # homeassistant.components.tilt_ble
-tilt-ble==0.3.1
+tilt-ble==1.0.1
 
 # homeassistant.components.tilt_pi
 tilt-pi==0.2.1
