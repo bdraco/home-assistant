@@ -282,26 +282,28 @@ class ESPHomeManager:
             call_id = service.call_id
             if call_id and service.wants_response:
                 # Service call with response expected
-                hass.async_create_task(
+                self.entry.async_create_task(
+                    hass,
                     self._handle_service_call_with_response(
                         domain,
                         service_name,
                         service_data,
                         call_id,
                         service.response_template,
-                    )
+                    ),
                 )
             elif call_id:
                 # Service call without response but needs success/failure notification
-                hass.async_create_task(
+                self.entry.async_create_task(
+                    hass,
                     self._handle_service_call_with_notification(
                         domain, service_name, service_data, call_id
-                    )
+                    ),
                 )
             else:
                 # Fire and forget service call
-                hass.async_create_task(
-                    hass.services.async_call(domain, service_name, service_data)
+                self.entry.async_create_task(
+                    hass, hass.services.async_call(domain, service_name, service_data)
                 )
         else:
             device_info = self.entry_data.device_info
@@ -351,8 +353,9 @@ class ESPHomeManager:
                 try:
                     # Render response template
                     tmpl = Template(response_template, self.hass)
-                    response = template.render_complex(
-                        tmpl, {"response": action_response}
+                    response = tmpl.async_render(
+                        variables={"response": action_response},
+                        strict=True,
                     )
                     response_dict = {"response": response}
 
@@ -372,13 +375,13 @@ class ESPHomeManager:
             vol.Invalid,
             HomeAssistantError,
         ) as ex:
-            await self._send_service_call_response(
+            self._send_service_call_response(
                 call_id, success=False, error_message=str(ex), response_data=b""
             )
 
         else:
             # Send success response back to ESPHome
-            await self._send_service_call_response(
+            self._send_service_call_response(
                 call_id=call_id,
                 success=True,
                 error_message="",
@@ -394,11 +397,11 @@ class ESPHomeManager:
                 domain, service_name, service_data, blocking=True
             )
         except (ServiceNotFound, ServiceValidationError, vol.Invalid) as ex:
-            await self._send_service_call_response(call_id, False, str(ex), b"")
+            self._send_service_call_response(call_id, False, str(ex), b"")
         else:
-            await self._send_service_call_response(call_id, True, "", b"")
+            self._send_service_call_response(call_id, True, "", b"")
 
-    async def _send_service_call_response(
+    def _send_service_call_response(
         self,
         call_id: int,
         success: bool,
@@ -412,7 +415,7 @@ class ESPHomeManager:
             success,
             error_message,
         )
-        await self.cli.send_homeassistant_action_response(
+        self.cli.send_homeassistant_action_response(
             call_id,
             success,
             error_message,
