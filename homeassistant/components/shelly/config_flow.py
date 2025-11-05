@@ -304,19 +304,17 @@ class ShellyConfigFlow(ConfigFlow, domain=DOMAIN):
         Active provisioning flows (do_provision/provision_done) should not be aborted
         as they're waiting for zeroconf handoff.
         """
-        normalized_mac = format_mac(mac)
-
         for flow in self._async_in_progress(include_uninitialized=True):
             if (
                 flow["flow_id"] != self.flow_id
-                and flow["context"].get("unique_id") == normalized_mac
+                and flow["context"].get("unique_id") == mac
                 and flow["context"].get("source") == "bluetooth"
                 and flow.get("step_id") not in BLUETOOTH_FINISHING_STEPS
             ):
                 LOGGER.debug(
                     "Aborting idle BLE flow %s for %s (device discovered via zeroconf)",
                     flow["flow_id"],
-                    normalized_mac,
+                    mac,
                 )
                 self.hass.config_entries.flow.async_abort(flow["flow_id"])
 
@@ -420,14 +418,14 @@ class ShellyConfigFlow(ConfigFlow, domain=DOMAIN):
             self.wifi_networks = await async_scan_wifi_networks(self.ble_device)
         except (DeviceConnectionError, RpcCallError) as err:
             LOGGER.debug("Failed to scan WiFi networks via BLE: %s", err)
-            # "Writing is not permitted" error means device is bound to Shelly cloud
+            # "Writing is not permitted" error means device rejects BLE writes
             # and BLE provisioning is disabled - user must use Shelly app
-            if "Writing is not permitted" in str(err):
+            if "not permitted" in str(err):
                 return self.async_abort(reason="ble_not_permitted")
             return await self.async_step_wifi_scan_failed()
         except Exception:  # noqa: BLE001
             LOGGER.exception("Unexpected exception during WiFi scan")
-            return await self.async_step_wifi_scan_failed()
+            return self.async_abort(reason="unknown")
 
         # Create list of SSIDs for selection
         # If no networks found, still allow custom SSID entry
@@ -515,12 +513,6 @@ class ShellyConfigFlow(ConfigFlow, domain=DOMAIN):
             mac,
         )
 
-        # Abort any other flows for this device
-        for flow in self._async_in_progress(include_uninitialized=True):
-            flow_unique_id = flow["context"].get("unique_id")
-            if flow["flow_id"] != self.flow_id and self.unique_id == flow_unique_id:
-                self.hass.config_entries.flow.async_abort(flow["flow_id"])
-
         # Two-phase device discovery after WiFi provisioning:
         #
         # Phase 1: Wait for zeroconf discovery callback (via event)
@@ -538,10 +530,6 @@ class ShellyConfigFlow(ConfigFlow, domain=DOMAIN):
         # try to connect right away, causing false failures before device is ready.
         try:
             await asyncio.wait_for(state.event.wait(), timeout=PROVISIONING_TIMEOUT)
-            LOGGER.debug(
-                "Zeroconf discovered device after WiFi provisioning at %s",
-                state.host,
-            )
         except TimeoutError:
             LOGGER.debug("Timeout waiting for zeroconf discovery, trying active lookup")
             # No new discovery received - device may have stale zeroconf data
@@ -557,6 +545,11 @@ class ShellyConfigFlow(ConfigFlow, domain=DOMAIN):
                 return None
 
             state.host, state.port = result
+        else:
+            LOGGER.debug(
+                "Zeroconf discovery received for device after WiFi provisioning at %s",
+                state.host,
+            )
 
         # Device discovered via zeroconf - get device info and set up directly
         assert state.host is not None

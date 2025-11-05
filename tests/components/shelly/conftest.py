@@ -789,3 +789,30 @@ def disable_async_remove_shelly_rpc_entities() -> Generator[None]:
         "homeassistant.components.shelly.utils.async_remove_shelly_rpc_entities"
     ):
         yield
+
+
+@pytest.fixture(autouse=True)
+def mock_provisioning_timeout() -> Generator[None]:
+    """Patch provisioning timeout to 0 for tests."""
+    with patch("homeassistant.components.shelly.config_flow.PROVISIONING_TIMEOUT", 0):
+        yield
+
+
+@pytest.fixture
+def mock_wifi_scan() -> Generator[AsyncMock]:
+    """Mock async_scan_wifi_networks."""
+    with patch(
+        "homeassistant.components.shelly.config_flow.async_scan_wifi_networks",
+        new=AsyncMock(return_value=[{"ssid": "TestNetwork", "rssi": -50, "auth": 2}]),
+    ) as mock_scan:
+        yield mock_scan
+
+
+@pytest.fixture
+def mock_wifi_provision() -> Generator[AsyncMock]:
+    """Mock async_provision_wifi."""
+    with patch(
+        "homeassistant.components.shelly.config_flow.async_provision_wifi",
+        new=AsyncMock(),
+    ) as mock_provision:
+        yield mock_provision
