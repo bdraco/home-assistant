@@ -315,7 +315,7 @@ aiolookin==1.0.0
 aiolyric==2.0.2
 
 # homeassistant.components.mealie
-aiomealie==1.0.1
+aiomealie==1.1.0
 
 # homeassistant.components.modern_forms
 aiomodernforms==0.1.8
@@ -1719,7 +1719,7 @@ plexauth==0.0.6
 plexwebsocket==0.0.14
 
 # homeassistant.components.plugwise
-plugwise==1.9.0
+plugwise==1.10.0
 
 # homeassistant.components.serial_pm
 pmsensor==0.4
