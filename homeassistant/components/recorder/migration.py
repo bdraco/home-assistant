@@ -1361,7 +1361,7 @@ class _SchemaVersion20Migrator(_SchemaVersionMigrator, target_version=20):
 class _SchemaVersion21Migrator(_SchemaVersionMigrator, target_version=21):
     def _apply_update(self) -> None:
         """Version specific update method."""
-        # Try to change the character set of the statistic_meta table
+        # Try to change the character set of events, states and statistics_meta tables
         if self.engine.dialect.name == SupportedDialect.MYSQL:
             for table in ("events", "states", "statistics_meta"):
                 _correct_table_character_set_and_collation(table, self.session_maker)
@@ -2070,7 +2070,9 @@ class _SchemaVersion52Migrator(_SchemaVersionMigrator, target_version=52):
         with session_scope(session=self.session_maker()) as session:
             connection = session.connection()
             for conv in _PRIMARY_UNIT_CONVERTERS:
-                units = {u.encode("utf-8") if u else u for u in conv.VALID_UNITS}
+                case_sensitive_units = {
+                    u.encode("utf-8") if u else u for u in conv.VALID_UNITS
+                }
                 # Reset unit_class to None for entries that do not match
                 # the valid units (case sensitive) but matched before due to
                 # case insensitive comparisons.
@@ -2080,18 +2082,21 @@ class _SchemaVersion52Migrator(_SchemaVersionMigrator, target_version=52):
                         and_(
                             StatisticsMeta.unit_of_measurement.in_(conv.VALID_UNITS),
                             cast_(StatisticsMeta.unit_of_measurement, BINARY).not_in(
-                                units
+                                case_sensitive_units
                             ),
                         )
                     )
                     .values(unit_class=None)
                 )
+                # Do an explicitly case sensitive match (actually binary) to set the
+                # correct unit_class. This is needed because we use the case sensitive
+                # utf8mb4_unicode_ci collation.
                 connection.execute(
                     update(StatisticsMeta)
                     .where(
                         and_(
                             cast_(StatisticsMeta.unit_of_measurement, BINARY).in_(
-                                units
+                                case_sensitive_units
                             ),
                             StatisticsMeta.unit_class.is_(None),
                         )
@@ -2105,6 +2110,9 @@ class _SchemaVersion52Migrator(_SchemaVersionMigrator, target_version=52):
         with session_scope(session=self.session_maker()) as session:
             connection = session.connection()
             for conv in _PRIMARY_UNIT_CONVERTERS:
+                # Set the correct unit_class. Unlike MySQL, Postgres and SQLite
+                # have case sensitive string comparisons by default, so we
+                # can directly match on the valid units.
                 connection.execute(
                     update(StatisticsMeta)
                     .where(
@@ -2115,6 +2123,23 @@ class _SchemaVersion52Migrator(_SchemaVersionMigrator, target_version=52):
                     )
                     .values(unit_class=conv.UNIT_CLASS)
                 )
+
+
+class _SchemaVersion53Migrator(_SchemaVersionMigrator, target_version=53):
+    def _apply_update(self) -> None:
+        """Version specific update method."""
+        # Try to change the character set of events, states and statistics_meta tables
+        if self.engine.dialect.name == SupportedDialect.MYSQL:
+            for table in (
+                "events",
+                "event_data",
+                "states",
+                "state_attributes",
+                "statistics",
+                "statistics_meta",
+                "statistics_short_term",
+            ):
+                _correct_table_character_set_and_collation(table, self.session_maker)
 
 
 def _migrate_statistics_columns_to_timestamp_removing_duplicates(
@@ -2159,8 +2184,10 @@ def _correct_table_character_set_and_collation(
     """Correct issues detected by validate_db_schema."""
     # Attempt to convert the table to utf8mb4
     _LOGGER.warning(
-        "Updating character set and collation of table %s to utf8mb4. %s",
+        "Updating table %s to character set %s and collation %s. %s",
         table,
+        MYSQL_DEFAULT_CHARSET,
+        MYSQL_COLLATE,
         MIGRATION_NOTE_MINUTES,
     )
     with (
