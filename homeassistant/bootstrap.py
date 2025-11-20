@@ -179,6 +179,8 @@ FRONTEND_INTEGRATIONS = {
 STAGE_0_INTEGRATIONS = (
     # Load logging and http deps as soon as possible
     ("logging, http deps", LOGGING_AND_HTTP_DEPS_INTEGRATIONS, None),
+    # Setup labs for preview features
+    ("labs", {"labs"}, STAGE_0_SUBSTAGE_TIMEOUT),
     # Setup frontend
     ("frontend", FRONTEND_INTEGRATIONS, None),
     # Setup recorder
@@ -215,6 +217,7 @@ DEFAULT_INTEGRATIONS = {
     "backup",
     "frontend",
     "hardware",
+    "labs",
     "logger",
     "network",
     "system_health",
