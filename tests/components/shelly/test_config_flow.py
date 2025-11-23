@@ -268,13 +268,22 @@ BLE_DISCOVERY_INFO_GEN3 = BluetoothServiceInfoBleak(
     tx_power=-127,
 )
 
-# Mock zeroconf service info for testing
-MOCK_ZEROCONF_SERVICE_INFO = AsyncServiceInfo(
+# Mock HTTP zeroconf service info for shellyplus2pm-AABBCCDDEEFF
+MOCK_HTTP_ZEROCONF_SERVICE_INFO = AsyncServiceInfo(
     type_="_http._tcp.local.",
     name="shellyplus2pm-AABBCCDDEEFF._http._tcp.local.",
     port=80,
     addresses=[ip_address("192.168.1.100").packed],
     server="shellyplus2pm-AABBCCDDEEFF.local.",
+)
+
+# Mock Shelly zeroconf service info for shellyplus2pm-CCBA97C2D670
+MOCK_SHELLY_ZEROCONF_SERVICE_INFO = AsyncServiceInfo(
+    type_="_http._tcp.local.",
+    name="shellyplus2pm-CCBA97C2D670._http._tcp.local.",
+    port=80,
+    addresses=[ip_address("192.168.1.100").packed],
+    server="shellyplus2pm-CCBA97C2D670.local.",
 )
 
 # Mock device info returned by get_info for BLE provisioned devices
@@ -333,7 +342,9 @@ def mock_discovery() -> Generator[AsyncMock]:
         yield mock_disc
 
 
-def create_mock_rpc_device(name: str = "Test Device") -> AsyncMock:
+def create_mock_rpc_device(
+    name: str = "Test Device", model: str = MODEL_PLUS_2PM
+) -> AsyncMock:
     """Create a mock RPC device for provisioning tests."""
     mock_device = AsyncMock()
     mock_device.initialize = AsyncMock()
@@ -341,7 +352,7 @@ def create_mock_rpc_device(name: str = "Test Device") -> AsyncMock:
     mock_device.firmware_version = "1.0.0"
     mock_device.status = {"sys": {}}
     mock_device.xmod_info = {}
-    mock_device.shelly = {"model": MODEL_PLUS_2PM}
+    mock_device.shelly = {"model": model}
     mock_device.wifi_setconfig = AsyncMock(return_value={})
     mock_device.ble_setconfig = AsyncMock(return_value={"restart_required": False})
     mock_device.shutdown = AsyncMock()
@@ -881,7 +892,7 @@ async def test_user_flow_with_zeroconf_devices(
 ) -> None:
     """Test user flow shows discovered Zeroconf devices."""
     # Mock zeroconf discovery to return a device
-    mock_discovery.return_value = [MOCK_ZEROCONF_SERVICE_INFO]
+    mock_discovery.return_value = [MOCK_HTTP_ZEROCONF_SERVICE_INFO]
 
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -915,14 +926,8 @@ async def test_user_flow_with_zeroconf_devices(
             },
         ),
         patch(
-            "homeassistant.components.shelly.config_flow.validate_input",
-            return_value={
-                "title": "Test Zeroconf Device",
-                CONF_HOST: "192.168.1.100",
-                CONF_MODEL: MODEL_PLUS_2PM,
-                CONF_GEN: 2,
-                CONF_SLEEP_PERIOD: 0,
-            },
+            "homeassistant.components.shelly.config_flow.RpcDevice.create",
+            return_value=create_mock_rpc_device("Test Zeroconf Device"),
         ),
     ):
         result = await hass.config_entries.flow.async_configure(
@@ -944,7 +949,7 @@ async def test_user_flow_select_zeroconf_device(
 ) -> None:
     """Test selecting a discovered Zeroconf device completes setup."""
     # Mock zeroconf discovery
-    mock_discovery.return_value = [MOCK_ZEROCONF_SERVICE_INFO]
+    mock_discovery.return_value = [MOCK_HTTP_ZEROCONF_SERVICE_INFO]
 
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -984,7 +989,7 @@ async def test_user_flow_select_manual_entry(
 ) -> None:
     """Test selecting manual entry from device list."""
     # Mock zeroconf discovery with a device
-    mock_discovery.return_value = [MOCK_ZEROCONF_SERVICE_INFO]
+    mock_discovery.return_value = [MOCK_HTTP_ZEROCONF_SERVICE_INFO]
 
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -1032,14 +1037,7 @@ async def test_user_flow_both_ble_and_zeroconf_prefers_zeroconf(
 ) -> None:
     """Test device discovered via both BLE and Zeroconf prefers Zeroconf."""
     # Mock zeroconf discovery - same MAC as BLE device
-    mock_service_info = AsyncServiceInfo(
-        type_="_http._tcp.local.",
-        name="shellyplus2pm-CCBA97C2D670._http._tcp.local.",
-        port=80,
-        addresses=[ip_address("192.168.1.100").packed],
-        server="shellyplus2pm-CCBA97C2D670.local.",
-    )
-    mock_discovery.return_value = [mock_service_info]
+    mock_discovery.return_value = [MOCK_SHELLY_ZEROCONF_SERVICE_INFO]
 
     # Inject BLE device with same MAC (from manufacturer data)
     # The manufacturer data contains WiFi MAC CCBA97C2D670
@@ -1272,14 +1270,8 @@ async def test_user_flow_filters_already_configured_devices(
             },
         ),
         patch(
-            "homeassistant.components.shelly.config_flow.validate_input",
-            return_value={
-                "title": "Test Device",
-                CONF_HOST: "192.168.1.101",
-                CONF_MODEL: MODEL_PLUS_2PM,
-                CONF_GEN: 2,
-                CONF_SLEEP_PERIOD: 0,
-            },
+            "homeassistant.components.shelly.config_flow.RpcDevice.create",
+            return_value=create_mock_rpc_device("Test Device"),
         ),
     ):
         result = await hass.config_entries.flow.async_configure(
@@ -1307,7 +1299,7 @@ async def test_user_flow_includes_ignored_devices(
     entry.add_to_hass(hass)
 
     # Mock zeroconf discovery with the ignored device
-    mock_discovery.return_value = [MOCK_ZEROCONF_SERVICE_INFO]
+    mock_discovery.return_value = [MOCK_HTTP_ZEROCONF_SERVICE_INFO]
 
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -1338,14 +1330,8 @@ async def test_user_flow_includes_ignored_devices(
             },
         ),
         patch(
-            "homeassistant.components.shelly.config_flow.validate_input",
-            return_value={
-                "title": "Test Ignored Device",
-                CONF_HOST: "192.168.1.100",
-                CONF_MODEL: MODEL_PLUS_2PM,
-                CONF_GEN: 2,
-                CONF_SLEEP_PERIOD: 0,
-            },
+            "homeassistant.components.shelly.config_flow.RpcDevice.create",
+            return_value=create_mock_rpc_device("Test Ignored Device"),
         ),
     ):
         result = await hass.config_entries.flow.async_configure(
@@ -1363,7 +1349,7 @@ async def test_user_flow_aborts_when_another_flow_finishes_while_in_progress(
 ) -> None:
     """Test that user flow aborts when another flow finishes and creates a config entry."""
     # Mock zeroconf discovery
-    mock_discovery.return_value = [MOCK_ZEROCONF_SERVICE_INFO]
+    mock_discovery.return_value = [MOCK_HTTP_ZEROCONF_SERVICE_INFO]
 
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -1414,7 +1400,7 @@ async def test_user_flow_zeroconf_device_connection_error(
 ) -> None:
     """Test connection error when getting info from Zeroconf device."""
     # Mock zeroconf discovery
-    mock_discovery.return_value = [MOCK_ZEROCONF_SERVICE_INFO]
+    mock_discovery.return_value = [MOCK_HTTP_ZEROCONF_SERVICE_INFO]
 
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -1440,7 +1426,7 @@ async def test_user_flow_zeroconf_device_validation_connection_error(
 ) -> None:
     """Test connection error during validation of Zeroconf device."""
     # Mock zeroconf discovery
-    mock_discovery.return_value = [MOCK_ZEROCONF_SERVICE_INFO]
+    mock_discovery.return_value = [MOCK_HTTP_ZEROCONF_SERVICE_INFO]
 
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -1459,7 +1445,7 @@ async def test_user_flow_zeroconf_device_validation_connection_error(
             },
         ),
         patch(
-            "homeassistant.components.shelly.config_flow.validate_input",
+            "homeassistant.components.shelly.config_flow.RpcDevice.create",
             side_effect=DeviceConnectionError,
         ),
     ):
@@ -1479,7 +1465,7 @@ async def test_user_flow_zeroconf_device_requires_auth(
 ) -> None:
     """Test selecting Zeroconf device that requires authentication."""
     # Mock zeroconf discovery
-    mock_discovery.return_value = [MOCK_ZEROCONF_SERVICE_INFO]
+    mock_discovery.return_value = [MOCK_HTTP_ZEROCONF_SERVICE_INFO]
 
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -1505,15 +1491,21 @@ async def test_user_flow_zeroconf_device_requires_auth(
     assert result["step_id"] == "credentials"
 
     # Complete credentials and create entry
-    with patch(
-        "homeassistant.components.shelly.config_flow.validate_input",
-        return_value={
-            "title": "Test Auth Device",
-            CONF_HOST: "192.168.1.100",
-            CONF_MODEL: MODEL_1,
-            CONF_GEN: 1,
-            CONF_SLEEP_PERIOD: 0,
-        },
+    with (
+        patch(
+            "homeassistant.components.shelly.config_flow.get_info",
+            return_value={
+                "mac": "AABBCCDDEEFF",
+                "model": MODEL_1,
+                "auth": False,  # Auth passed with credentials
+                "gen": 1,
+                "port": 80,
+            },
+        ),
+        patch(
+            "aioshelly.block_device.BlockDevice.create",
+            return_value=mock_block_device,
+        ),
     ):
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
@@ -1521,7 +1513,7 @@ async def test_user_flow_zeroconf_device_requires_auth(
         )
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["title"] == "Test Auth Device"
+    assert result["title"] == "Test name"
 
 
 async def test_user_flow_zeroconf_invalid_mac_filtered(
@@ -1560,14 +1552,8 @@ async def test_user_flow_zeroconf_invalid_mac_filtered(
             },
         ),
         patch(
-            "homeassistant.components.shelly.config_flow.validate_input",
-            return_value={
-                "title": "Manual Entry Device",
-                CONF_HOST: "192.168.1.100",
-                CONF_MODEL: MODEL_PLUS_2PM,
-                CONF_GEN: 2,
-                CONF_SLEEP_PERIOD: 0,
-            },
+            "homeassistant.components.shelly.config_flow.RpcDevice.create",
+            return_value=create_mock_rpc_device("Manual Entry Device"),
         ),
     ):
         result = await hass.config_entries.flow.async_configure(
@@ -1615,14 +1601,8 @@ async def test_user_flow_zeroconf_no_ipv4_filtered(
             },
         ),
         patch(
-            "homeassistant.components.shelly.config_flow.validate_input",
-            return_value={
-                "title": "Manual IPv4 Device",
-                CONF_HOST: "192.168.1.101",
-                CONF_MODEL: MODEL_PLUS_2PM,
-                CONF_GEN: 2,
-                CONF_SLEEP_PERIOD: 0,
-            },
+            "homeassistant.components.shelly.config_flow.RpcDevice.create",
+            return_value=create_mock_rpc_device("Manual IPv4 Device"),
         ),
     ):
         result = await hass.config_entries.flow.async_configure(
@@ -1685,14 +1665,8 @@ async def test_user_flow_ble_device_without_rpc_over_ble_filtered(
             },
         ),
         patch(
-            "homeassistant.components.shelly.config_flow.validate_input",
-            return_value={
-                "title": "Manual BLE Device",
-                CONF_HOST: "192.168.1.102",
-                CONF_MODEL: MODEL_PLUS_2PM,
-                CONF_GEN: 2,
-                CONF_SLEEP_PERIOD: 0,
-            },
+            "homeassistant.components.shelly.config_flow.RpcDevice.create",
+            return_value=create_mock_rpc_device("Manual BLE Device"),
         ),
     ):
         result = await hass.config_entries.flow.async_configure(
@@ -1710,7 +1684,7 @@ async def test_user_flow_select_zeroconf_device_mac_mismatch(
 ) -> None:
     """Test MAC address mismatch when selecting Zeroconf device."""
     # Mock zeroconf discovery
-    mock_discovery.return_value = [MOCK_ZEROCONF_SERVICE_INFO]
+    mock_discovery.return_value = [MOCK_HTTP_ZEROCONF_SERVICE_INFO]
 
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -1729,7 +1703,7 @@ async def test_user_flow_select_zeroconf_device_mac_mismatch(
             },
         ),
         patch(
-            "homeassistant.components.shelly.config_flow.validate_input",
+            "homeassistant.components.shelly.config_flow.RpcDevice.create",
             side_effect=MacAddressMismatchError,
         ),
     ):
@@ -1774,7 +1748,7 @@ async def test_user_flow_select_zeroconf_device_custom_port_not_supported(
             },
         ),
         patch(
-            "homeassistant.components.shelly.config_flow.validate_input",
+            "homeassistant.components.shelly.config_flow.RpcDevice.create",
             side_effect=CustomPortNotSupported,
         ),
     ):
@@ -1793,7 +1767,7 @@ async def test_user_flow_select_zeroconf_device_not_fully_provisioned(
 ) -> None:
     """Test firmware not fully provisioned when selecting Zeroconf device."""
     # Mock zeroconf discovery
-    mock_discovery.return_value = [MOCK_ZEROCONF_SERVICE_INFO]
+    mock_discovery.return_value = [MOCK_HTTP_ZEROCONF_SERVICE_INFO]
 
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -1812,13 +1786,8 @@ async def test_user_flow_select_zeroconf_device_not_fully_provisioned(
             },
         ),
         patch(
-            "homeassistant.components.shelly.config_flow.validate_input",
-            return_value={
-                "title": "shellyplus2pm-AABBCCDDEEFF",
-                CONF_HOST: "192.168.1.100",
-                CONF_MODEL: "",  # Empty model
-                CONF_GEN: 2,
-            },
+            "homeassistant.components.shelly.config_flow.RpcDevice.create",
+            return_value=create_mock_rpc_device("shellyplus2pm-AABBCCDDEEFF", model=""),
         ),
     ):
         result = await hass.config_entries.flow.async_configure(
@@ -4238,7 +4207,7 @@ async def test_bluetooth_provision_validate_input_fails(
             return_value=MOCK_DEVICE_INFO,
         ),
         patch(
-            "homeassistant.components.shelly.config_flow.validate_input",
+            "homeassistant.components.shelly.config_flow.RpcDevice.create",
             side_effect=DeviceConnectionError,
         ),
     ):
@@ -4307,15 +4276,8 @@ async def test_bluetooth_provision_firmware_not_fully_provisioned(
             return_value=MOCK_DEVICE_INFO,
         ),
         patch(
-            "homeassistant.components.shelly.config_flow.validate_input",
-            return_value={
-                "title": "Test name",
-                CONF_HOST: "1.1.1.1",
-                CONF_PORT: 80,
-                CONF_MODEL: None,  # No model - firmware not fully provisioned
-                CONF_SLEEP_PERIOD: 0,
-                CONF_GEN: 2,
-            },
+            "homeassistant.components.shelly.config_flow.RpcDevice.create",
+            return_value=create_mock_rpc_device("Test name", model=None),
         ),
     ):
         result = await hass.config_entries.flow.async_configure(
