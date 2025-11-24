@@ -278,13 +278,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ElkM1ConfigEntry) -> boo
     for keypad in elk.keypads:
         keypad.add_callback(_keypad_changed)
 
+    sync_success = False
     try:
         await ElkSyncWaiter(elk, LOGIN_TIMEOUT, SYNC_TIMEOUT).async_wait()
+        sync_success = True
     except LoginFailed:
         _LOGGER.error("ElkM1 login failed for %s", conf[CONF_HOST])
         return False
     except TimeoutError as exc:
         raise ConfigEntryNotReady(f"Timed out connecting to {conf[CONF_HOST]}") from exc
+    finally:
+        if not sync_success:
+            elk.disconnect()
 
     elk_temp_unit = elk.panel.temperature_units
     if elk_temp_unit == "C":
@@ -338,20 +343,19 @@ class ElkSyncWaiter:
         self._loop = asyncio.get_running_loop()
         self._sync_future: asyncio.Future[None] = self._loop.create_future()
         self._login_future: asyncio.Future[None] = self._loop.create_future()
-        self._login_succeeded = False
 
-    def _set_future_if_not_done(self, future: asyncio.Future[None]) -> None:
+    @callback
+    def _async_set_future_if_not_done(self, future: asyncio.Future[None]) -> None:
         """Set the future result if not already done."""
         if not future.done():
             future.set_result(None)
 
     @callback
-    def _login_status(self, succeeded: bool) -> None:
+    def _async_login_status(self, succeeded: bool) -> None:
         """Handle login status callback."""
-        self._login_succeeded = succeeded
         if succeeded:
             _LOGGER.debug("ElkM1 login succeeded")
-            self._set_future_if_not_done(self._login_future)
+            self._async_set_future_if_not_done(self._login_future)
         else:
             _LOGGER.error("ElkM1 login failed; invalid username or password")
             self._async_set_exception_if_not_done(self._login_future, LoginFailed)
@@ -360,19 +364,23 @@ class ElkSyncWaiter:
     def _async_set_exception_if_not_done(
         self, future: asyncio.Future[None], exception: type[Exception]
     ) -> None:
-        """Handle timeout callback."""
+        """Set an exception on the future if not already done."""
         if not future.done():
-            future.set_exception(exception)
+            future.set_exception(exception())
 
     @callback
-    def _sync_complete(self) -> None:
+    def _async_sync_complete(self) -> None:
         """Handle sync complete callback."""
-        self._set_future_if_not_done(self._sync_future)
+        self._async_set_future_if_not_done(self._sync_future)
 
-    async def async_wait(self) -> bool:
-        """Wait for login and sync to complete."""
-        self._elk.add_handler("login", self._login_status)
-        self._elk.add_handler("sync_complete", self._sync_complete)
+    async def async_wait(self) -> None:
+        """Wait for login and sync to complete.
+
+        Raises LoginFailed if login fails.
+        Raises TimeoutError if login or sync times out.
+        """
+        self._elk.add_handler("login", self._async_login_status)
+        self._elk.add_handler("sync_complete", self._async_sync_complete)
 
         try:
             for name, future, timeout in (
@@ -383,18 +391,12 @@ class ElkSyncWaiter:
                 handle = self._loop.call_later(
                     timeout, self._async_set_exception_if_not_done, future, TimeoutError
                 )
-                step_succeeded = False
                 try:
                     await future
-                    step_succeeded = True
                 finally:
                     handle.cancel()
-                    if not step_succeeded:
-                        self._elk.disconnect()
 
                 _LOGGER.debug("Received %s event", name)
         finally:
-            self._elk.remove_handler("login", self._login_status)
-            self._elk.remove_handler("sync_complete", self._sync_complete)
-
-        return self._login_succeeded
+            self._elk.remove_handler("login", self._async_login_status)
+            self._elk.remove_handler("sync_complete", self._async_sync_complete)
