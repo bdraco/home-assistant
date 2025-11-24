@@ -1805,19 +1805,11 @@ async def test_user_flow_select_ble_device(
     # Mock empty zeroconf discovery
     mock_discovery.return_value = []
 
-    # Inject BLE device with RPC-over-BLE enabled
+    # Inject BLE device with RPC-over-BLE enabled (no discovery flow created)
     inject_bluetooth_service_info_bleak(hass, BLE_DISCOVERY_INFO_GEN3)
 
     # Wait for bluetooth discovery to process
     await hass.async_block_till_done()
-
-    # Start a bluetooth discovery flow manually to simulate auto-discovery
-    ble_result = await hass.config_entries.flow.async_init(
-        DOMAIN,
-        context={"source": config_entries.SOURCE_BLUETOOTH},
-        data=BLE_DISCOVERY_INFO_GEN3,
-    )
-    ble_flow_id = ble_result["flow_id"]
 
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -1826,7 +1818,7 @@ async def test_user_flow_select_ble_device(
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
 
-    # Select the BLE device - should take over from the discovery flow
+    # Select the BLE device
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
         {CONF_DEVICE: "CCBA97C2D670"},  # MAC from manufacturer data
@@ -1891,9 +1883,38 @@ async def test_user_flow_select_ble_device(
     assert result["result"].unique_id == "CCBA97C2D670"
     assert result["title"] == "Test BLE Device"
 
-    # Verify the original bluetooth discovery flow no longer exists
-    flows = hass.config_entries.flow.async_progress_by_handler(DOMAIN)
-    assert not any(f["flow_id"] == ble_flow_id for f in flows)
+
+async def test_user_flow_filters_devices_with_active_discovery_flows(
+    hass: HomeAssistant,
+    mock_discovery: AsyncMock,
+) -> None:
+    """Test user flow filters out devices that already have discovery flows."""
+    # Mock empty zeroconf discovery
+    mock_discovery.return_value = []
+
+    # Inject BLE device with RPC-over-BLE enabled
+    inject_bluetooth_service_info_bleak(hass, BLE_DISCOVERY_INFO_GEN3)
+
+    # Wait for bluetooth discovery to process
+    await hass.async_block_till_done()
+
+    # Start a bluetooth discovery flow to simulate auto-discovery
+    await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": config_entries.SOURCE_BLUETOOTH},
+        data=BLE_DISCOVERY_INFO_GEN3,
+    )
+
+    # Start a user flow - should go to manual entry since the only
+    # discovered device already has an active discovery flow
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+
+    # Should go directly to manual entry since the BLE device is filtered
+    # out (it already has an active discovery flow being offered to the user)
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "user_manual"
 
 
 @pytest.mark.parametrize(
@@ -4373,19 +4394,6 @@ async def test_bluetooth_provision_timeout_ble_fallback_succeeds(
         context={"source": config_entries.SOURCE_BLUETOOTH},
     )
 
-    # Confirm and scan
-    with patch(
-        "homeassistant.components.shelly.config_flow.async_scan_wifi_networks",
-        return_value=[{"ssid": "MyNetwork", "rssi": -50, "auth": 2}],
-    ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-
-    # Select network
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {CONF_SSID: "MyNetwork"},
-    )
-
     # Mock device for BLE status query
     mock_ble_status_device = AsyncMock()
     mock_ble_status_device.status = {"wifi": {"sta_ip": "192.168.1.100"}}
@@ -4401,8 +4409,13 @@ async def test_bluetooth_provision_timeout_ble_fallback_succeeds(
     mock_device.ble_setconfig = AsyncMock(return_value={"restart_required": False})
     mock_device.shutdown = AsyncMock()
 
+    # Confirm and scan, then select network and enter password
     # Provision WiFi but no zeroconf discovery arrives, active lookup fails, BLE fallback succeeds
     with (
+        patch(
+            "homeassistant.components.shelly.config_flow.async_scan_wifi_networks",
+            return_value=[{"ssid": "MyNetwork", "rssi": -50, "auth": 2}],
+        ),
         patch(
             "homeassistant.components.shelly.config_flow.PROVISIONING_TIMEOUT",
             0.01,  # Short timeout to trigger timeout path
@@ -4427,9 +4440,13 @@ async def test_bluetooth_provision_timeout_ble_fallback_succeeds(
         # Configure BLE RPC mock to return device with IP
         mock_ble_rpc.return_value.__aenter__.return_value = mock_ble_status_device
 
+        # Scan for networks
+        result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+
+        # Select network and enter password in single step
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
-            {CONF_PASSWORD: "my_password"},
+            {CONF_SSID: "MyNetwork", CONF_PASSWORD: "my_password"},
         )
 
         # Provisioning shows progress
@@ -4459,21 +4476,13 @@ async def test_bluetooth_provision_timeout_ble_fallback_fails(
         context={"source": config_entries.SOURCE_BLUETOOTH},
     )
 
-    # Confirm and scan
-    with patch(
-        "homeassistant.components.shelly.config_flow.async_scan_wifi_networks",
-        return_value=[{"ssid": "MyNetwork", "rssi": -50, "auth": 2}],
-    ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-
-    # Select network
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {CONF_SSID: "MyNetwork"},
-    )
-
+    # Confirm and scan, select network and enter password
     # Provision WiFi but no zeroconf discovery, active lookup fails, BLE fallback fails
     with (
+        patch(
+            "homeassistant.components.shelly.config_flow.async_scan_wifi_networks",
+            return_value=[{"ssid": "MyNetwork", "rssi": -50, "auth": 2}],
+        ),
         patch(
             "homeassistant.components.shelly.config_flow.PROVISIONING_TIMEOUT",
             0.01,  # Short timeout to trigger timeout path
@@ -4488,9 +4497,13 @@ async def test_bluetooth_provision_timeout_ble_fallback_fails(
             return_value=None,  # BLE fallback also fails
         ),
     ):
+        # Scan for networks
+        result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+
+        # Select network and enter password in single step
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
-            {CONF_PASSWORD: "my_password"},
+            {CONF_SSID: "MyNetwork", CONF_PASSWORD: "my_password"},
         )
 
         # Provisioning shows progress
@@ -4528,21 +4541,13 @@ async def test_bluetooth_provision_timeout_ble_exception(
         context={"source": config_entries.SOURCE_BLUETOOTH},
     )
 
-    # Confirm and scan
-    with patch(
-        "homeassistant.components.shelly.config_flow.async_scan_wifi_networks",
-        return_value=[{"ssid": "MyNetwork", "rssi": -50, "auth": 2}],
-    ):
-        result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-
-    # Select network
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {CONF_SSID: "MyNetwork"},
-    )
-
+    # Confirm and scan, select network and enter password
     # Provision WiFi but no zeroconf discovery, active lookup fails, BLE raises exception
     with (
+        patch(
+            "homeassistant.components.shelly.config_flow.async_scan_wifi_networks",
+            return_value=[{"ssid": "MyNetwork", "rssi": -50, "auth": 2}],
+        ),
         patch(
             "homeassistant.components.shelly.config_flow.PROVISIONING_TIMEOUT",
             0.01,  # Short timeout to trigger timeout path
@@ -4557,9 +4562,13 @@ async def test_bluetooth_provision_timeout_ble_exception(
             side_effect=DeviceConnectionError,  # BLE raises exception
         ),
     ):
+        # Scan for networks
+        result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+
+        # Select network and enter password in single step
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
-            {CONF_PASSWORD: "my_password"},
+            {CONF_SSID: "MyNetwork", CONF_PASSWORD: "my_password"},
         )
 
         # Provisioning shows progress
