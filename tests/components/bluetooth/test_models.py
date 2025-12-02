@@ -117,6 +117,7 @@ async def test_wrapped_bleak_client_local_adapter_only(hass: HomeAssistant) -> N
 
     client = HaBleakClientWrapper(switchbot_device)
     with (
+        patch_bleak_backend_type(),
         patch(
             "bleak.backends.bluezdbus.client.BleakClientBlueZDBus.connect",
             return_value=True,
