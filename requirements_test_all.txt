@@ -222,7 +222,7 @@ aiodhcpwatcher==1.2.1
 aiodiscover==2.7.1
 
 # homeassistant.components.dnsip
-aiodns==3.5.0
+aiodns==3.6.0
 
 # homeassistant.components.duke_energy
 aiodukeenergy==0.3.0
@@ -1977,7 +1977,7 @@ pyrate-limiter==3.9.0
 pyrisco==0.6.7
 
 # homeassistant.components.rituals_perfume_genie
-pyrituals==0.0.6
+pyrituals==0.0.7
 
 # homeassistant.components.thread
 pyroute2==0.7.5
