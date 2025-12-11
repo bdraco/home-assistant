@@ -1170,7 +1170,7 @@ async def test_user_flow_with_ble_devices(
     flows = hass.config_entries.flow.async_progress_by_handler(DOMAIN)
     for flow in flows:
         if flow["context"]["source"] == config_entries.SOURCE_BLUETOOTH:
-            await hass.config_entries.flow.async_abort(flow["flow_id"])
+            hass.config_entries.flow.async_abort(flow["flow_id"])
 
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -3689,10 +3689,6 @@ async def test_bluetooth_wifi_scan_failure(
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "wifi_scan_failed"
-    assert result["description_placeholders"] == {
-        "name": "ShellyPlus2PM-C049EF8873E8",
-        "error": "DeviceConnectionError('Connection timed out')",
-    }
 
     # Now configure success for retry
     mock_ble_rpc_device.wifi_scan.side_effect = None
@@ -3900,11 +3896,6 @@ async def test_bluetooth_wifi_provision_failure(
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "provision_failed"
-    assert result["description_placeholders"] == {
-        "name": "ShellyPlus2PM-C049EF8873E8",
-        "ssid": "MyNetwork",
-        "error": "DeviceConnectionError('BLE connection lost')",
-    }
 
     # Reset wifi_setconfig for retry - now it succeeds
     mock_ble_rpc_device.wifi_setconfig.side_effect = None
@@ -4625,6 +4616,7 @@ async def test_bluetooth_provision_timeout_ble_exception(
 
     # Confirm and scan, select network and enter password
     # Provision WiFi but no zeroconf discovery, active lookup fails, BLE raises exception
+    # Keep patches active until all background tasks complete to avoid socket errors
     with (
         patch(
             "homeassistant.components.shelly.config_flow.PROVISIONING_TIMEOUT",
@@ -4633,6 +4625,10 @@ async def test_bluetooth_provision_timeout_ble_exception(
         patch(
             "homeassistant.components.shelly.config_flow.async_lookup_device_by_name",
             return_value=None,  # Active lookup fails
+        ),
+        patch(
+            "homeassistant.components.shelly.config_flow.get_info",
+            side_effect=DeviceConnectionError,  # get_info also fails
         ),
     ):
         # Select network and enter password in single step
@@ -4648,16 +4644,21 @@ async def test_bluetooth_provision_timeout_ble_exception(
         # Timeout occurs, both active lookup and BLE fallback fail (exception)
         result = await hass.config_entries.flow.async_configure(result["flow_id"])
 
-    # Should show provision_failed form
-    assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "provision_failed"
+        # Should show provision_failed form
+        assert result["type"] is FlowResultType.FORM
+        assert result["step_id"] == "provision_failed"
 
-    # User aborts after failure - configure wifi_scan to raise exception
-    mock_ble_rpc_device.wifi_scan.side_effect = RuntimeError("BLE device unavailable")
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+        # User aborts after failure - configure wifi_scan to raise exception
+        mock_ble_rpc_device.wifi_scan.side_effect = RuntimeError(
+            "BLE device unavailable"
+        )
+        result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
 
-    assert result["type"] is FlowResultType.ABORT
-    assert result["reason"] == "unknown"
+        assert result["type"] is FlowResultType.ABORT
+        assert result["reason"] == "unknown"
+
+        # Wait for all background tasks to complete before patches are removed
+        await hass.async_block_till_done(wait_background_tasks=True)
 
 
 @pytest.mark.usefixtures("mock_ble_rpc_device_class")
@@ -5072,3 +5073,200 @@ async def test_zeroconf_aborts_idle_ble_flow(
     assert result["result"].unique_id == "C049EF8873E8"
     assert len(mock_setup.mock_calls) == 1
     assert len(mock_setup_entry.mock_calls) == 1
+
+
+@pytest.mark.usefixtures("mock_zeroconf", "mock_ble_rpc_device_class")
+async def test_bluetooth_flow_abort_cleans_up_ble_connection(
+    hass: HomeAssistant,
+    mock_ble_rpc_device: AsyncMock,
+) -> None:
+    """Test that aborting BLE flow cleans up the BLE connection."""
+    # Configure mock BLE device
+    mock_ble_rpc_device.wifi_scan.return_value = [
+        {"ssid": "MyNetwork", "rssi": -50, "auth": 2}
+    ]
+
+    inject_bluetooth_service_info_bleak(hass, BLE_DISCOVERY_INFO)
+
+    # Start BLE flow
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        data=BLE_DISCOVERY_INFO,
+        context={"source": config_entries.SOURCE_BLUETOOTH},
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "bluetooth_confirm"
+    flow_id = result["flow_id"]
+
+    # Confirm to proceed to WiFi scan (this creates the BLE connection)
+    result = await hass.config_entries.flow.async_configure(flow_id, {})
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "wifi_scan"
+
+    # Verify BLE device was connected
+    mock_ble_rpc_device.initialize.assert_called_once()
+    mock_ble_rpc_device.wifi_scan.assert_called_once()
+
+    # Abort the flow - this should trigger async_remove and clean up BLE
+    hass.config_entries.flow.async_abort(flow_id)
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    # Verify cleanup was called
+    mock_ble_rpc_device.shutdown.assert_called_once()
+
+
+@pytest.mark.usefixtures("mock_zeroconf")
+async def test_bluetooth_ble_initialize_failure_cleans_up(
+    hass: HomeAssistant,
+) -> None:
+    """Test that initialize failure properly cleans up the device."""
+    mock_device = AsyncMock()
+    mock_device.initialize = AsyncMock(side_effect=DeviceConnectionError)
+    mock_device.shutdown = AsyncMock()
+
+    inject_bluetooth_service_info_bleak(hass, BLE_DISCOVERY_INFO)
+
+    # Start BLE flow
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        data=BLE_DISCOVERY_INFO,
+        context={"source": config_entries.SOURCE_BLUETOOTH},
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "bluetooth_confirm"
+
+    # Confirm to proceed to WiFi scan - this will try to create BLE connection
+    # but initialize() will fail
+    with patch(
+        "homeassistant.components.shelly.config_flow.RpcDevice.create",
+        return_value=mock_device,
+    ):
+        result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+
+    # Should show wifi_scan_failed due to connection error
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "wifi_scan_failed"
+
+    # Verify device was cleaned up after initialize failure
+    mock_device.shutdown.assert_called_once()
+
+    # Abort the flow to reach terminal state
+    hass.config_entries.flow.async_abort(result["flow_id"])
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    # Verify shutdown wasn't called again during abort (device was already cleaned up)
+    mock_device.shutdown.assert_called_once()
+
+
+@pytest.mark.usefixtures("mock_zeroconf", "mock_ble_rpc_device_class")
+async def test_bluetooth_ble_shutdown_exception_handled(
+    hass: HomeAssistant,
+    mock_ble_rpc_device: AsyncMock,
+) -> None:
+    """Test that shutdown exceptions during cleanup are handled gracefully."""
+    # Configure mock BLE device
+    mock_ble_rpc_device.wifi_scan.return_value = [
+        {"ssid": "MyNetwork", "rssi": -50, "auth": 2}
+    ]
+    # Make shutdown raise an exception
+    mock_ble_rpc_device.shutdown.side_effect = RuntimeError("Shutdown failed")
+
+    inject_bluetooth_service_info_bleak(hass, BLE_DISCOVERY_INFO)
+
+    # Start BLE flow
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        data=BLE_DISCOVERY_INFO,
+        context={"source": config_entries.SOURCE_BLUETOOTH},
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "bluetooth_confirm"
+
+    # Confirm to proceed to WiFi scan (creates BLE connection)
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "wifi_scan"
+
+    # Abort the flow - this should trigger async_remove and cleanup
+    # The shutdown exception should be caught and logged, not propagate
+    hass.config_entries.flow.async_abort(result["flow_id"])
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+    # Verify shutdown was attempted despite the exception
+    mock_ble_rpc_device.shutdown.assert_called_once()
+
+
+@pytest.mark.usefixtures("mock_zeroconf", "mock_ble_rpc_device_class")
+async def test_bluetooth_provision_ble_reconnect_fails_during_ip_fetch(
+    hass: HomeAssistant,
+    mock_ble_rpc_device: AsyncMock,
+) -> None:
+    """Test BLE reconnection fails during IP fetch fallback after provisioning."""
+    # Configure mock BLE device for initial wifi scan
+    mock_ble_rpc_device.wifi_scan.return_value = [
+        {"ssid": "MyNetwork", "rssi": -50, "auth": 2}
+    ]
+
+    # Inject BLE device
+    inject_bluetooth_service_info_bleak(hass, BLE_DISCOVERY_INFO)
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        data=BLE_DISCOVERY_INFO,
+        context={"source": config_entries.SOURCE_BLUETOOTH},
+    )
+
+    # Scan for networks first (this creates the initial BLE connection)
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    assert result["step_id"] == "wifi_scan"
+
+    # Track initialize calls - first call succeeds (for wifi_setconfig reconnect),
+    # second call fails (during _async_get_ip_from_ble reconnect)
+    init_call_count = 0
+
+    async def initialize_side_effect() -> None:
+        nonlocal init_call_count
+        init_call_count += 1
+        if init_call_count == 1:
+            # First reconnect (for wifi_setconfig) succeeds
+            return
+        # Second reconnect (for _async_get_ip_from_ble) fails
+        raise DeviceConnectionError
+
+    # Simulate: device disconnects, first reconnect succeeds, second fails
+    mock_ble_rpc_device.connected = False
+    mock_ble_rpc_device.initialize = AsyncMock(side_effect=initialize_side_effect)
+
+    # Provision WiFi - timeout occurs, active lookup fails, BLE reconnect fails
+    with (
+        patch(
+            "homeassistant.components.shelly.config_flow.PROVISIONING_TIMEOUT",
+            0.01,
+        ),
+        patch(
+            "homeassistant.components.shelly.config_flow.async_lookup_device_by_name",
+            return_value=None,
+        ),
+        patch(
+            "homeassistant.components.shelly.config_flow.get_info",
+            side_effect=DeviceConnectionError,
+        ),
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {CONF_SSID: "MyNetwork", CONF_PASSWORD: "my_password"},
+        )
+
+        assert result["type"] is FlowResultType.SHOW_PROGRESS
+        await hass.async_block_till_done()
+
+        result = await hass.config_entries.flow.async_configure(result["flow_id"])
+
+        # Should show provision_failed since BLE reconnection failed during IP fetch
+        assert result["type"] is FlowResultType.FORM
+        assert result["step_id"] == "provision_failed"
+
+        # Abort flow to reach terminal state
+        hass.config_entries.flow.async_abort(result["flow_id"])
+        await hass.async_block_till_done(wait_background_tasks=True)
