@@ -396,7 +396,7 @@ aiostreammagic==2.11.0
 aioswitcher==6.0.0
 
 # homeassistant.components.syncthing
-aiosyncthing==0.5.1
+aiosyncthing==0.7.1
 
 # homeassistant.components.tankerkoenig
 aiotankerkoenig==0.4.2
@@ -570,7 +570,7 @@ beautifulsoup4==4.13.3
 bimmer-connected[china]==0.17.3
 
 # homeassistant.components.esphome
-bleak-esphome==3.4.0
+bleak-esphome==3.4.1
 
 # homeassistant.components.bluetooth
 bleak-retry-connector==4.4.3
@@ -2529,7 +2529,7 @@ tilt-pi==0.2.1
 todoist-api-python==2.1.7
 
 # homeassistant.components.togrill
-togrill-bluetooth==0.8.0
+togrill-bluetooth==0.8.1
 
 # homeassistant.components.tolo
 tololib==1.2.2
