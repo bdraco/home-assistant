@@ -295,6 +295,7 @@ WAVE_ENHANCE_DEVICE_INFO = AirthingsDevice(
     name="Airthings Wave Enhance",
     identifier="123456",
     sensors={
+        "connectivity_mode": "Bluetooth",
         "lux": 25,
         "battery": 85,
         "humidity": 60.0,
