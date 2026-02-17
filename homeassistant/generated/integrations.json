@@ -303,6 +303,23 @@
       "config_flow": false,
       "iot_class": "local_polling"
     },
+    "american_standard": {
+      "name": "American Standard",
+      "integrations": {
+        "nexia": {
+          "integration_type": "hub",
+          "config_flow": true,
+          "iot_class": "cloud_polling",
+          "name": "Nexia/American Standard/Trane"
+        },
+        "trane": {
+          "integration_type": "hub",
+          "config_flow": true,
+          "iot_class": "local_push",
+          "name": "Trane Local"
+        }
+      }
+    },
     "amp_motorization": {
       "name": "AMP Motorization",
       "integration_type": "virtual",
@@ -2370,6 +2387,12 @@
         }
       }
     },
+    "ghost": {
+      "name": "Ghost",
+      "integration_type": "service",
+      "config_flow": true,
+      "iot_class": "cloud_polling"
+    },
     "gios": {
       "name": "GIO\u015a",
       "integration_type": "service",
@@ -2701,16 +2724,35 @@
       "config_flow": false,
       "iot_class": "local_push"
     },
+    "heatit": {
+      "name": "Heatit",
+      "iot_standards": [
+        "zwave"
+      ]
+    },
     "heatmiser": {
       "name": "Heatmiser",
       "integration_type": "hub",
       "config_flow": false,
       "iot_class": "local_polling"
     },
+    "hegel": {
+      "name": "Hegel Amplifier",
+      "integration_type": "device",
+      "config_flow": true,
+      "iot_class": "local_push"
+    },
     "heicko": {
       "name": "Heicko",
       "integration_type": "virtual",
       "supported_by": "motion_blinds"
+    },
+    "heiman": {
+      "name": "Heiman",
+      "iot_standards": [
+        "matter",
+        "zigbee"
+      ]
     },
     "heiwa": {
       "name": "Heiwa",
@@ -2847,6 +2889,12 @@
         "zwave"
       ]
     },
+    "homevolt": {
+      "name": "Homevolt",
+      "integration_type": "device",
+      "config_flow": true,
+      "iot_class": "local_polling"
+    },
     "homewizard": {
       "name": "HomeWizard",
       "integration_type": "device",
@@ -2959,6 +3007,12 @@
       "config_flow": true,
       "iot_class": "local_push"
     },
+    "hypontech": {
+      "name": "Hypontech Cloud",
+      "integration_type": "hub",
+      "config_flow": true,
+      "iot_class": "cloud_polling"
+    },
     "ialarm": {
       "name": "Antifurto365 iAlarm",
       "integration_type": "device",
@@ -2977,6 +3031,12 @@
       "config_flow": true,
       "iot_class": "cloud_polling",
       "single_config_entry": true
+    },
+    "idrive_e2": {
+      "name": "IDrive e2",
+      "integration_type": "service",
+      "config_flow": true,
+      "iot_class": "cloud_push"
     },
     "idteck_prox": {
       "name": "IDTECK Proximity Reader",
@@ -3073,6 +3133,12 @@
       "config_flow": true,
       "iot_class": "local_polling"
     },
+    "indevolt": {
+      "name": "Indevolt",
+      "integration_type": "device",
+      "config_flow": true,
+      "iot_class": "local_polling"
+    },
     "indianamichiganpower": {
       "name": "Indiana Michigan Power",
       "integration_type": "virtual",
@@ -3115,6 +3181,12 @@
       "config_flow": true,
       "iot_class": "local_push",
       "single_config_entry": true
+    },
+    "intelliclima": {
+      "name": "IntelliClima",
+      "integration_type": "device",
+      "config_flow": true,
+      "iot_class": "cloud_polling"
     },
     "intellifire": {
       "name": "IntelliFire",
@@ -3604,6 +3676,12 @@
       "config_flow": true,
       "iot_class": "local_polling"
     },
+    "liebherr": {
+      "name": "Liebherr",
+      "integration_type": "hub",
+      "config_flow": true,
+      "iot_class": "cloud_polling"
+    },
     "lifx": {
       "name": "LIFX",
       "integration_type": "device",
@@ -4084,6 +4162,12 @@
           "iot_class": "cloud_polling",
           "name": "OneDrive"
         },
+        "onedrive_for_business": {
+          "integration_type": "service",
+          "config_flow": true,
+          "iot_class": "cloud_polling",
+          "name": "OneDrive for Business"
+        },
         "xbox": {
           "integration_type": "hub",
           "config_flow": true,
@@ -4146,7 +4230,7 @@
       "iot_class": "local_push"
     },
     "mobile_app": {
-      "integration_type": "hub",
+      "integration_type": "device",
       "config_flow": true,
       "iot_class": "local_push"
     },
@@ -4292,6 +4376,12 @@
           "name": "MQTT Statestream"
         }
       }
+    },
+    "mta": {
+      "name": "MTA New York City Transit",
+      "integration_type": "service",
+      "config_flow": true,
+      "iot_class": "cloud_polling"
     },
     "mullvad": {
       "name": "Mullvad VPN",
@@ -4450,12 +4540,6 @@
       "name": "Neurio energy",
       "integration_type": "hub",
       "config_flow": false,
-      "iot_class": "cloud_polling"
-    },
-    "nexia": {
-      "name": "Nexia/American Standard/Trane",
-      "integration_type": "hub",
-      "config_flow": true,
       "iot_class": "cloud_polling"
     },
     "nexity": {
@@ -5195,7 +5279,7 @@
     },
     "portainer": {
       "name": "Portainer",
-      "integration_type": "hub",
+      "integration_type": "service",
       "config_flow": true,
       "iot_class": "local_polling"
     },
@@ -5209,6 +5293,12 @@
       "integration_type": "hub",
       "config_flow": true,
       "iot_class": "cloud_polling"
+    },
+    "prana": {
+      "name": "Prana",
+      "integration_type": "device",
+      "config_flow": true,
+      "iot_class": "local_polling"
     },
     "private_ble_device": {
       "name": "Private BLE Device",
@@ -5556,6 +5646,12 @@
       "name": "Reddit",
       "integration_type": "hub",
       "config_flow": false,
+      "iot_class": "cloud_polling"
+    },
+    "redgtech": {
+      "name": "Redgtech",
+      "integration_type": "service",
+      "config_flow": true,
       "iot_class": "cloud_polling"
     },
     "refoss": {
@@ -6407,10 +6503,10 @@
       "iot_class": "local_polling"
     },
     "spaceapi": {
-      "name": "Space API",
-      "integration_type": "hub",
+      "name": "SpaceAPI",
+      "integration_type": "service",
       "config_flow": false,
-      "iot_class": "cloud_polling"
+      "iot_class": "calculated"
     },
     "spc": {
       "name": "Vanderbilt SPC",
@@ -6427,8 +6523,9 @@
     "splunk": {
       "name": "Splunk",
       "integration_type": "hub",
-      "config_flow": false,
-      "iot_class": "local_push"
+      "config_flow": true,
+      "iot_class": "local_push",
+      "single_config_entry": true
     },
     "spotify": {
       "name": "Spotify",
@@ -7072,6 +7169,23 @@
           "config_flow": true,
           "iot_class": "cloud_polling",
           "name": "Trafikverket Weather Station"
+        }
+      }
+    },
+    "trane": {
+      "name": "Trane",
+      "integrations": {
+        "nexia": {
+          "integration_type": "hub",
+          "config_flow": true,
+          "iot_class": "cloud_polling",
+          "name": "Nexia/American Standard/Trane"
+        },
+        "trane": {
+          "integration_type": "hub",
+          "config_flow": true,
+          "iot_class": "local_push",
+          "name": "Trane Local"
         }
       }
     },
