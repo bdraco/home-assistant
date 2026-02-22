@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections import defaultdict
 from collections.abc import Callable, Generator, Iterable
 from datetime import datetime, timedelta
@@ -17,6 +18,7 @@ from uiprotect.data import (
     EventType,
     ModelType,
     ProtectAdoptableDeviceModel,
+    PTZPatrol,
     WSSubscriptionMessage,
 )
 from uiprotect.exceptions import ClientError, NotAuthorized
@@ -89,6 +91,8 @@ class ProtectData:
         self.adopt_signal = _async_dispatch_id(entry, DISPATCH_ADOPT)
         self.add_signal = _async_dispatch_id(entry, DISPATCH_ADD)
         self.channels_signal = _async_dispatch_id(entry, DISPATCH_CHANNELS)
+        # PTZ patrol cache: camera_id -> list of patrols
+        self.ptz_patrols: dict[str, list[PTZPatrol]] = {}
 
     @property
     def disable_stream(self) -> bool:
@@ -125,6 +129,27 @@ class ProtectData:
         return cast(
             Generator[Camera], self.get_by_types({ModelType.CAMERA}, ignore_unadopted)
         )
+
+    async def async_load_ptz_patrols(self) -> None:
+        """Load PTZ patrols for all PTZ cameras."""
+        await asyncio.gather(
+            *(
+                self.async_load_ptz_patrols_for_camera(camera)
+                for camera in self.get_cameras()
+            )
+        )
+
+    async def async_load_ptz_patrols_for_camera(self, camera: Camera) -> None:
+        """Load PTZ patrols for a specific camera."""
+        if camera.feature_flags.is_ptz:
+            try:
+                self.ptz_patrols[camera.id] = await camera.get_ptz_patrols()
+            except ClientError:
+                _LOGGER.debug(
+                    "Failed to load PTZ patrols for camera %s",
+                    camera.display_name,
+                )
+                self.ptz_patrols[camera.id] = []
 
     @callback
     def async_setup(self) -> None:
