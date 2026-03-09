@@ -67,7 +67,7 @@ def _build_srtp_url(address: str, port: int, pkt_size: int, srtp_key: str) -> st
     """
     addr = _format_address_for_url(address)
     return (
-        f"srtp://{addr}:{port}?rtcpport={port}"
+        f"srtp://{addr}:{port}?localrtpport={port}&rtcpport={port}"
         f"&pkt_size={pkt_size}"
         f"&srtp_out_suite=AES_CM_128_HMAC_SHA1_80"
         f"&srtp_out_params={quote(srtp_key, safe='')}"
@@ -470,8 +470,20 @@ def _stream_loop(
 
         if packet.stream == in_video:
             if video_copy:
+                if v_packets == 0:
+                    _LOGGER.debug(
+                        "First video packet: size=%d pts=%s dts=%s key=%s",
+                        packet.size,
+                        packet.pts,
+                        packet.dts,
+                        packet.is_keyframe,
+                    )
                 packet.stream = out_video
-                video_output.mux(packet)
+                try:
+                    video_output.mux(packet)
+                except av.FFmpegError:
+                    _LOGGER.exception("Video mux failed")
+                    break
                 v_packets += 1
             else:
                 for frame in packet.decode():
