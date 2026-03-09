@@ -89,6 +89,7 @@ AUDIO_OUTPUT = (
     "{a_application}"
     "-ac 1 -ar {a_sample_rate}k "
     "-b:a {a_max_bitrate}k -bufsize {a_bufsize}k "
+    "{a_frame_duration}"
     "-payload_type 110 "
     "-ssrc {a_ssrc} -f rtp "
     "-srtp_out_suite AES_CM_128_HMAC_SHA1_80 -srtp_out_params {a_srtp_key} "
@@ -339,8 +340,12 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
                 + " "
             )
         audio_application = ""
+        audio_frame_duration = ""
         if self.config[CONF_AUDIO_CODEC] == "libopus":
             audio_application = "-application lowdelay "
+            audio_frame_duration = (
+                f"-frame_duration {stream_config.get('a_packet_time', 20)} "
+            )
         output_vars = stream_config.copy()
         output_vars.update(
             {
@@ -354,6 +359,7 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
                 "a_pkt_size": self.config[CONF_AUDIO_PACKET_SIZE],
                 "a_encoder": self.config[CONF_AUDIO_CODEC],
                 "a_application": audio_application,
+                "a_frame_duration": audio_frame_duration,
             }
         )
         output = VIDEO_OUTPUT.format(**output_vars)
