@@ -321,6 +321,16 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
             session_info["id"],
             stream_config,
         )
+        try:
+            return await self._async_start_stream(session_info, stream_config)
+        except Exception:
+            _LOGGER.exception("Failed to start stream")
+            return False
+
+    async def _async_start_stream(
+        self, session_info: dict[str, Any], stream_config: dict[str, Any]
+    ) -> bool:
+        """Start the streaming subprocess."""
         if not (raw_source := await self._async_get_stream_source()):
             _LOGGER.error("Camera has no stream source")
             return False
