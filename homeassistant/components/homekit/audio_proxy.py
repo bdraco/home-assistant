@@ -17,6 +17,7 @@ import base64
 import hashlib
 import hmac
 import logging
+import os
 import socket
 import struct
 import sys
@@ -118,6 +119,7 @@ def _run_proxy(
         return 1
 
     ratio = target_clock_rate / SRTP_OPUS_CLOCK_RATE
+    parent_pid = os.getppid()
 
     try:
         recv_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -130,6 +132,9 @@ def _run_proxy(
 
     try:
         send_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # SO_REUSEADDR allows quick rebind if a previous proxy just released
+        # the port (e.g. stream restart)
+        send_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         # Bind to 0.0.0.0 so the kernel picks the correct source IP
         # for the route to the HomeKit client
         send_sock.bind(("0.0.0.0", dest_port))
@@ -149,6 +154,9 @@ def _run_proxy(
             try:
                 data = recv_sock.recv(2048)
             except TimeoutError:
+                # Check if parent process is still alive to avoid orphaning
+                if os.getppid() != parent_pid:
+                    break
                 continue
             if len(data) < 12:
                 continue
@@ -261,13 +269,14 @@ class AudioProxy:
                 return
             _LOGGER.warning("Audio proxy: %s", line.decode(errors="replace").rstrip())
 
-    def async_stop(self) -> None:
-        """Stop the proxy subprocess."""
+    async def async_stop(self) -> None:
+        """Stop the proxy subprocess and wait for port release."""
         if self._stderr_task and not self._stderr_task.done():
             self._stderr_task.cancel()
             self._stderr_task = None
         if self._process and self._process.returncode is None:
             self._process.kill()
+            await self._process.wait()
             self._process = None
 
 

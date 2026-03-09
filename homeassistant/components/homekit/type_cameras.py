@@ -364,7 +364,7 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
                     "[%s] Audio proxy failed to start",
                     self.display_name,
                 )
-                audio_proxy.async_stop()
+                await audio_proxy.async_stop()
                 audio_proxy = None
 
         output_vars = stream_config.copy()
@@ -400,7 +400,7 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
         if not opened:
             _LOGGER.error("Failed to open ffmpeg stream")
             if audio_proxy:
-                audio_proxy.async_stop()
+                await audio_proxy.async_stop()
             return False
 
         _LOGGER.debug(
@@ -473,7 +473,7 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
         """Stop the stream for the given ``session_id``."""
         session_id = session_info["id"]
         if proxy := session_info.pop(AUDIO_PROXY, None):
-            proxy.async_stop()
+            await proxy.async_stop()
 
         if not (stream := session_info.get("stream")):
             _LOGGER.debug("No stream for session ID %s", session_id)
