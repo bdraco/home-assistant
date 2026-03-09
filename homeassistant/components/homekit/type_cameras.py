@@ -348,7 +348,8 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
             )
         # Start audio proxy to convert Opus RTP timestamps from 48kHz
         # (FFmpeg's hardcoded Opus RTP clock rate per RFC 7587) to the
-        # sample rate negotiated by HomeKit (typically 16kHz)
+        # sample rate negotiated by HomeKit (typically 16kHz).
+        # a_sample_rate is in kHz (e.g. 16 for 16000 Hz) from pyhap TLV.
         audio_proxy: AudioProxy | None = None
         if self.config[CONF_SUPPORT_AUDIO]:
             audio_proxy = AudioProxy(
@@ -358,6 +359,10 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
                 target_clock_rate=stream_config["a_sample_rate"] * 1000,
             )
             await audio_proxy.async_start()
+            if not audio_proxy.local_port:
+                _LOGGER.error("Audio proxy failed to start")
+                audio_proxy.async_stop()
+                audio_proxy = None
 
         output_vars = stream_config.copy()
         output_vars.update(
