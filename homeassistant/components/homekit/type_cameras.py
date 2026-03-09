@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 from haffmpeg.core import FFMPEG_STDERR, HAFFmpeg
+from homekit_audio_proxy import AudioProxy
 from pyhap.camera import (
     VIDEO_CODEC_PARAM_LEVEL_TYPES,
     VIDEO_CODEC_PARAM_PROFILE_ID_TYPES,
@@ -32,7 +33,6 @@ from homeassistant.helpers.event import (
 from homeassistant.util.async_ import create_eager_task
 
 from .accessories import TYPES, HomeDriver
-from .audio_proxy import AudioProxy
 from .const import (
     CHAR_MOTION_DETECTED,
     CONF_AUDIO_CODEC,
