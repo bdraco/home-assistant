@@ -20,6 +20,7 @@ import logging
 import socket
 import struct
 import sys
+import traceback
 
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
@@ -102,23 +103,41 @@ def _run_proxy(
     dest_port: int,
     srtp_key_b64: str,
     target_clock_rate: int,
-) -> None:
-    """Run the audio proxy loop (blocking, for subprocess use)."""
-    srtp = _SRTPContext(srtp_key_b64)
+) -> int:
+    """Run the audio proxy loop (blocking, for subprocess use).
+
+    Returns exit code: 0 for clean shutdown, 1 for error.
+    """
+    try:
+        srtp = _SRTPContext(srtp_key_b64)
+    except Exception:  # noqa: BLE001 - subprocess entry point
+        traceback.print_exc(file=sys.stderr)
+        return 1
+
     ratio = target_clock_rate / SRTP_OPUS_CLOCK_RATE
 
-    recv_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    recv_sock.bind(("127.0.0.1", 0))
-    local_port = recv_sock.getsockname()[1]
+    try:
+        recv_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        recv_sock.bind(("127.0.0.1", 0))
+        local_port = recv_sock.getsockname()[1]
+    except OSError:
+        traceback.print_exc(file=sys.stderr)
+        return 1
 
-    send_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    send_sock.bind(("0.0.0.0", dest_port))
+    try:
+        send_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        send_sock.bind(("0.0.0.0", dest_port))
+    except OSError:
+        traceback.print_exc(file=sys.stderr)
+        recv_sock.close()
+        return 1
 
     # Signal the local port to the parent process
     sys.stdout.write(f"{local_port}\n")
     sys.stdout.flush()
 
     dest = (dest_addr, dest_port)
+    packets_forwarded = 0
     try:
         while True:
             data = recv_sock.recv(2048)
@@ -133,11 +152,19 @@ def _run_proxy(
 
             srtp_packet = srtp.encrypt(bytes(packet))
             send_sock.sendto(srtp_packet, dest)
-    except OSError:
-        pass
+            packets_forwarded += 1
+    except OSError as err:
+        sys.stderr.write(
+            f"Audio proxy socket error after {packets_forwarded} packets: {err}\n"
+        )
+    except Exception:  # noqa: BLE001 - subprocess entry point
+        traceback.print_exc(file=sys.stderr)
+        return 1
     finally:
         recv_sock.close()
         send_sock.close()
+
+    return 0
 
 
 class AudioProxy:
@@ -159,6 +186,7 @@ class AudioProxy:
         self._srtp_key_b64 = srtp_key_b64
         self._target_clock_rate = target_clock_rate
         self._process: asyncio.subprocess.Process | None = None
+        self._stderr_task: asyncio.Task[None] | None = None
         self.local_port: int = 0
 
     async def async_start(self) -> None:
@@ -172,13 +200,36 @@ class AudioProxy:
             self._srtp_key_b64,
             str(self._target_clock_rate),
             stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
-        assert self._process.stdout is not None
+
+        if self._process.stdout is None:
+            _LOGGER.error("Audio proxy subprocess has no stdout")
+            return
+
         line = await self._process.stdout.readline()
+        if not line:
+            # Process exited before writing the port — read stderr for details
+            stderr_output = b""
+            if self._process.stderr:
+                stderr_output = await self._process.stderr.read()
+            _LOGGER.error(
+                "Audio proxy subprocess failed to start: %s",
+                stderr_output.decode(errors="replace").strip(),
+            )
+            return
+
         self.local_port = int(line.strip())
 
+        # Log stderr in the background so errors are visible in HA logs
+        if self._process.stderr:
+            self._stderr_task = asyncio.ensure_future(
+                self._log_stderr(self._process.stderr)
+            )
+
         _LOGGER.debug(
-            "Audio proxy subprocess started (PID %d) on port %d -> %s:%d (clock %d->%d)",
+            "Audio proxy subprocess started (PID %d) on port %d -> %s:%d"
+            " (clock %d->%d)",
             self._process.pid,
             self.local_port,
             self._dest_addr,
@@ -187,17 +238,31 @@ class AudioProxy:
             self._target_clock_rate,
         )
 
+    @staticmethod
+    async def _log_stderr(stderr: asyncio.StreamReader) -> None:
+        """Forward subprocess stderr to HA logger."""
+        while True:
+            line = await stderr.readline()
+            if not line:
+                return
+            _LOGGER.warning("Audio proxy: %s", line.decode(errors="replace").rstrip())
+
     def async_stop(self) -> None:
         """Stop the proxy subprocess."""
+        if self._stderr_task and not self._stderr_task.done():
+            self._stderr_task.cancel()
+            self._stderr_task = None
         if self._process and self._process.returncode is None:
             self._process.kill()
             self._process = None
 
 
 if __name__ == "__main__":
-    _run_proxy(
-        dest_addr=sys.argv[1],
-        dest_port=int(sys.argv[2]),
-        srtp_key_b64=sys.argv[3],
-        target_clock_rate=int(sys.argv[4]),
+    sys.exit(
+        _run_proxy(
+            dest_addr=sys.argv[1],
+            dest_port=int(sys.argv[2]),
+            srtp_key_b64=sys.argv[3],
+            target_clock_rate=int(sys.argv[4]),
+        )
     )
