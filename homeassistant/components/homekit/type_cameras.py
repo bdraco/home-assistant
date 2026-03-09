@@ -85,7 +85,7 @@ VIDEO_OUTPUT = (
 
 AUDIO_OUTPUT = (
     "-map {a_map} -vn "
-    "-af aresample=async=1:min_comp=0:first_pts=0,asetpts=N/SR/TB "
+    "-af aresample=async=1:min_comp=0:first_pts=0,realtime "
     "-c:a {a_encoder} "
     "{a_application}"
     "-ac 1 -ar {a_sample_rate}k "
