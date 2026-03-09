@@ -6,6 +6,8 @@ the negotiated sample rate (e.g., 16000 Hz). This proxy receives plain
 RTP from FFmpeg on a local UDP port, converts the timestamps from
 48000 Hz to the negotiated rate, encrypts with SRTP, and forwards to
 the HomeKit client.
+
+Runs as a subprocess to avoid blocking the main event loop with crypto.
 """
 
 from __future__ import annotations
@@ -15,7 +17,9 @@ import base64
 import hashlib
 import hmac
 import logging
+import socket
 import struct
+import sys
 
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
@@ -28,21 +32,17 @@ def _derive_srtp_key(
     master_key: bytes, master_salt: bytes, label: int, length: int
 ) -> bytes:
     """Derive an SRTP session key per RFC 3711 Section 4.3.1."""
-    # key_id = label << 48 (label is 8-bit, r=0 for kdr=0)
-    # x = key_id XOR master_salt (both as 112-bit integers)
-    # IV = x padded to 128 bits (append 2 zero bytes)
     key_id = label << 48
     salt_int = int.from_bytes(master_salt, "big")
     x = key_id ^ salt_int
     iv = x.to_bytes(14, "big") + b"\x00\x00"
 
-    # Generate keystream using AES-128-CTR
     cipher = Cipher(algorithms.AES(master_key), modes.CTR(iv))
     encryptor = cipher.encryptor()
     return (encryptor.update(b"\x00" * length) + encryptor.finalize())[:length]
 
 
-class SRTPContext:
+class _SRTPContext:
     """SRTP encryption context for AES_CM_128_HMAC_SHA1_80."""
 
     def __init__(self, master_key_b64: str) -> None:
@@ -59,7 +59,6 @@ class SRTPContext:
 
     def encrypt(self, rtp_packet: bytes) -> bytes:
         """Encrypt an RTP packet to produce an SRTP packet."""
-        # Parse RTP header to find payload offset
         header_len = 12
         cc = rtp_packet[0] & 0x0F
         header_len += cc * 4
@@ -73,27 +72,22 @@ class SRTPContext:
         ssrc = struct.unpack_from("!I", rtp_packet, 8)[0]
         seq = struct.unpack_from("!H", rtp_packet, 2)[0]
 
-        # Track ROC (rollover counter)
         if seq < self._last_seq and (self._last_seq - seq) > 0x8000:
             self._roc += 1
         self._last_seq = seq
 
         packet_index = (self._roc << 16) | seq
 
-        # Build IV for AES-128-CTR encryption
         iv = bytearray(16)
         struct.pack_into("!I", iv, 4, ssrc)
-        pi_bytes = packet_index.to_bytes(6, "big")
-        iv[8:14] = pi_bytes
+        iv[8:14] = packet_index.to_bytes(6, "big")
         for i in range(14):
             iv[i] ^= self._session_salt[i]
 
-        # Encrypt payload
         cipher = Cipher(algorithms.AES(self._session_key), modes.CTR(bytes(iv)))
         encryptor = cipher.encryptor()
         encrypted_payload = encryptor.update(payload) + encryptor.finalize()
 
-        # Build SRTP packet and compute auth tag
         srtp_packet = header + encrypted_payload
         auth_data = srtp_packet + struct.pack("!I", self._roc)
         auth_tag = hmac.new(self._session_auth_key, auth_data, hashlib.sha1).digest()[
@@ -103,49 +97,53 @@ class SRTPContext:
         return srtp_packet + auth_tag
 
 
-class _AudioProxyProtocol(asyncio.DatagramProtocol):
-    """UDP protocol that receives RTP, fixes timestamps, and forwards as SRTP."""
+def _run_proxy(
+    dest_addr: str,
+    dest_port: int,
+    srtp_key_b64: str,
+    target_clock_rate: int,
+) -> None:
+    """Run the audio proxy loop (blocking, for subprocess use)."""
+    srtp = _SRTPContext(srtp_key_b64)
+    ratio = target_clock_rate / SRTP_OPUS_CLOCK_RATE
 
-    def __init__(
-        self,
-        srtp: SRTPContext,
-        dest_addr: str,
-        dest_port: int,
-        target_clock_rate: int,
-    ) -> None:
-        """Initialize the proxy protocol."""
-        self._srtp = srtp
-        self._dest = (dest_addr, dest_port)
-        self._ratio = target_clock_rate / SRTP_OPUS_CLOCK_RATE
-        self._out_transport: asyncio.DatagramTransport | None = None
+    recv_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    recv_sock.bind(("127.0.0.1", 0))
+    local_port = recv_sock.getsockname()[1]
 
-    def set_out_transport(self, transport: asyncio.DatagramTransport) -> None:
-        """Set the outgoing transport for sending SRTP packets."""
-        self._out_transport = transport
+    send_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    send_sock.bind(("0.0.0.0", dest_port))
 
-    def datagram_received(self, data: bytes, addr: tuple[str, int]) -> None:
-        """Process an incoming RTP packet from FFmpeg."""
-        if len(data) < 12 or self._out_transport is None:
-            return
+    # Signal the local port to the parent process
+    sys.stdout.write(f"{local_port}\n")
+    sys.stdout.flush()
 
-        # Convert timestamp from 48000 Hz to negotiated sample rate
-        ts = struct.unpack_from("!I", data, 4)[0]
-        new_ts = int(ts * self._ratio) & 0xFFFFFFFF
-        packet = bytearray(data)
-        struct.pack_into("!I", packet, 4, new_ts)
+    dest = (dest_addr, dest_port)
+    try:
+        while True:
+            data = recv_sock.recv(2048)
+            if len(data) < 12:
+                continue
 
-        # Encrypt and forward
-        srtp_packet = self._srtp.encrypt(bytes(packet))
-        self._out_transport.sendto(srtp_packet, self._dest)
+            # Convert timestamp from 48000 Hz to negotiated sample rate
+            ts = struct.unpack_from("!I", data, 4)[0]
+            new_ts = int(ts * ratio) & 0xFFFFFFFF
+            packet = bytearray(data)
+            struct.pack_into("!I", packet, 4, new_ts)
+
+            srtp_packet = srtp.encrypt(bytes(packet))
+            send_sock.sendto(srtp_packet, dest)
+    except OSError:
+        pass
+    finally:
+        recv_sock.close()
+        send_sock.close()
 
 
 class AudioProxy:
     """Proxy that converts FFmpeg's Opus RTP timestamps for HomeKit.
 
-    FFmpeg uses 48000 Hz RTP clock rate for Opus (per RFC 7587), but
-    HomeKit expects the negotiated sample rate (typically 16000 Hz).
-    This proxy intercepts FFmpeg's RTP output, converts timestamps,
-    encrypts with SRTP, and forwards to the HomeKit client.
+    Runs as a subprocess to keep crypto work off the main event loop.
     """
 
     def __init__(
@@ -160,35 +158,28 @@ class AudioProxy:
         self._dest_port = dest_port
         self._srtp_key_b64 = srtp_key_b64
         self._target_clock_rate = target_clock_rate
-        self._in_transport: asyncio.DatagramTransport | None = None
-        self._out_transport: asyncio.DatagramTransport | None = None
+        self._process: asyncio.subprocess.Process | None = None
         self.local_port: int = 0
 
     async def async_start(self) -> None:
-        """Start the proxy and bind to a local UDP port."""
-        loop = asyncio.get_running_loop()
-        srtp = SRTPContext(self._srtp_key_b64)
-
-        protocol = _AudioProxyProtocol(
-            srtp, self._dest_addr, self._dest_port, self._target_clock_rate
+        """Start the proxy subprocess."""
+        self._process = await asyncio.create_subprocess_exec(
+            sys.executable,
+            "-m",
+            "homeassistant.components.homekit.audio_proxy",
+            self._dest_addr,
+            str(self._dest_port),
+            self._srtp_key_b64,
+            str(self._target_clock_rate),
+            stdout=asyncio.subprocess.PIPE,
         )
-
-        self._in_transport, _ = await loop.create_datagram_endpoint(
-            lambda: protocol, local_addr=("127.0.0.1", 0)
-        )
-        sockname = self._in_transport.get_extra_info("sockname")
-        self.local_port = sockname[1]
-
-        # Bind outgoing socket to the negotiated audio port so HomeKit
-        # receives SRTP packets from the expected source port
-        self._out_transport, _ = await loop.create_datagram_endpoint(
-            asyncio.DatagramProtocol,
-            local_addr=("0.0.0.0", self._dest_port),
-        )
-        protocol.set_out_transport(self._out_transport)
+        assert self._process.stdout is not None
+        line = await self._process.stdout.readline()
+        self.local_port = int(line.strip())
 
         _LOGGER.debug(
-            "Audio proxy started on port %d -> %s:%d (clock %d->%d)",
+            "Audio proxy subprocess started (PID %d) on port %d -> %s:%d (clock %d->%d)",
+            self._process.pid,
             self.local_port,
             self._dest_addr,
             self._dest_port,
@@ -197,10 +188,16 @@ class AudioProxy:
         )
 
     def async_stop(self) -> None:
-        """Stop the proxy."""
-        if self._in_transport:
-            self._in_transport.close()
-            self._in_transport = None
-        if self._out_transport:
-            self._out_transport.close()
-            self._out_transport = None
+        """Stop the proxy subprocess."""
+        if self._process and self._process.returncode is None:
+            self._process.kill()
+            self._process = None
+
+
+if __name__ == "__main__":
+    _run_proxy(
+        dest_addr=sys.argv[1],
+        dest_port=int(sys.argv[2]),
+        srtp_key_b64=sys.argv[3],
+        target_clock_rate=int(sys.argv[4]),
+    )
