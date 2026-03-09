@@ -199,7 +199,13 @@ def _setup_video_output(
     )
 
     if vc.codec == CODEC_COPY:
-        return video_output, video_output.add_stream(template=input_stream)  # type: ignore[call-overload]
+        # Set up output stream to remux packets without re-encoding
+        out_video = video_output.add_stream(input_stream.codec_context.name)
+        out_video.width = input_stream.codec_context.width  # type: ignore[attr-defined, union-attr]
+        out_video.height = input_stream.codec_context.height  # type: ignore[attr-defined, union-attr]
+        if input_stream.codec_context.extradata:
+            out_video.codec_context.extradata = input_stream.codec_context.extradata
+        return video_output, out_video
 
     out_video = video_output.add_stream(vc.codec, rate=vc.fps)
     out_video.width = vc.width  # type: ignore[union-attr]
