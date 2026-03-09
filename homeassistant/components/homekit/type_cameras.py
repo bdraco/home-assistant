@@ -32,6 +32,7 @@ from homeassistant.helpers.event import (
 from homeassistant.util.async_ import create_eager_task
 
 from .accessories import TYPES, HomeDriver
+from .audio_proxy import AudioProxy
 from .const import (
     CHAR_MOTION_DETECTED,
     CONF_AUDIO_CODEC,
@@ -85,7 +86,6 @@ VIDEO_OUTPUT = (
 
 AUDIO_OUTPUT = (
     "-map {a_map} -vn "
-    "-af aresample=async=1:min_comp=0:first_pts=0,arealtime "
     "-c:a {a_encoder} "
     "{a_application}"
     "-ac 1 -ar {a_sample_rate}k "
@@ -93,9 +93,7 @@ AUDIO_OUTPUT = (
     "{a_frame_duration}"
     "-payload_type 110 "
     "-ssrc {a_ssrc} -f rtp "
-    "-srtp_out_suite AES_CM_128_HMAC_SHA1_80 -srtp_out_params {a_srtp_key} "
-    "srtp://{address}:{a_port}?rtcpport={a_port}&"
-    "localrtpport={a_port}&pkt_size={a_pkt_size}"
+    "rtp://127.0.0.1:{a_proxy_port}?pkt_size={a_pkt_size}"
 )
 
 SLOW_RESOLUTIONS = [
@@ -122,6 +120,7 @@ FFMPEG_WATCH_INTERVAL = timedelta(seconds=5)
 FFMPEG_LOGGER = "ffmpeg_logger"
 FFMPEG_WATCHER = "ffmpeg_watcher"
 FFMPEG_PID = "ffmpeg_pid"
+AUDIO_PROXY = "audio_proxy"
 SESSION_ID = "session_id"
 
 CONFIG_DEFAULTS = {
@@ -347,6 +346,19 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
             audio_frame_duration = (
                 f"-frame_duration {stream_config.get('a_packet_time', 20)} "
             )
+        # Start audio proxy to convert Opus RTP timestamps from 48kHz
+        # (FFmpeg's hardcoded Opus RTP clock rate per RFC 7587) to the
+        # sample rate negotiated by HomeKit (typically 16kHz)
+        audio_proxy: AudioProxy | None = None
+        if self.config[CONF_SUPPORT_AUDIO]:
+            audio_proxy = AudioProxy(
+                dest_addr=stream_config["address"],
+                dest_port=stream_config["a_port"],
+                srtp_key_b64=stream_config["a_srtp_key"],
+                target_clock_rate=stream_config["a_sample_rate"] * 1000,
+            )
+            await audio_proxy.async_start()
+
         output_vars = stream_config.copy()
         output_vars.update(
             {
@@ -361,6 +373,7 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
                 "a_encoder": self.config[CONF_AUDIO_CODEC],
                 "a_application": audio_application,
                 "a_frame_duration": audio_frame_duration,
+                "a_proxy_port": audio_proxy.local_port if audio_proxy else 0,
             }
         )
         output = VIDEO_OUTPUT.format(**output_vars)
@@ -378,6 +391,8 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
         )
         if not opened:
             _LOGGER.error("Failed to open ffmpeg stream")
+            if audio_proxy:
+                audio_proxy.async_stop()
             return False
 
         _LOGGER.debug(
@@ -388,6 +403,7 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
 
         session_info["stream"] = stream
         session_info[FFMPEG_PID] = stream.process.pid
+        session_info[AUDIO_PROXY] = audio_proxy
 
         stderr_reader = await stream.get_reader(source=FFMPEG_STDERR)
 
@@ -448,6 +464,9 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
     async def stop_stream(self, session_info: dict[str, Any]) -> None:
         """Stop the stream for the given ``session_id``."""
         session_id = session_info["id"]
+        if proxy := session_info.pop(AUDIO_PROXY, None):
+            proxy.async_stop()
+
         if not (stream := session_info.get("stream")):
             _LOGGER.debug("No stream for session ID %s", session_id)
             return
