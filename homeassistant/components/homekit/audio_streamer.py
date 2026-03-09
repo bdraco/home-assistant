@@ -472,6 +472,10 @@ def _stream_loop(
 
         if packet.stream == in_video:
             if video_copy:
+                # Wait for a keyframe before sending video;
+                # P-frames without a preceding IDR are undecodable
+                if v_packets == 0 and not packet.is_keyframe:
+                    continue
                 if v_packets == 0:
                     _LOGGER.debug(
                         "First video packet: size=%d pts=%s dts=%s key=%s time_base=%s",
