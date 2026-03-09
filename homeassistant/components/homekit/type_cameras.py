@@ -90,6 +90,7 @@ AUDIO_OUTPUT = (
     "-ac 1 -ar {a_sample_rate}k "
     "-b:a {a_max_bitrate}k -bufsize {a_bufsize}k "
     "{a_frame_duration}"
+    "-async 1 "
     "-payload_type 110 "
     "-ssrc {a_ssrc} -f rtp "
     "-srtp_out_suite AES_CM_128_HMAC_SHA1_80 -srtp_out_params {a_srtp_key} "
