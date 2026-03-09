@@ -1,8 +1,13 @@
 """Class to hold all camera accessories."""
 
+from __future__ import annotations
+
 import asyncio
 from datetime import timedelta
+import json
 import logging
+import subprocess
+import sys
 from typing import Any
 
 from haffmpeg.core import FFMPEG_STDERR, HAFFmpeg
@@ -33,6 +38,7 @@ from homeassistant.util.async_ import create_eager_task
 
 from .accessories import TYPES, HomeDriver
 from .const import (
+    AUDIO_CODEC_OPUS,
     CHAR_MOTION_DETECTED,
     CONF_AUDIO_CODEC,
     CONF_AUDIO_MAP,
@@ -120,6 +126,7 @@ FFMPEG_WATCH_INTERVAL = timedelta(seconds=5)
 FFMPEG_LOGGER = "ffmpeg_logger"
 FFMPEG_WATCHER = "ffmpeg_watcher"
 FFMPEG_PID = "ffmpeg_pid"
+AUDIO_STREAM_PROCESS = "audio_stream_process"
 SESSION_ID = "session_id"
 
 CONFIG_DEFAULTS = {
@@ -315,6 +322,102 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
             )
         return stream_source
 
+    def _get_audio_stream_source(self, raw_source: str) -> str:
+        """Extract the raw stream URL from the input source.
+
+        The input source may have FFmpeg flags prepended (e.g. "-i url").
+        We need the raw URL for the PyAV audio subprocess.
+        """
+        # If the source has -i prefix from custom config, extract the URL
+        if "-i " in raw_source:
+            # Find the last -i and take the URL after it
+            parts = raw_source.split("-i ")
+            return parts[-1].strip().split()[0]
+        return raw_source
+
+    def _should_use_pyav_audio(self) -> bool:
+        """Check if PyAV audio streaming should be used.
+
+        PyAV audio streaming is used when the audio codec is Opus, which
+        requires repacketization to match the HomeKit client's requested
+        frame duration (a_packet_time).
+        """
+        return bool(
+            self.config[CONF_SUPPORT_AUDIO]
+            and self.config[CONF_AUDIO_CODEC] == AUDIO_CODEC_OPUS
+        )
+
+    async def _async_start_audio_stream(
+        self,
+        session_info: dict[str, Any],
+        stream_config: dict[str, Any],
+        raw_source: str,
+    ) -> None:
+        """Start the PyAV audio streamer subprocess.
+
+        Launches a separate Python process that handles audio transcoding
+        with correct Opus frame duration matching the HomeKit client's
+        a_packet_time request. This fixes choppy audio caused by FFmpeg
+        always generating 20ms Opus frames regardless of what the client
+        requested.
+        """
+        audio_config = {
+            "source": raw_source,
+            "address": stream_config["address"],
+            "port": stream_config["a_port"],
+            "srtp_key": stream_config["a_srtp_key"],
+            "ssrc": stream_config["a_ssrc"],
+            "sample_rate": stream_config["a_sample_rate"],
+            "packet_time": stream_config.get("a_packet_time", 20),
+            "max_bitrate": stream_config["a_max_bitrate"],
+            "payload_type": stream_config.get("a_payload_type", 110),
+            "pkt_size": self.config[CONF_AUDIO_PACKET_SIZE],
+        }
+
+        _LOGGER.debug(
+            "[%s] Starting PyAV audio stream with config: %s",
+            session_info["id"],
+            {k: v for k, v in audio_config.items() if k != "srtp_key"},
+        )
+
+        audio_process = await asyncio.create_subprocess_exec(
+            sys.executable,
+            "-m",
+            "homeassistant.components.homekit.audio_streamer",
+            json.dumps(audio_config),
+            stdin=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stdout=subprocess.DEVNULL,
+        )
+
+        session_info[AUDIO_STREAM_PROCESS] = audio_process
+
+        _LOGGER.debug(
+            "[%s] Started audio stream process - PID %d",
+            session_info["id"],
+            audio_process.pid,
+        )
+
+        # Log stderr from the audio process
+        if audio_process.stderr:
+            session_info["audio_logger"] = create_eager_task(
+                self._async_log_audio_stderr(session_info["id"], audio_process.stderr)
+            )
+
+    async def _async_log_audio_stderr(
+        self, session_id: str, stderr: asyncio.StreamReader
+    ) -> None:
+        """Log stderr output from the audio streamer subprocess."""
+        while True:
+            line = await stderr.readline()
+            if line == b"":
+                return
+            _LOGGER.debug(
+                "[%s] audio: %s",
+                session_id,
+                line.rstrip().decode("utf-8", errors="replace"),
+            )
+
     async def start_stream(
         self, session_info: dict[str, Any], stream_config: dict[str, Any]
     ) -> bool:
@@ -324,9 +427,13 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
             session_info["id"],
             stream_config,
         )
-        if not (input_source := await self._async_get_stream_source()):
+        if not (raw_source := await self._async_get_stream_source()):
             _LOGGER.error("Camera has no stream source")
             return False
+
+        use_pyav_audio = self._should_use_pyav_audio()
+
+        input_source = raw_source
         if "-i " not in input_source:
             input_source = "-i " + input_source
         video_profile = ""
@@ -357,7 +464,8 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
             }
         )
         output = VIDEO_OUTPUT.format(**output_vars)
-        if self.config[CONF_SUPPORT_AUDIO]:
+        if self.config[CONF_SUPPORT_AUDIO] and not use_pyav_audio:
+            # Use FFmpeg for audio when not using PyAV audio streamer
             output = output + " " + AUDIO_OUTPUT.format(**output_vars)
         _LOGGER.debug("FFmpeg output settings: %s", output)
         stream = HAFFmpeg(self._ffmpeg.binary)
@@ -395,6 +503,13 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
             watch_session,
             FFMPEG_WATCH_INTERVAL,
         )
+
+        # Start PyAV audio streamer as a separate process
+        if use_pyav_audio:
+            audio_source = self._get_audio_stream_source(raw_source)
+            await self._async_start_audio_stream(
+                session_info, stream_config, audio_source
+            )
 
         return await self._async_ffmpeg_watch(session_info["id"])
 
@@ -438,6 +553,50 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
             )
         super().async_stop()
 
+    async def _async_stop_audio_stream(self, session_info: dict[str, Any]) -> None:
+        """Stop the PyAV audio streamer subprocess."""
+        audio_process: asyncio.subprocess.Process | None = session_info.pop(
+            AUDIO_STREAM_PROCESS, None
+        )
+        if audio_process is None:
+            return
+
+        session_id = session_info["id"]
+
+        # Cancel the audio logger task
+        if audio_logger := session_info.pop("audio_logger", None):
+            audio_logger.cancel()
+
+        if audio_process.returncode is not None:
+            _LOGGER.debug(
+                "[%s] Audio stream already stopped (rc=%d)",
+                session_id,
+                audio_process.returncode,
+            )
+            return
+
+        _LOGGER.debug(
+            "[%s] Stopping audio stream - PID %d", session_id, audio_process.pid
+        )
+
+        # Close stdin to signal the child to stop
+        if audio_process.stdin:
+            audio_process.stdin.close()
+
+        # Give it a moment to exit gracefully, then terminate
+        try:
+            await asyncio.wait_for(audio_process.wait(), timeout=3.0)
+        except TimeoutError:
+            _LOGGER.debug("[%s] Audio stream did not stop, terminating", session_id)
+            audio_process.terminate()
+            try:
+                await asyncio.wait_for(audio_process.wait(), timeout=2.0)
+            except TimeoutError:
+                _LOGGER.warning(
+                    "[%s] Audio stream did not terminate, killing", session_id
+                )
+                audio_process.kill()
+
     async def stop_stream(self, session_info: dict[str, Any]) -> None:
         """Stop the stream for the given ``session_id``."""
         session_id = session_info["id"]
@@ -446,6 +605,9 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
             return
 
         self._async_stop_ffmpeg_watch(session_id)
+
+        # Stop the audio streamer subprocess if running
+        await self._async_stop_audio_stream(session_info)
 
         if not pid_is_alive(stream.process.pid):
             _LOGGER.warning("[%s] Stream already stopped", session_id)
