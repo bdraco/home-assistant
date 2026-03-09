@@ -30,7 +30,6 @@ import sys
 import threading
 import time
 from typing import Any
-from urllib.parse import urlparse
 
 import av
 from av.audio.resampler import AudioResampler  # pylint: disable=no-name-in-module
@@ -52,10 +51,7 @@ CODEC_COPY = "copy"
 
 def _format_address_for_url(address: str) -> str:
     """Wrap IPv6 addresses in brackets for URL use."""
-    parsed = urlparse(f"//{address}")
-    if ":" in address and parsed.hostname != address:
-        return address
-    if ":" in address:
+    if ":" in address and not address.startswith("["):
         return f"[{address}]"
     return address
 
