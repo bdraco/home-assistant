@@ -1,15 +1,11 @@
 """Class to hold all camera accessories."""
 
-from __future__ import annotations
-
 import asyncio
 from datetime import timedelta
-import json
 import logging
-import subprocess
-import sys
 from typing import Any
 
+from haffmpeg.core import FFMPEG_STDERR, HAFFmpeg
 from pyhap.camera import (
     VIDEO_CODEC_PARAM_LEVEL_TYPES,
     VIDEO_CODEC_PARAM_PROFILE_ID_TYPES,
@@ -19,6 +15,7 @@ from pyhap.const import CATEGORY_CAMERA
 from pyhap.util import callback as pyhap_callback
 
 from homeassistant.components import camera
+from homeassistant.components.ffmpeg import get_ffmpeg_manager
 from homeassistant.const import STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import (
     Event,
@@ -38,6 +35,7 @@ from .accessories import TYPES, HomeDriver
 from .const import (
     CHAR_MOTION_DETECTED,
     CONF_AUDIO_CODEC,
+    CONF_AUDIO_MAP,
     CONF_AUDIO_PACKET_SIZE,
     CONF_LINKED_MOTION_SENSOR,
     CONF_MAX_FPS,
@@ -48,9 +46,11 @@ from .const import (
     CONF_STREAM_SOURCE,
     CONF_SUPPORT_AUDIO,
     CONF_VIDEO_CODEC,
+    CONF_VIDEO_MAP,
     CONF_VIDEO_PACKET_SIZE,
     CONF_VIDEO_PROFILE_NAMES,
     DEFAULT_AUDIO_CODEC,
+    DEFAULT_AUDIO_MAP,
     DEFAULT_AUDIO_PACKET_SIZE,
     DEFAULT_MAX_FPS,
     DEFAULT_MAX_HEIGHT,
@@ -58,15 +58,44 @@ from .const import (
     DEFAULT_STREAM_COUNT,
     DEFAULT_SUPPORT_AUDIO,
     DEFAULT_VIDEO_CODEC,
+    DEFAULT_VIDEO_MAP,
     DEFAULT_VIDEO_PACKET_SIZE,
     DEFAULT_VIDEO_PROFILE_NAMES,
     SERV_MOTION_SENSOR,
 )
 from .doorbell import HomeDoorbellAccessory
-from .util import state_changed_event_is_same_state
+from .util import pid_is_alive, state_changed_event_is_same_state
 
 _LOGGER = logging.getLogger(__name__)
 
+
+VIDEO_OUTPUT = (
+    "-map {v_map} -an "
+    "-c:v {v_codec} "
+    "{v_profile}"
+    "-tune zerolatency -pix_fmt yuv420p "
+    "-r {fps} "
+    "-b:v {v_max_bitrate}k -bufsize {v_bufsize}k -maxrate {v_max_bitrate}k "
+    "-payload_type 99 "
+    "-ssrc {v_ssrc} -f rtp "
+    "-srtp_out_suite AES_CM_128_HMAC_SHA1_80 -srtp_out_params {v_srtp_key} "
+    "srtp://{address}:{v_port}?rtcpport={v_port}&"
+    "localrtpport={v_port}&pkt_size={v_pkt_size}"
+)
+
+AUDIO_OUTPUT = (
+    "-map {a_map} -vn "
+    "-c:a {a_encoder} "
+    "{a_application}"
+    "-ac 1 -ar {a_sample_rate}k "
+    "-b:a {a_max_bitrate}k -bufsize {a_bufsize}k "
+    "{a_frame_duration}"
+    "-payload_type 110 "
+    "-ssrc {a_ssrc} -f rtp "
+    "-srtp_out_suite AES_CM_128_HMAC_SHA1_80 -srtp_out_params {a_srtp_key} "
+    "srtp://{address}:{a_port}?rtcpport={a_port}&"
+    "localrtpport={a_port}&pkt_size={a_pkt_size}"
+)
 
 SLOW_RESOLUTIONS = [
     (320, 180, 15),
@@ -88,11 +117,10 @@ RESOLUTIONS = [
     (1600, 1200),
 ]
 
-PROCESS_WATCH_INTERVAL = timedelta(seconds=5)
-STREAM_PROCESS = "stream_process"
-STREAM_STDERR = "stream_stderr"
-STREAM_LOGGER = "stream_logger"
-STREAM_WATCHER = "stream_watcher"
+FFMPEG_WATCH_INTERVAL = timedelta(seconds=5)
+FFMPEG_LOGGER = "ffmpeg_logger"
+FFMPEG_WATCHER = "ffmpeg_watcher"
+FFMPEG_PID = "ffmpeg_pid"
 SESSION_ID = "session_id"
 
 CONFIG_DEFAULTS = {
@@ -101,6 +129,8 @@ CONFIG_DEFAULTS = {
     CONF_MAX_HEIGHT: DEFAULT_MAX_HEIGHT,
     CONF_MAX_FPS: DEFAULT_MAX_FPS,
     CONF_AUDIO_CODEC: DEFAULT_AUDIO_CODEC,
+    CONF_AUDIO_MAP: DEFAULT_AUDIO_MAP,
+    CONF_VIDEO_MAP: DEFAULT_VIDEO_MAP,
     CONF_VIDEO_CODEC: DEFAULT_VIDEO_CODEC,
     CONF_VIDEO_PROFILE_NAMES: DEFAULT_VIDEO_PROFILE_NAMES,
     CONF_AUDIO_PACKET_SIZE: DEFAULT_AUDIO_PACKET_SIZE,
@@ -125,6 +155,7 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
         config: dict[str, Any],
     ) -> None:
         """Initialize a Camera accessory object."""
+        self._ffmpeg = get_ffmpeg_manager(hass)
         for config_key, conf in CONFIG_DEFAULTS.items():
             if config_key not in config:
                 config[config_key] = conf
@@ -285,34 +316,6 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
             )
         return stream_source
 
-    def _parse_stream_source(self, raw_source: str) -> tuple[str, dict[str, str]]:
-        """Parse stream source into URL and FFmpeg input options.
-
-        The stream_source config value may include FFmpeg input flags
-        (e.g. "-rtsp_transport tcp -i rtsp://..."). This extracts the
-        URL and converts flags to PyAV input options.
-        """
-        if "-i " not in raw_source:
-            return raw_source, {}
-
-        # Split on -i to separate input options from URL
-        parts = raw_source.rsplit("-i ", maxsplit=1)
-        url = parts[1].strip().split()[0]
-
-        # Parse input options from the prefix (e.g. "-rtsp_transport tcp")
-        input_options: dict[str, str] = {}
-        tokens = parts[0].strip().split()
-        i = 0
-        while i < len(tokens):
-            if tokens[i].startswith("-") and i + 1 < len(tokens):
-                key = tokens[i].lstrip("-")
-                input_options[key] = tokens[i + 1]
-                i += 2
-            else:
-                i += 1
-
-        return url, input_options
-
     async def start_stream(
         self, session_info: dict[str, Any], stream_config: dict[str, Any]
     ) -> bool:
@@ -322,164 +325,115 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
             session_info["id"],
             stream_config,
         )
-        try:
-            return await self._async_start_stream(session_info, stream_config)
-        except Exception:
-            _LOGGER.exception("Failed to start stream")
-            return False
-
-    async def _async_start_stream(
-        self, session_info: dict[str, Any], stream_config: dict[str, Any]
-    ) -> bool:
-        """Start the streaming subprocess."""
-        if not (raw_source := await self._async_get_stream_source()):
+        if not (input_source := await self._async_get_stream_source()):
             _LOGGER.error("Camera has no stream source")
             return False
-
-        source_url, input_options = self._parse_stream_source(raw_source)
-        _LOGGER.debug(
-            "[%s] Parsed source: url=%s input_options=%s",
-            session_info["id"],
-            source_url,
-            input_options,
-        )
-
-        # Determine video profile name from the negotiated profile ID
-        video_profile = self.config[CONF_VIDEO_PROFILE_NAMES][
-            int.from_bytes(stream_config["v_profile_id"], byteorder="big")
-        ]
-
-        # Build the config for the PyAV streamer subprocess
-        streamer_config: dict[str, Any] = {
-            "source": source_url,
-            "address": stream_config["address"],
-            "input_options": input_options,
-            "video": {
-                "port": stream_config["v_port"],
-                "srtp_key": stream_config["v_srtp_key"],
-                "ssrc": stream_config["v_ssrc"],
-                "payload_type": 99,
-                "pkt_size": self.config[CONF_VIDEO_PACKET_SIZE],
-                "codec": self.config[CONF_VIDEO_CODEC],
-                "profile": video_profile,
-                "max_bitrate": stream_config["v_max_bitrate"],
-                "fps": stream_config["fps"],
-                "width": stream_config["width"],
-                "height": stream_config["height"],
-            },
-        }
-
-        if self.config[CONF_SUPPORT_AUDIO]:
-            streamer_config["audio"] = {
-                "port": stream_config["a_port"],
-                "srtp_key": stream_config["a_srtp_key"],
-                "ssrc": stream_config["a_ssrc"],
-                "payload_type": int.from_bytes(
-                    stream_config.get("a_payload_type", b"\x6e"),
-                    byteorder="big",
-                ),
-                "pkt_size": self.config[CONF_AUDIO_PACKET_SIZE],
-                "codec": self.config[CONF_AUDIO_CODEC],
-                "sample_rate": stream_config["a_sample_rate"],
-                "packet_time": stream_config.get("a_packet_time", 20),
-                "max_bitrate": stream_config["a_max_bitrate"],
+        if "-i " not in input_source:
+            input_source = "-i " + input_source
+        video_profile = ""
+        if self.config[CONF_VIDEO_CODEC] != "copy":
+            video_profile = (
+                "-profile:v "
+                + self.config[CONF_VIDEO_PROFILE_NAMES][
+                    int.from_bytes(stream_config["v_profile_id"], byteorder="big")
+                ]
+                + " "
+            )
+        audio_application = ""
+        audio_frame_duration = ""
+        if self.config[CONF_AUDIO_CODEC] == "libopus":
+            audio_application = "-application lowdelay "
+            audio_frame_duration = (
+                f"-frame_duration {stream_config.get('a_packet_time', 20)} "
+            )
+        output_vars = stream_config.copy()
+        output_vars.update(
+            {
+                "v_profile": video_profile,
+                "v_bufsize": stream_config["v_max_bitrate"] * 4,
+                "v_map": self.config[CONF_VIDEO_MAP],
+                "v_pkt_size": self.config[CONF_VIDEO_PACKET_SIZE],
+                "v_codec": self.config[CONF_VIDEO_CODEC],
+                "a_bufsize": stream_config["a_max_bitrate"] * 4,
+                "a_map": self.config[CONF_AUDIO_MAP],
+                "a_pkt_size": self.config[CONF_AUDIO_PACKET_SIZE],
+                "a_encoder": self.config[CONF_AUDIO_CODEC],
+                "a_application": audio_application,
+                "a_frame_duration": audio_frame_duration,
             }
-
-        _LOGGER.debug(
-            "[%s] Streamer config: %s",
-            session_info["id"],
-            streamer_config,
         )
-
-        stream_process = await asyncio.create_subprocess_exec(
-            sys.executable,
-            "-m",
-            "homeassistant.components.homekit.audio_streamer",
-            stdin=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            stdout=subprocess.DEVNULL,
+        output = VIDEO_OUTPUT.format(**output_vars)
+        if self.config[CONF_SUPPORT_AUDIO]:
+            output = output + " " + AUDIO_OUTPUT.format(**output_vars)
+        _LOGGER.debug("FFmpeg output settings: %s", output)
+        stream = HAFFmpeg(self._ffmpeg.binary)
+        opened = await stream.open(
+            cmd=[],
+            input_source=input_source,
+            output=output,
+            extra_cmd="-hide_banner -nostats",
+            stderr_pipe=True,
+            stdout_pipe=False,
         )
-
-        session_info[STREAM_PROCESS] = stream_process
+        if not opened:
+            _LOGGER.error("Failed to open ffmpeg stream")
+            return False
 
         _LOGGER.debug(
             "[%s] Started stream process - PID %d",
             session_info["id"],
-            stream_process.pid,
+            stream.process.pid,
         )
 
-        # Send config via stdin (one JSON line), keep stdin open
-        # for liveness signaling (close = stop)
-        assert stream_process.stdin is not None
-        config_line = json.dumps(streamer_config) + "\n"
-        stream_process.stdin.write(config_line.encode())
-        await stream_process.stdin.drain()
+        session_info["stream"] = stream
+        session_info[FFMPEG_PID] = stream.process.pid
 
-        # Log stderr from the streamer process
-        if stream_process.stderr:
-            session_info[STREAM_LOGGER] = create_eager_task(
-                self._async_log_stream_stderr(session_info["id"], stream_process.stderr)
-            )
+        stderr_reader = await stream.get_reader(source=FFMPEG_STDERR)
 
-        # Watch the process periodically
         async def watch_session(_: Any) -> None:
-            await self._async_process_watch(session_info["id"])
+            await self._async_ffmpeg_watch(session_info["id"])
 
-        session_info[STREAM_WATCHER] = async_track_time_interval(
+        session_info[FFMPEG_LOGGER] = create_eager_task(
+            self._async_log_stderr_stream(stderr_reader)
+        )
+        session_info[FFMPEG_WATCHER] = async_track_time_interval(
             self.hass,
             watch_session,
-            PROCESS_WATCH_INTERVAL,
+            FFMPEG_WATCH_INTERVAL,
         )
 
-        return await self._async_process_watch(session_info["id"])
+        return await self._async_ffmpeg_watch(session_info["id"])
 
-    async def _async_log_stream_stderr(
-        self, session_id: str, stderr: asyncio.StreamReader
+    async def _async_log_stderr_stream(
+        self, stderr_reader: asyncio.StreamReader
     ) -> None:
-        """Log stderr output from the streamer subprocess."""
-        stderr_lines: list[str] = self.sessions[session_id].setdefault(
-            STREAM_STDERR, []
-        )
+        """Log output from ffmpeg."""
+        _LOGGER.debug("%s: ffmpeg: started", self.display_name)
         while True:
-            line = await stderr.readline()
+            line = await stderr_reader.readline()
             if line == b"":
                 return
-            decoded = line.rstrip().decode("utf-8", errors="replace")
-            stderr_lines.append(decoded)
-            _LOGGER.debug("[%s] streamer: %s", session_id, decoded)
 
-    async def _async_process_watch(self, session_id: str) -> bool:
-        """Check to make sure the streamer is still running."""
-        stream_process: asyncio.subprocess.Process | None = self.sessions[
-            session_id
-        ].get(STREAM_PROCESS)
-        if stream_process is None:
-            return False
+            _LOGGER.debug("%s: ffmpeg: %s", self.display_name, line.rstrip())
 
-        if stream_process.returncode is None:
-            # Still running
+    async def _async_ffmpeg_watch(self, session_id: str) -> bool:
+        """Check to make sure ffmpeg is still running and cleanup if not."""
+        ffmpeg_pid = self.sessions[session_id][FFMPEG_PID]
+        if pid_is_alive(ffmpeg_pid):
             return True
 
-        stderr_lines: list[str] = self.sessions[session_id].get(STREAM_STDERR, [])
-        stderr_tail = "\n".join(stderr_lines[-10:]) if stderr_lines else "no output"
-        _LOGGER.warning(
-            "Streaming process ended unexpectedly - PID %d (rc=%d):\n%s",
-            stream_process.pid,
-            stream_process.returncode,
-            stderr_tail,
-        )
-        self._async_stop_process_watch(session_id)
+        _LOGGER.warning("Streaming process ended unexpectedly - PID %d", ffmpeg_pid)
+        self._async_stop_ffmpeg_watch(session_id)
         self.set_streaming_available(self.sessions[session_id]["stream_idx"])
         return False
 
     @callback
-    def _async_stop_process_watch(self, session_id: str) -> None:
-        """Clean up a streaming session watcher."""
-        if STREAM_WATCHER not in self.sessions[session_id]:
+    def _async_stop_ffmpeg_watch(self, session_id: str) -> None:
+        """Cleanup a streaming session after stopping."""
+        if FFMPEG_WATCHER not in self.sessions[session_id]:
             return
-        self.sessions[session_id].pop(STREAM_WATCHER)()
-        if logger := self.sessions[session_id].pop(STREAM_LOGGER, None):
-            logger.cancel()
+        self.sessions[session_id].pop(FFMPEG_WATCHER)()
+        self.sessions[session_id].pop(FFMPEG_LOGGER).cancel()
 
     @callback
     def async_stop(self) -> None:
@@ -491,42 +445,28 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
         super().async_stop()
 
     async def stop_stream(self, session_info: dict[str, Any]) -> None:
-        """Stop the stream for the given session."""
+        """Stop the stream for the given ``session_id``."""
         session_id = session_info["id"]
-        stream_process: asyncio.subprocess.Process | None = session_info.pop(
-            STREAM_PROCESS, None
-        )
-        if stream_process is None:
+        if not (stream := session_info.get("stream")):
             _LOGGER.debug("No stream for session ID %s", session_id)
             return
 
-        self._async_stop_process_watch(session_id)
+        self._async_stop_ffmpeg_watch(session_id)
 
-        if stream_process.returncode is not None:
-            _LOGGER.debug(
-                "[%s] Stream already stopped (rc=%d)",
-                session_id,
-                stream_process.returncode,
-            )
+        if not pid_is_alive(stream.process.pid):
+            _LOGGER.warning("[%s] Stream already stopped", session_id)
             return
 
-        _LOGGER.debug("[%s] Stopping stream - PID %d", session_id, stream_process.pid)
-
-        # Close stdin to signal the child to stop gracefully
-        if stream_process.stdin:
-            stream_process.stdin.close()
-
-        # Give it time to exit, then escalate
-        try:
-            await asyncio.wait_for(stream_process.wait(), timeout=3.0)
-        except TimeoutError:
-            _LOGGER.debug("[%s] Stream did not stop, terminating", session_id)
-            stream_process.terminate()
+        for shutdown_method in ("close", "kill"):
+            _LOGGER.debug("[%s] %s stream", session_id, shutdown_method)
             try:
-                await asyncio.wait_for(stream_process.wait(), timeout=2.0)
-            except TimeoutError:
-                _LOGGER.warning("[%s] Stream did not terminate, killing", session_id)
-                stream_process.kill()
+                await getattr(stream, shutdown_method)()
+            except Exception:
+                _LOGGER.exception(
+                    "[%s] Failed to %s stream", session_id, shutdown_method
+                )
+            else:
+                return
 
     async def reconfigure_stream(
         self, session_info: dict[str, Any], stream_config: dict[str, Any]
