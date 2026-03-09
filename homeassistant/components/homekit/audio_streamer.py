@@ -422,6 +422,14 @@ def _mux_audio(
                         out_pkt.pts,
                         out_pkt.dts,
                     )
+                # Skip priming packets with negative timestamps;
+                # RTP timestamps are unsigned and the muxer rejects them
+                if out_pkt.pts is not None and out_pkt.pts < 0:
+                    _LOGGER.debug(
+                        "Skipping audio packet with negative pts=%s",
+                        out_pkt.pts,
+                    )
+                    continue
                 try:
                     audio_output.mux(out_pkt)
                 except av.FFmpegError:
