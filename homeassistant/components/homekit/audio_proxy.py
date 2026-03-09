@@ -179,9 +179,11 @@ class AudioProxy:
         sockname = self._in_transport.get_extra_info("sockname")
         self.local_port = sockname[1]
 
-        # Create unconnected outgoing socket for sending
+        # Bind outgoing socket to the negotiated audio port so HomeKit
+        # receives SRTP packets from the expected source port
         self._out_transport, _ = await loop.create_datagram_endpoint(
-            asyncio.DatagramProtocol, local_addr=("0.0.0.0", 0)
+            asyncio.DatagramProtocol,
+            local_addr=("0.0.0.0", self._dest_port),
         )
         protocol.set_out_transport(self._out_transport)
 
