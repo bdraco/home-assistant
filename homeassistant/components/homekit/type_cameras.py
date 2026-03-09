@@ -360,7 +360,10 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
             )
             await audio_proxy.async_start()
             if not audio_proxy.local_port:
-                _LOGGER.error("Audio proxy failed to start")
+                _LOGGER.error(
+                    "[%s] Audio proxy failed to start",
+                    self.display_name,
+                )
                 audio_proxy.async_stop()
                 audio_proxy = None
 
