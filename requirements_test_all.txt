@@ -1087,7 +1087,7 @@ home-assistant-frontend==20260304.0
 home-assistant-intents==2026.3.3
 
 # homeassistant.components.homekit
-homekit-audio-proxy==1.2.0
+homekit-audio-proxy==1.2.1
 
 # homeassistant.components.gentex_homelink
 homelink-integration-api==0.0.1
@@ -1620,7 +1620,7 @@ py-nightscout==1.2.2
 py-nymta==0.4.0
 
 # homeassistant.components.opendisplay
-py-opendisplay==5.2.0
+py-opendisplay==5.5.0
 
 # homeassistant.components.ecovacs
 py-sucks==0.9.11
@@ -2093,7 +2093,7 @@ pysenz==1.0.2
 pyserial==3.5
 
 # homeassistant.components.seventeentrack
-pyseventeentrack==1.1.1
+pyseventeentrack==1.1.2
 
 # homeassistant.components.sia
 pysiaalarm==3.2.2
