@@ -56,11 +56,20 @@ def _format_address_for_url(address: str) -> str:
     return address
 
 
-def _build_srtp_url(address: str, port: int, pkt_size: int) -> str:
-    """Build an SRTP output URL."""
+def _build_srtp_url(address: str, port: int, pkt_size: int, srtp_key: str) -> str:
+    """Build an SRTP output URL with encryption params in the query string.
+
+    The srtp_out_suite and srtp_out_params must be in the URL because
+    they are protocol-level options consumed by FFmpeg's SRTP protocol
+    handler, not muxer options. Passing them via av.open(options=...)
+    sends them to the RTP muxer which ignores them.
+    """
     addr = _format_address_for_url(address)
     return (
-        f"srtp://{addr}:{port}?rtcpport={port}&localrtpport={port}&pkt_size={pkt_size}"
+        f"srtp://{addr}:{port}?rtcpport={port}&localrtpport={port}"
+        f"&pkt_size={pkt_size}"
+        f"&srtp_out_suite=AES_CM_128_HMAC_SHA1_80"
+        f"&srtp_out_params={srtp_key}"
     )
 
 
@@ -168,7 +177,7 @@ def _open_srtp_output(
     payload_type: int,
 ) -> av.container.OutputContainer:
     """Open an SRTP output container."""
-    url = _build_srtp_url(address, port, pkt_size)
+    url = _build_srtp_url(address, port, pkt_size, srtp_key)
     _LOGGER.debug(
         "Opening SRTP output: %s ssrc=%d payload_type=%d", url, ssrc, payload_type
     )
@@ -177,8 +186,6 @@ def _open_srtp_output(
         "w",
         format="rtp",
         options={
-            "srtp_out_suite": "AES_CM_128_HMAC_SHA1_80",
-            "srtp_out_params": srtp_key,
             "ssrc": str(ssrc),
             "payload_type": str(payload_type),
         },
