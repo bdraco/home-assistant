@@ -30,6 +30,7 @@ import sys
 import threading
 import time
 from typing import Any
+from urllib.parse import quote
 
 import av
 from av.audio.resampler import AudioResampler  # pylint: disable=no-name-in-module
@@ -69,7 +70,7 @@ def _build_srtp_url(address: str, port: int, pkt_size: int, srtp_key: str) -> st
         f"srtp://{addr}:{port}?rtcpport={port}"
         f"&pkt_size={pkt_size}"
         f"&srtp_out_suite=AES_CM_128_HMAC_SHA1_80"
-        f"&srtp_out_params={srtp_key}"
+        f"&srtp_out_params={quote(srtp_key, safe='')}"
     )
 
 
