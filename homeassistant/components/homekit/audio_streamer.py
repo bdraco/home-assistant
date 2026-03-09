@@ -66,7 +66,7 @@ def _build_srtp_url(address: str, port: int, pkt_size: int, srtp_key: str) -> st
     """
     addr = _format_address_for_url(address)
     return (
-        f"srtp://{addr}:{port}?rtcpport={port}&localrtpport={port}"
+        f"srtp://{addr}:{port}?rtcpport={port}"
         f"&pkt_size={pkt_size}"
         f"&srtp_out_suite=AES_CM_128_HMAC_SHA1_80"
         f"&srtp_out_params={srtp_key}"
@@ -399,6 +399,29 @@ def stream_av(config: StreamConfig, stop_event: threading.Event) -> None:
                 audio_output.close()
 
 
+def _mux_audio(
+    packet: av.Packet,
+    resampler: AudioResampler,
+    out_audio: AudioStream,
+    audio_output: av.container.OutputContainer,
+    a_packets: int,
+) -> int:
+    """Decode, resample, encode, and mux one audio packet."""
+    for frame in packet.decode():
+        for resampled in resampler.resample(frame):  # type: ignore[arg-type]
+            for out_pkt in out_audio.encode(resampled):
+                if a_packets == 0:
+                    _LOGGER.debug(
+                        "First audio packet: size=%d pts=%s dts=%s",
+                        out_pkt.size,
+                        out_pkt.pts,
+                        out_pkt.dts,
+                    )
+                audio_output.mux(out_pkt)
+                a_packets += 1
+    return a_packets
+
+
 def _stream_loop(
     input_container: av.container.InputContainer,
     demux_streams: list[av.stream.Stream],
@@ -442,11 +465,9 @@ def _stream_loop(
             and out_audio is not None
             and resampler is not None
         ):
-            for frame in packet.decode():
-                for resampled in resampler.resample(frame):  # type: ignore[arg-type]
-                    for out_pkt in out_audio.encode(resampled):
-                        audio_output.mux(out_pkt)
-                        a_packets += 1
+            a_packets = _mux_audio(
+                packet, resampler, out_audio, audio_output, a_packets
+            )
 
     # Flush encoders
     if not stop_event.is_set():
