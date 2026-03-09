@@ -460,6 +460,8 @@ def _stream_loop(
     v_packets = 0
     a_packets = 0
 
+    last_log_time = start_time
+
     for packet in input_container.demux(*demux_streams):
         if stop_event.is_set():
             _LOGGER.debug("Stop requested")
@@ -472,11 +474,12 @@ def _stream_loop(
             if video_copy:
                 if v_packets == 0:
                     _LOGGER.debug(
-                        "First video packet: size=%d pts=%s dts=%s key=%s",
+                        "First video packet: size=%d pts=%s dts=%s key=%s time_base=%s",
                         packet.size,
                         packet.pts,
                         packet.dts,
                         packet.is_keyframe,
+                        packet.time_base,
                     )
                 packet.stream = out_video
                 try:
@@ -503,6 +506,16 @@ def _stream_loop(
             if a_packets == -1:
                 # Audio mux failed; disable audio for rest of stream
                 in_audio = None
+
+        now = time.monotonic()
+        if now - last_log_time >= 5.0:
+            _LOGGER.debug(
+                "Progress: %d video, %d audio packets in %.1fs",
+                v_packets,
+                a_packets,
+                now - start_time,
+            )
+            last_log_time = now
 
     # Flush encoders
     if not stop_event.is_set():
