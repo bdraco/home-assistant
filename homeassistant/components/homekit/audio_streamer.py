@@ -409,27 +409,30 @@ def _mux_audio(
 ) -> int:
     """Decode, resample, encode, and mux one audio packet.
 
+    Regenerates timestamps from zero (like go2rtc) instead of using
+    the encoder's timestamps which can be negative due to Opus
+    lookahead. Apple only cares about proper monotonic timestamps
+    based on the requested sample rate.
+
     Returns updated packet count, or -1 if audio muxing failed
     and should be disabled for the rest of the stream.
     """
     for frame in packet.decode():
         for resampled in resampler.resample(frame):  # type: ignore[arg-type]
             for out_pkt in out_audio.encode(resampled):
+                # Override encoder timestamps with monotonic counter;
+                # Opus encoder produces negative pts for priming packets
+                # and the RTP muxer rejects unsigned-incompatible values
+                out_pkt.pts = a_packets * (out_pkt.duration or 0)
+                out_pkt.dts = out_pkt.pts
                 if a_packets == 0:
                     _LOGGER.debug(
-                        "First audio packet: size=%d pts=%s dts=%s",
+                        "First audio packet: size=%d pts=%s dts=%s duration=%s",
                         out_pkt.size,
                         out_pkt.pts,
                         out_pkt.dts,
+                        out_pkt.duration,
                     )
-                # Skip priming packets with negative timestamps;
-                # RTP timestamps are unsigned and the muxer rejects them
-                if out_pkt.pts is not None and out_pkt.pts < 0:
-                    _LOGGER.debug(
-                        "Skipping audio packet with negative pts=%s",
-                        out_pkt.pts,
-                    )
-                    continue
                 try:
                     audio_output.mux(out_pkt)
                 except av.FFmpegError:
