@@ -169,6 +169,9 @@ def _open_srtp_output(
 ) -> av.container.OutputContainer:
     """Open an SRTP output container."""
     url = _build_srtp_url(address, port, pkt_size)
+    _LOGGER.debug(
+        "Opening SRTP output: %s ssrc=%d payload_type=%d", url, ssrc, payload_type
+    )
     return av.open(
         url,
         "w",
@@ -200,6 +203,7 @@ def _setup_video_output(
 
     if vc.codec == CODEC_COPY:
         # Set up output stream to remux packets without re-encoding
+        _LOGGER.debug("Video copy mode: codec=%s", input_stream.codec_context.name)
         out_video = video_output.add_stream(input_stream.codec_context.name)
         out_video.width = input_stream.codec_context.width  # type: ignore[attr-defined, union-attr]
         out_video.height = input_stream.codec_context.height  # type: ignore[attr-defined, union-attr]
@@ -207,6 +211,15 @@ def _setup_video_output(
             out_video.codec_context.extradata = input_stream.codec_context.extradata
         return video_output, out_video
 
+    _LOGGER.debug(
+        "Video transcode: codec=%s %dx%d @%dfps %dkbps profile=%s",
+        vc.codec,
+        vc.width,
+        vc.height,
+        vc.fps,
+        vc.max_bitrate_kbps,
+        vc.profile,
+    )
     out_video = video_output.add_stream(vc.codec, rate=vc.fps)
     out_video.width = vc.width  # type: ignore[union-attr]
     out_video.height = vc.height  # type: ignore[union-attr]
@@ -235,6 +248,12 @@ def _setup_audio_output(
         ac.payload_type,
     )
 
+    _LOGGER.debug(
+        "Audio output: opus %dHz %dms %dkbps",
+        ac.sample_rate,
+        ac.packet_time_ms,
+        ac.max_bitrate_kbps,
+    )
     out_stream = audio_output.add_stream(
         "libopus",
         rate=ac.sample_rate,
@@ -283,6 +302,8 @@ def stream_av(config: StreamConfig, stop_event: threading.Event) -> None:
         input_options["rtsp_transport"] = "tcp"
     if config.input_options:
         input_options.update(config.input_options)
+
+    _LOGGER.debug("Opening source %s with options %s", config.source, input_options)
 
     try:
         input_container = av.open(
@@ -453,6 +474,7 @@ def main() -> None:
         sys.exit(1)
 
     config_data = json.loads(config_line)
+    _LOGGER.debug("Received config: %s", config_data)
     config = StreamConfig.from_dict(config_data)
 
     stop_event = threading.Event()
