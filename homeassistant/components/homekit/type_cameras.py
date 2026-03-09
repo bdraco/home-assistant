@@ -127,6 +127,7 @@ FFMPEG_LOGGER = "ffmpeg_logger"
 FFMPEG_WATCHER = "ffmpeg_watcher"
 FFMPEG_PID = "ffmpeg_pid"
 AUDIO_STREAM_PROCESS = "audio_stream_process"
+AUDIO_LOGGER = "audio_logger"
 SESSION_ID = "session_id"
 
 CONFIG_DEFAULTS = {
@@ -325,15 +326,15 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
     def _get_audio_stream_source(self, raw_source: str) -> str:
         """Extract the raw stream URL from the input source.
 
-        The input source may have FFmpeg flags prepended (e.g. "-i url").
-        We need the raw URL for the PyAV audio subprocess.
+        The stream_source config value may include FFmpeg flags
+        (e.g. "-rtsp_transport tcp -i rtsp://..."). We need the
+        raw URL for the PyAV audio subprocess.
         """
-        # If the source has -i prefix from custom config, extract the URL
-        if "-i " in raw_source:
-            # Find the last -i and take the URL after it
-            parts = raw_source.split("-i ")
-            return parts[-1].strip().split()[0]
-        return raw_source
+        if "-i " not in raw_source:
+            return raw_source
+        # Take the token immediately after the last -i flag
+        parts = raw_source.rsplit("-i ", maxsplit=1)
+        return parts[1].strip().split()[0]
 
     def _should_use_pyav_audio(self) -> bool:
         """Check if PyAV audio streaming should be used.
@@ -360,6 +361,9 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
         a_packet_time request. This fixes choppy audio caused by FFmpeg
         always generating 20ms Opus frames regardless of what the client
         requested.
+
+        Config is passed via stdin (not CLI args) to avoid exposing
+        SRTP keys in the process list.
         """
         audio_config = {
             "source": raw_source,
@@ -384,7 +388,6 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
             sys.executable,
             "-m",
             "homeassistant.components.homekit.audio_streamer",
-            json.dumps(audio_config),
             stdin=subprocess.PIPE,
             stderr=subprocess.PIPE,
             stdout=subprocess.DEVNULL,
@@ -398,9 +401,16 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
             audio_process.pid,
         )
 
+        # Send config via stdin (one JSON line), keep stdin open
+        # for liveness signaling (close = stop)
+        assert audio_process.stdin is not None
+        config_line = json.dumps(audio_config) + "\n"
+        audio_process.stdin.write(config_line.encode())
+        await audio_process.stdin.drain()
+
         # Log stderr from the audio process
         if audio_process.stderr:
-            session_info["audio_logger"] = create_eager_task(
+            session_info[AUDIO_LOGGER] = create_eager_task(
                 self._async_log_audio_stderr(session_info["id"], audio_process.stderr)
             )
 
@@ -564,7 +574,7 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
         session_id = session_info["id"]
 
         # Cancel the audio logger task
-        if audio_logger := session_info.pop("audio_logger", None):
+        if audio_logger := session_info.pop(AUDIO_LOGGER, None):
             audio_logger.cancel()
 
         if audio_process.returncode is not None:

@@ -14,7 +14,10 @@ Background:
   https://github.com/AlexxIT/go2rtc/pull/843
 
 Usage:
-  python -m homeassistant.components.homekit.audio_streamer <json_config>
+  python -m homeassistant.components.homekit.audio_streamer
+
+  Reads JSON config from stdin (one line), then keeps stdin open.
+  When stdin closes (parent died) or SIGTERM is received, stops gracefully.
 """
 
 from __future__ import annotations
@@ -28,6 +31,7 @@ import sys
 import threading
 import time
 from typing import Any
+from urllib.parse import urlparse
 
 import av
 from av.audio.resampler import AudioResampler  # pylint: disable=no-name-in-module
@@ -42,6 +46,17 @@ _LOGGER = logging.getLogger(__name__)
 
 # Input timeout for opening RTSP source (seconds)
 INPUT_TIMEOUT = 10.0
+
+
+def _format_address_for_url(address: str) -> str:
+    """Wrap IPv6 addresses in brackets for URL use."""
+    parsed = urlparse(f"//{address}")
+    if ":" in address and parsed.hostname != address:
+        # Already has brackets or is not a plain IPv6 address
+        return address
+    if ":" in address:
+        return f"[{address}]"
+    return address
 
 
 @dataclass(slots=True, frozen=True)
@@ -65,15 +80,11 @@ class StreamConfig:
         return self.sample_rate_khz * 1000
 
     @property
-    def frame_size(self) -> int:
-        """Return Opus frame size in samples for the requested packet_time."""
-        return self.packet_time_ms * self.sample_rate_khz
-
-    @property
     def srtp_url(self) -> str:
         """Return SRTP output URL."""
+        addr = _format_address_for_url(self.address)
         return (
-            f"srtp://{self.address}:{self.port}"
+            f"srtp://{addr}:{self.port}"
             f"?rtcpport={self.port}"
             f"&localrtpport={self.port}"
             f"&pkt_size={self.pkt_size}"
@@ -105,6 +116,10 @@ def stream_audio(config: StreamConfig, stop_event: threading.Event) -> None:
        duration requested by the HomeKit client
     3. Decodes, resamples, and re-encodes audio frames
     4. Paces output to real-time to avoid flooding UDP buffers
+
+    Note: This opens a separate RTSP connection to the camera for audio.
+    Most cameras support at least 2 concurrent streams. A future
+    optimization could pipe audio from FFmpeg to avoid the extra connection.
     """
     _LOGGER.info(
         "Starting audio stream: source=%s target=%s rate=%dkHz packet_time=%dms",
@@ -112,14 +127,6 @@ def stream_audio(config: StreamConfig, stop_event: threading.Event) -> None:
         config.srtp_url,
         config.sample_rate_khz,
         config.packet_time_ms,
-    )
-
-    frame_size = config.frame_size
-    _LOGGER.debug(
-        "Opus frame_size=%d samples (%dms at %dHz)",
-        frame_size,
-        config.packet_time_ms,
-        config.sample_rate,
     )
 
     # Open the input source (RTSP camera stream)
@@ -132,7 +139,6 @@ def stream_audio(config: StreamConfig, stop_event: threading.Event) -> None:
         _LOGGER.exception("Failed to open source %s", config.source)
         return
 
-    start_time = time.monotonic()
     samples_sent = 0
     packets_sent = 0
 
@@ -149,7 +155,7 @@ def stream_audio(config: StreamConfig, stop_event: threading.Event) -> None:
             input_stream.codec_context.channels,
         )
 
-        # Open SRTP output
+        # Open SRTP output with SSRC and payload_type set on the RTP muxer
         try:
             output_container = av.open(
                 config.srtp_url,
@@ -158,6 +164,8 @@ def stream_audio(config: StreamConfig, stop_event: threading.Event) -> None:
                 options={
                     "srtp_out_suite": "AES_CM_128_HMAC_SHA1_80",
                     "srtp_out_params": config.srtp_key,
+                    "ssrc": str(config.ssrc),
+                    "payload_type": str(config.payload_type),
                 },
                 timeout=(5.0, None),
             )
@@ -186,6 +194,10 @@ def stream_audio(config: StreamConfig, stop_event: threading.Event) -> None:
             )
 
             _LOGGER.info("Streaming audio")
+
+            # Set start_time after all setup is complete so pacing
+            # is not skewed by connection/setup latency
+            start_time = time.monotonic()
 
             try:
                 for frame in input_container.decode(input_stream):
@@ -220,12 +232,18 @@ def stream_audio(config: StreamConfig, stop_event: threading.Event) -> None:
 
 
 def main() -> None:
-    """Entry point for the audio streamer subprocess."""
-    if len(sys.argv) < 2:
-        _LOGGER.error("Usage: %s <json_config>", sys.argv[0])
+    """Entry point for the audio streamer subprocess.
+
+    Reads JSON config from stdin (first line), then keeps stdin open.
+    Stops when stdin is closed (parent died) or SIGTERM is received.
+    """
+    # Read config from stdin to avoid exposing SRTP keys in process list
+    config_line = sys.stdin.readline()
+    if not config_line:
+        _LOGGER.error("No config received on stdin")
         sys.exit(1)
 
-    config_data = json.loads(sys.argv[1])
+    config_data = json.loads(config_line)
     config = StreamConfig.from_dict(config_data)
 
     stop_event = threading.Event()
@@ -237,7 +255,9 @@ def main() -> None:
     signal.signal(signal.SIGTERM, handle_signal)
     signal.signal(signal.SIGINT, handle_signal)
 
-    # Monitor stdin - when parent closes it, we should exit
+    # Monitor stdin - when parent closes it, we should exit.
+    # After reading the config line above, stdin stays open as a
+    # liveness signal. When the parent closes it, we stop.
     def watch_stdin() -> None:
         with contextlib.suppress(OSError):
             sys.stdin.read()
