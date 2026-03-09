@@ -85,12 +85,12 @@ VIDEO_OUTPUT = (
 
 AUDIO_OUTPUT = (
     "-map {a_map} -vn "
+    "-af aresample=async=1:min_comp=0:first_pts=0,asetpts=N/SR/TB "
     "-c:a {a_encoder} "
     "{a_application}"
     "-ac 1 -ar {a_sample_rate}k "
     "-b:a {a_max_bitrate}k -bufsize {a_bufsize}k "
     "{a_frame_duration}"
-    "-async 1 "
     "-payload_type 110 "
     "-ssrc {a_ssrc} -f rtp "
     "-srtp_out_suite AES_CM_128_HMAC_SHA1_80 -srtp_out_params {a_srtp_key} "
