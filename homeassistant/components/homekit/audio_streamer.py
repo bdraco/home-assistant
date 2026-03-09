@@ -407,7 +407,11 @@ def _mux_audio(
     audio_output: av.container.OutputContainer,
     a_packets: int,
 ) -> int:
-    """Decode, resample, encode, and mux one audio packet."""
+    """Decode, resample, encode, and mux one audio packet.
+
+    Returns updated packet count, or -1 if audio muxing failed
+    and should be disabled for the rest of the stream.
+    """
     for frame in packet.decode():
         for resampled in resampler.resample(frame):  # type: ignore[arg-type]
             for out_pkt in out_audio.encode(resampled):
@@ -418,7 +422,11 @@ def _mux_audio(
                         out_pkt.pts,
                         out_pkt.dts,
                     )
-                audio_output.mux(out_pkt)
+                try:
+                    audio_output.mux(out_pkt)
+                except av.FFmpegError:
+                    _LOGGER.exception("Audio mux failed, disabling audio")
+                    return -1
                 a_packets += 1
     return a_packets
 
@@ -469,6 +477,9 @@ def _stream_loop(
             a_packets = _mux_audio(
                 packet, resampler, out_audio, audio_output, a_packets
             )
+            if a_packets == -1:
+                # Audio mux failed; disable audio for rest of stream
+                in_audio = None
 
     # Flush encoders
     if not stop_event.is_set():
@@ -476,7 +487,7 @@ def _stream_loop(
             for out_pkt in out_video.encode(None):  # type: ignore[attr-defined]
                 video_output.mux(out_pkt)
                 v_packets += 1
-        if out_audio is not None and audio_output is not None:
+        if out_audio is not None and audio_output is not None and a_packets != -1:
             for out_pkt in out_audio.encode(None):
                 audio_output.mux(out_pkt)
                 a_packets += 1
