@@ -357,7 +357,10 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
                 "port": stream_config["a_port"],
                 "srtp_key": stream_config["a_srtp_key"],
                 "ssrc": stream_config["a_ssrc"],
-                "payload_type": stream_config.get("a_payload_type", 110),
+                "payload_type": int.from_bytes(
+                    stream_config.get("a_payload_type", b"\x6e"),
+                    byteorder="big",
+                ),
                 "pkt_size": self.config[CONF_AUDIO_PACKET_SIZE],
                 "codec": self.config[CONF_AUDIO_CODEC],
                 "sample_rate": stream_config["a_sample_rate"],
