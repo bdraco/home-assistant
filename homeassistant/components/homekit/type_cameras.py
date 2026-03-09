@@ -337,6 +337,12 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
             return False
 
         source_url, input_options = self._parse_stream_source(raw_source)
+        _LOGGER.debug(
+            "[%s] Parsed source: url=%s input_options=%s",
+            session_info["id"],
+            source_url,
+            input_options,
+        )
 
         # Determine video profile name from the negotiated profile ID
         video_profile = self.config[CONF_VIDEO_PROFILE_NAMES][
@@ -380,11 +386,9 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
             }
 
         _LOGGER.debug(
-            "[%s] Launching PyAV streamer: source=%s video_codec=%s audio=%s",
+            "[%s] Streamer config: %s",
             session_info["id"],
-            source_url,
-            self.config[CONF_VIDEO_CODEC],
-            "enabled" if self.config[CONF_SUPPORT_AUDIO] else "disabled",
+            streamer_config,
         )
 
         stream_process = await asyncio.create_subprocess_exec(
