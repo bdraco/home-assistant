@@ -98,6 +98,9 @@ class _SRTPContext:
         return srtp_packet + auth_tag
 
 
+_RECV_TIMEOUT_SECONDS = 5.0
+
+
 def _run_proxy(
     dest_addr: str,
     dest_port: int,
@@ -118,6 +121,7 @@ def _run_proxy(
 
     try:
         recv_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        recv_sock.settimeout(_RECV_TIMEOUT_SECONDS)
         recv_sock.bind(("127.0.0.1", 0))
         local_port = recv_sock.getsockname()[1]
     except OSError:
@@ -126,6 +130,8 @@ def _run_proxy(
 
     try:
         send_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # Bind to 0.0.0.0 so the kernel picks the correct source IP
+        # for the route to the HomeKit client
         send_sock.bind(("0.0.0.0", dest_port))
     except OSError:
         traceback.print_exc(file=sys.stderr)
@@ -140,7 +146,10 @@ def _run_proxy(
     packets_forwarded = 0
     try:
         while True:
-            data = recv_sock.recv(2048)
+            try:
+                data = recv_sock.recv(2048)
+            except TimeoutError:
+                continue
             if len(data) < 12:
                 continue
 
@@ -197,11 +206,16 @@ class AudioProxy:
             "homeassistant.components.homekit.audio_proxy",
             self._dest_addr,
             str(self._dest_port),
-            self._srtp_key_b64,
             str(self._target_clock_rate),
+            stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
+        # Pass SRTP key via stdin to avoid exposing it in process args
+        if self._process.stdin:
+            self._process.stdin.write(self._srtp_key_b64.encode() + b"\n")
+            await self._process.stdin.drain()
+            self._process.stdin.close()
 
         if self._process.stdout is None:
             _LOGGER.error("Audio proxy subprocess has no stdout")
@@ -223,7 +237,7 @@ class AudioProxy:
 
         # Log stderr in the background so errors are visible in HA logs
         if self._process.stderr:
-            self._stderr_task = asyncio.ensure_future(
+            self._stderr_task = asyncio.create_task(
                 self._log_stderr(self._process.stderr)
             )
 
@@ -258,11 +272,13 @@ class AudioProxy:
 
 
 if __name__ == "__main__":
+    # SRTP key is passed via stdin to avoid exposing it in process args
+    _srtp_key = sys.stdin.readline().strip()
     sys.exit(
         _run_proxy(
             dest_addr=sys.argv[1],
             dest_port=int(sys.argv[2]),
-            srtp_key_b64=sys.argv[3],
-            target_clock_rate=int(sys.argv[4]),
+            srtp_key_b64=_srtp_key,
+            target_clock_rate=int(sys.argv[3]),
         )
     )
