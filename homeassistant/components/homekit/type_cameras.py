@@ -90,6 +90,7 @@ RESOLUTIONS = [
 
 PROCESS_WATCH_INTERVAL = timedelta(seconds=5)
 STREAM_PROCESS = "stream_process"
+STREAM_STDERR = "stream_stderr"
 STREAM_LOGGER = "stream_logger"
 STREAM_WATCHER = "stream_watcher"
 SESSION_ID = "session_id"
@@ -321,6 +322,16 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
             session_info["id"],
             stream_config,
         )
+        try:
+            return await self._async_start_stream(session_info, stream_config)
+        except Exception:
+            _LOGGER.exception("Failed to start stream")
+            return False
+
+    async def _async_start_stream(
+        self, session_info: dict[str, Any], stream_config: dict[str, Any]
+    ) -> bool:
+        """Start the streaming subprocess."""
         if not (raw_source := await self._async_get_stream_source()):
             _LOGGER.error("Camera has no stream source")
             return False
@@ -422,15 +433,16 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
         self, session_id: str, stderr: asyncio.StreamReader
     ) -> None:
         """Log stderr output from the streamer subprocess."""
+        stderr_lines: list[str] = self.sessions[session_id].setdefault(
+            STREAM_STDERR, []
+        )
         while True:
             line = await stderr.readline()
             if line == b"":
                 return
-            _LOGGER.debug(
-                "[%s] streamer: %s",
-                session_id,
-                line.rstrip().decode("utf-8", errors="replace"),
-            )
+            decoded = line.rstrip().decode("utf-8", errors="replace")
+            stderr_lines.append(decoded)
+            _LOGGER.debug("[%s] streamer: %s", session_id, decoded)
 
     async def _async_process_watch(self, session_id: str) -> bool:
         """Check to make sure the streamer is still running."""
@@ -444,10 +456,13 @@ class Camera(HomeDoorbellAccessory, PyhapCamera):  # type: ignore[misc]
             # Still running
             return True
 
+        stderr_lines: list[str] = self.sessions[session_id].get(STREAM_STDERR, [])
+        stderr_tail = "\n".join(stderr_lines[-10:]) if stderr_lines else "no output"
         _LOGGER.warning(
-            "Streaming process ended unexpectedly - PID %d (rc=%d)",
+            "Streaming process ended unexpectedly - PID %d (rc=%d):\n%s",
             stream_process.pid,
             stream_process.returncode,
+            stderr_tail,
         )
         self._async_stop_process_watch(session_id)
         self.set_streaming_available(self.sessions[session_id]["stream_idx"])
