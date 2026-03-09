@@ -277,6 +277,10 @@ def stream_av(config: StreamConfig, stop_event: threading.Event) -> None:
 
     # Open the input source (RTSP camera stream)
     input_options: dict[str, str] = {}
+    # Default to TCP transport for RTSP/RTSPS sources to avoid
+    # UDP packet loss issues and to support TLS (rtsps://)
+    if config.source.startswith(("rtsp://", "rtsps://")):
+        input_options["rtsp_transport"] = "tcp"
     if config.input_options:
         input_options.update(config.input_options)
 
