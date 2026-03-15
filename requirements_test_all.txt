@@ -1040,7 +1040,7 @@ ha-silabs-firmware-client==0.3.0
 habiticalib==0.4.6
 
 # homeassistant.components.bluetooth
-habluetooth==5.9.1
+habluetooth==5.10.0
 
 # homeassistant.components.hanna
 hanna-cloud==0.0.7
@@ -1632,7 +1632,7 @@ py-sucks==0.9.11
 py-synologydsm-api==2.7.3
 
 # homeassistant.components.unifi_access
-py-unifi-access==1.0.0
+py-unifi-access==1.1.0
 
 # homeassistant.components.hdmi_cec
 pyCEC==0.5.2
