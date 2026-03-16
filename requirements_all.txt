@@ -251,7 +251,7 @@ aioelectricitymaps==1.1.1
 aioemonitor==1.0.5
 
 # homeassistant.components.esphome
-aioesphomeapi==44.3.1
+aioesphomeapi==44.5.2
 
 # homeassistant.components.matrix
 # homeassistant.components.slack
@@ -321,7 +321,7 @@ aiolookin==1.0.0
 aiolyric==2.0.2
 
 # homeassistant.components.mealie
-aiomealie==1.2.1
+aiomealie==1.2.2
 
 # homeassistant.components.modern_forms
 aiomodernforms==0.1.8
@@ -1422,7 +1422,7 @@ libpyfoscamcgi==0.0.9
 libpyvivotek==0.6.1
 
 # homeassistant.components.libre_hardware_monitor
-librehardwaremonitor-api==1.10.1
+librehardwaremonitor-api==1.11.1
 
 # homeassistant.components.mikrotik
 librouteros==3.2.0
@@ -3133,7 +3133,7 @@ transmission-rpc==7.0.3
 triggercmd==0.0.36
 
 # homeassistant.components.trmnl
-trmnl==0.1.0
+trmnl==0.1.1
 
 # homeassistant.components.twinkly
 ttls==1.8.3
