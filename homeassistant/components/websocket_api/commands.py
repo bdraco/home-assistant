@@ -912,8 +912,8 @@ async def handle_get_triggers_for_target(
 ) -> None:
     """Handle get triggers for target command.
 
-    This command returns all triggers that can be used with any entities that are currently
-    part of a target.
+    This command returns all triggers that can be used
+    with any entities that are currently part of a target.
     """
     triggers = await async_get_triggers_for_target(
         hass, msg["target"], msg["expand_group"]
@@ -935,8 +935,8 @@ async def handle_get_conditions_for_target(
 ) -> None:
     """Handle get conditions for target command.
 
-    This command returns all conditions that can be used with any entities that are currently
-    part of a target.
+    This command returns all conditions that can be used
+    with any entities that are currently part of a target.
     """
     conditions = await async_get_conditions_for_target(
         hass, msg["target"], msg["expand_group"]
@@ -958,8 +958,8 @@ async def handle_get_services_for_target(
 ) -> None:
     """Handle get services for target command.
 
-    This command returns all services that can be used with any entities that are currently
-    part of a target.
+    This command returns all services that can be used
+    with any entities that are currently part of a target.
     """
     services = await async_get_services_for_target(
         hass, msg["target"], msg["expand_group"]
