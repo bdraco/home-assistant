@@ -35,10 +35,5 @@ class YaleXSBLEDoorSensor(YALEXSBLEEntity, BinarySensorEntity):
         self, new_state: LockState, lock_info: LockInfo, connection_info: ConnectionInfo
     ) -> None:
         """Update the state."""
-        if new_state.door in (DoorStatus.OPENED, DoorStatus.AJAR):
-            self._attr_is_on = True
-        elif new_state.door == DoorStatus.CLOSED:
-            self._attr_is_on = False
-        else:
-            self._attr_is_on = None
+        self._attr_is_on = new_state.door is DoorStatus.OPENED
         super()._async_update_state(new_state, lock_info, connection_info)

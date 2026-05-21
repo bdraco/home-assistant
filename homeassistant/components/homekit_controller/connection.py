@@ -305,7 +305,7 @@ class HKDevice:
         # yet.
         attempts = None if self.hass.state is CoreState.running else 1
         if (
-            transport == Transport.BLE
+            transport is Transport.BLE
             and pairing.accessories
             and pairing.accessories.has_aid(1)
         ):
@@ -335,7 +335,7 @@ class HKDevice:
         )
         entry.async_on_unload(self._async_cancel_subscription_timer)
 
-        if transport != Transport.BLE:
+        if transport is not Transport.BLE:
             # Although async_populate_accessories_state fetched the accessory database,
             # the /accessories endpoint may return cached values from the accessory's
             # perspective. For example, Ecobee thermostats may report stale temperature
@@ -356,7 +356,7 @@ class HKDevice:
 
         await self.async_process_entity_map()
 
-        if transport != Transport.BLE:
+        if transport is not Transport.BLE:
             # Start regular polling after entity map is processed
             self._async_start_polling()
 
@@ -366,7 +366,7 @@ class HKDevice:
 
         self.async_set_available_state(self.pairing.is_available)
 
-        if transport == Transport.BLE:
+        if transport is Transport.BLE:
             # If we are using BLE, we need to periodically check of the
             # BLE device is available since we won't get callbacks
             # when it goes away since we HomeKit supports disconnected
@@ -427,7 +427,7 @@ class HKDevice:
             identifiers.add((IDENTIFIER_SERIAL_NUMBER, accessory.serial_number))
 
         connections: set[tuple[str, str]] = set()
-        if self.pairing.transport == Transport.BLE and (
+        if self.pairing.transport is Transport.BLE and (
             discovery := self.pairing.controller.discoveries.get(
                 normalize_hkid(self.unique_id)
             )
@@ -629,7 +629,7 @@ class HKDevice:
                 current_unique_id.add((accessory.aid, service.iid, None))
 
                 for char in service.characteristics:
-                    if self.pairing.transport != Transport.BLE:
+                    if self.pairing.transport is not Transport.BLE:
                         if char.type == CharacteristicsTypes.THREAD_CONTROL_POINT:
                             continue
 
@@ -1064,7 +1064,7 @@ class HKDevice:
     @property
     def is_unprovisioned_thread_device(self) -> bool:
         """Is this a thread capable device not connected by CoAP."""
-        if self.pairing.controller.transport_type != TransportType.BLE:
+        if self.pairing.controller.transport_type is not TransportType.BLE:
             return False
 
         if not self.entity_map.aid(1).services.first(
@@ -1076,7 +1076,7 @@ class HKDevice:
 
     async def async_thread_provision(self) -> None:
         """Migrate a HomeKit pairing to CoAP (Thread)."""
-        if self.pairing.controller.transport_type == TransportType.COAP:
+        if self.pairing.controller.transport_type is TransportType.COAP:
             raise HomeAssistantError("Already connected to a thread network")
 
         if not (dataset := await async_get_preferred_dataset(self.hass)):
