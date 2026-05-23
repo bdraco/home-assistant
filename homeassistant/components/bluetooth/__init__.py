@@ -1,5 +1,6 @@
 """The bluetooth integration."""
 
+from collections.abc import Mapping
 import datetime
 import logging
 import platform
@@ -11,6 +12,7 @@ from bluetooth_adapters import (
     ADAPTER_CONNECTION_SLOTS,
     ADAPTER_HW_VERSION,
     ADAPTER_MANUFACTURER,
+    ADAPTER_PASSIVE_SCAN,
     ADAPTER_SW_VERSION,
     DEFAULT_ADDRESS,
     DEFAULT_CONNECTION_SLOTS,
@@ -79,11 +81,13 @@ from .const import (
     BLUETOOTH_DISCOVERY_COOLDOWN_SECONDS,
     CONF_ADAPTER,
     CONF_DETAILS,
+    CONF_MODE,
     CONF_PASSIVE,
     CONF_SOURCE_CONFIG_ENTRY_ID,
     CONF_SOURCE_DEVICE_ID,
     CONF_SOURCE_DOMAIN,
     CONF_SOURCE_MODEL,
+    DEFAULT_MODE,
     DOMAIN,
     FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS,
     LINUX_FIRMWARE_LOAD_FALLBACK_SECONDS,
@@ -344,6 +348,21 @@ async def async_update_device(
         device_registry.async_update_device(device_entry.id, **kwargs)
 
 
+def _async_resolve_scanning_mode(options: Mapping[str, Any]) -> BluetoothScanningMode:
+    """Resolve CONF_MODE, falling back to legacy CONF_PASSIVE or DEFAULT_MODE."""
+    if (mode_value := options.get(CONF_MODE)) is not None:
+        try:
+            return BluetoothScanningMode(mode_value)
+        except ValueError:
+            _LOGGER.warning("Unknown bluetooth scanning mode %r", mode_value)
+            return BluetoothScanningMode(DEFAULT_MODE)
+    if (legacy_passive := options.get(CONF_PASSIVE)) is True:
+        return BluetoothScanningMode.PASSIVE
+    if legacy_passive is False:
+        return BluetoothScanningMode.ACTIVE
+    return BluetoothScanningMode(DEFAULT_MODE)
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up a config entry for a bluetooth scanner."""
     if source_entry_id := entry.data.get(CONF_SOURCE_CONFIG_ENTRY_ID):
@@ -387,12 +406,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         raise ConfigEntryNotReady(
             f"Bluetooth adapter {adapter} with address {address} not found"
         )
-    passive = entry.options.get(CONF_PASSIVE)
     adapters = await manager.async_get_bluetooth_adapters()
-    mode = BluetoothScanningMode.PASSIVE if passive else BluetoothScanningMode.ACTIVE
+    details = adapters[adapter]
+    mode = _async_resolve_scanning_mode(entry.options)
+    # AUTO needs passive scanning support to flip on demand; without it
+    # the scanner would start passive on hardware that can't do passive.
+    if mode is BluetoothScanningMode.AUTO and not details.get(ADAPTER_PASSIVE_SCAN):
+        mode = BluetoothScanningMode.ACTIVE
     scanner = HaScanner(mode, adapter, address)
     scanner.async_setup()
-    details = adapters[adapter]
     if entry.title == address:
         hass.config_entries.async_update_entry(
             entry, title=adapter_title(adapter, details)

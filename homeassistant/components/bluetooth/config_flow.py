@@ -12,7 +12,7 @@ from bluetooth_adapters import (
     adapter_model,
     get_adapters,
 )
-from habluetooth import get_manager
+from habluetooth import BluetoothScanningMode, get_manager
 import voluptuous as vol
 
 from homeassistant.components import onboarding
@@ -24,31 +24,73 @@ from homeassistant.config_entries import (
 )
 from homeassistant.core import callback
 from homeassistant.helpers.schema_config_entry_flow import (
+    SchemaCommonFlowHandler,
     SchemaFlowFormStep,
     SchemaOptionsFlowHandler,
+)
+from homeassistant.helpers.selector import (
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
 )
 from homeassistant.helpers.typing import DiscoveryInfoType
 
 from .const import (
     CONF_ADAPTER,
     CONF_DETAILS,
+    CONF_MODE,
     CONF_PASSIVE,
     CONF_SOURCE,
     CONF_SOURCE_CONFIG_ENTRY_ID,
     CONF_SOURCE_DEVICE_ID,
     CONF_SOURCE_DOMAIN,
     CONF_SOURCE_MODEL,
+    DEFAULT_MODE,
     DOMAIN,
 )
 from .util import adapter_title
 
-OPTIONS_SCHEMA = vol.Schema(
-    {
-        vol.Required(CONF_PASSIVE, default=False): bool,
-    }
+_VALID_MODE_VALUES = {mode.value for mode in BluetoothScanningMode}
+_MODE_SELECTOR = SelectSelector(
+    SelectSelectorConfig(
+        options=[
+            BluetoothScanningMode.AUTO.value,
+            BluetoothScanningMode.ACTIVE.value,
+            BluetoothScanningMode.PASSIVE.value,
+        ],
+        translation_key="mode",
+        mode=SelectSelectorMode.DROPDOWN,
+    )
 )
+
+
+async def _options_schema(handler: SchemaCommonFlowHandler) -> vol.Schema:
+    """Build the options schema with the saved mode as the default."""
+    options = handler.options
+    current = options.get(CONF_MODE)
+    if current is None or current not in _VALID_MODE_VALUES:
+        legacy_passive = options.get(CONF_PASSIVE)
+        if legacy_passive is True:
+            current = BluetoothScanningMode.PASSIVE.value
+        elif legacy_passive is False:
+            current = BluetoothScanningMode.ACTIVE.value
+        else:
+            current = DEFAULT_MODE
+    return vol.Schema({vol.Required(CONF_MODE, default=current): _MODE_SELECTOR})
+
+
+async def _validate_options(
+    handler: SchemaCommonFlowHandler, user_input: dict[str, Any]
+) -> dict[str, Any]:
+    """Mirror CONF_MODE into the legacy CONF_PASSIVE for downgrade safety."""
+    user_input[CONF_PASSIVE] = (
+        user_input[CONF_MODE] == BluetoothScanningMode.PASSIVE.value
+    )
+    return user_input
+
+
 OPTIONS_FLOW = {
-    "init": SchemaFlowFormStep(OPTIONS_SCHEMA),
+    "init": SchemaFlowFormStep(_options_schema, validate_user_input=_validate_options),
 }
 
 
