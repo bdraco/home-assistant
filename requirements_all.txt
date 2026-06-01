@@ -203,7 +203,7 @@ aioapcaccess==1.0.0
 aioaquacell==1.0.0
 
 # homeassistant.components.vistapool
-aioaquarite==0.4.0
+aioaquarite==0.5.1
 
 # homeassistant.components.aseko_pool_live
 aioaseko==1.0.0
@@ -1266,7 +1266,7 @@ hole==0.9.0
 holidays==0.97
 
 # homeassistant.components.frontend
-home-assistant-frontend==20260527.1
+home-assistant-frontend==20260527.2
 
 # homeassistant.components.conversation
 home-assistant-intents==2026.5.5
@@ -2200,6 +2200,9 @@ pygti==0.9.4
 
 # homeassistant.components.version
 pyhaversion==22.8.0
+
+# homeassistant.components.helty
+pyhelty==0.2.0
 
 # homeassistant.components.heos
 pyheos==1.0.6
