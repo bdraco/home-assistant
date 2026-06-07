@@ -1269,7 +1269,7 @@ hole==0.9.0
 holidays==0.98
 
 # homeassistant.components.frontend
-home-assistant-frontend==20260527.4
+home-assistant-frontend==20260527.5
 
 # homeassistant.components.conversation
 home-assistant-intents==2026.6.1
@@ -3246,7 +3246,7 @@ uasiren==0.0.1
 uhooapi==1.2.8
 
 # homeassistant.components.unifiprotect
-uiprotect==10.5.0
+uiprotect==11.3.0
 
 # homeassistant.components.landisgyr_heat_meter
 ultraheat-api==0.6.1
