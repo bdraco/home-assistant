@@ -7,7 +7,7 @@ import datetime as dt
 from functools import partial
 from itertools import chain
 import logging
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, override
 
 from aiohttp import WSMsgType, web
 from aiohttp.http_websocket import WebSocketWriter
@@ -61,6 +61,7 @@ class WebsocketAPIView(HomeAssistantView):
 class WebSocketAdapter(logging.LoggerAdapter):
     """Add connection id to websocket messages."""
 
+    @override
     def process(self, msg: str, kwargs: Any) -> tuple[str, Any]:
         """Add connid to websocket log messages."""
         assert self.extra is not None
@@ -118,6 +119,7 @@ class WebSocketHandler:
         """Handle logging change."""
         self._debug = self._logger.isEnabledFor(logging.DEBUG)
 
+    @override
     def __repr__(self) -> str:
         """Return the representation."""
         return (

@@ -18,7 +18,6 @@ import pytest
 from sensor_state_data import SensorDeviceClass
 
 from homeassistant.components.bluetooth import async_last_service_info
-from homeassistant.components.bluetooth.manager import HomeAssistantBluetoothManager
 from homeassistant.components.inkbird.const import (
     CONF_DEVICE_DATA,
     CONF_DEVICE_TYPE,
@@ -26,7 +25,6 @@ from homeassistant.components.inkbird.const import (
 )
 from homeassistant.components.inkbird.coordinator import (
     ACTIVE_SCAN_DURATION,
-    ACTIVE_SCAN_INTERVAL,
     FALLBACK_POLL_INTERVAL,
 )
 from homeassistant.components.sensor import ATTR_STATE_CLASS
@@ -104,6 +102,26 @@ async def test_sensors(hass: HomeAssistant) -> None:
     assert entry.data[CONF_DEVICE_TYPE] == "IBS-TH"
     assert await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()
+
+
+async def test_active_scan_duration(hass: HomeAssistant) -> None:
+    """Test the scan response only IBS-TH registers a wide active scan window."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="61DE521B-F0BF-9F44-64D4-75BBE1738105",
+        data={CONF_DEVICE_TYPE: "IBS-TH"},
+    )
+    entry.add_to_hass(hass)
+
+    with patch(
+        "homeassistant.components.bluetooth.update_coordinator.async_register_callback"
+    ) as mock_register_callback:
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+    assert mock_register_callback.call_args.kwargs["scan_duration"] == (
+        ACTIVE_SCAN_DURATION
+    )
 
 
 async def test_device_with_corrupt_name(hass: HomeAssistant) -> None:
@@ -308,35 +326,6 @@ async def test_notify_sensor(hass: HomeAssistant) -> None:
 
     saved_device_data_changed_callback({"temp_unit": "C"})
     assert entry.data[CONF_DEVICE_DATA] == {"temp_unit": "C"}
-
-
-async def test_active_scan_cadence(hass: HomeAssistant) -> None:
-    """Test the coordinator registers an active scan cadence with the manager."""
-    entry = MockConfigEntry(
-        domain=DOMAIN,
-        unique_id="61DE521B-F0BF-9F44-64D4-75BBE1738105",
-    )
-    entry.add_to_hass(hass)
-
-    cancel = MagicMock()
-    with patch.object(
-        HomeAssistantBluetoothManager,
-        "async_register_active_scan",
-        return_value=cancel,
-    ) as mock_register:
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
-
-    mock_register.assert_called_once_with(
-        "61DE521B-F0BF-9F44-64D4-75BBE1738105",
-        ACTIVE_SCAN_INTERVAL,
-        ACTIVE_SCAN_DURATION,
-    )
-    cancel.assert_not_called()
-
-    assert await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
-    cancel.assert_called_once()
 
 
 async def test_ibs_p02b_sensors(hass: HomeAssistant) -> None:
