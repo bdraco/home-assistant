@@ -303,7 +303,7 @@ aiohue==4.8.1
 aioimaplib==2.0.1
 
 # homeassistant.components.immich
-aioimmich==0.15.1
+aioimmich==0.16.0
 
 # homeassistant.components.apache_kafka
 aiokafka==0.10.0
@@ -1213,7 +1213,7 @@ ha-xthings-cloud==1.0.5
 habiticalib==0.4.7
 
 # homeassistant.components.bluetooth
-habluetooth==6.26.4
+habluetooth==6.26.5
 
 # homeassistant.components.hanna
 hanna-cloud==0.0.7
