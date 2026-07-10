@@ -50,7 +50,7 @@ from .components import (
     group as group_pre_import,  # noqa: F401
     hardware as hardware_import,  # noqa: F401 - not named pre_import since it has requirements
     history as history_pre_import,  # noqa: F401
-    http,  # not named pre_import since it has requirements
+    http as http_import,  # noqa: F401 - not named pre_import since it has requirements
     image_upload as image_upload_import,  # noqa: F401 - not named pre_import since it has requirements
     logbook as logbook_pre_import,  # noqa: F401
     lovelace as lovelace_pre_import,  # noqa: F401
@@ -419,12 +419,7 @@ async def async_setup_hass(
         _LOGGER.info("Starting in recovery mode")
         hass.config.recovery_mode = True
 
-        http_conf = (await http.async_get_last_config(hass)) or {}
-
-        await async_from_config_dict(
-            {"recovery_mode": {}, "http": http_conf},
-            hass,
-        )
+        await async_from_config_dict({"recovery_mode": {}}, hass)
 
     if runtime_config.open_ui:
         hass.add_job(open_hass_ui, hass)

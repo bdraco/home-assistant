@@ -5,7 +5,6 @@ from functools import partial
 import logging
 import os
 import struct
-from typing import Any
 
 from aiohasupervisor import SupervisorBadRequestError, SupervisorError
 from aiohasupervisor.models import (
@@ -17,7 +16,7 @@ from aiohasupervisor.models import (
 
 from homeassistant.auth.const import GROUP_ID_ADMIN
 from homeassistant.auth.models import RefreshToken, User
-from homeassistant.components import frontend, network
+from homeassistant.components import frontend
 from homeassistant.components.homeassistant import async_set_stop_handler
 from homeassistant.components.onboarding import async_is_onboarded
 from homeassistant.config_entries import SOURCE_SYSTEM, ConfigEntry
@@ -31,7 +30,6 @@ from homeassistant.helpers import (
     issue_registry as ir,
 )
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.issue_registry import IssueSeverity
 from homeassistant.helpers.typing import ConfigType
 
@@ -56,24 +54,21 @@ from .auth import async_setup_auth_view
 from .config import HassioConfig
 from .const import (
     ADDONS_COORDINATOR,
-    ATTR_UPDATE_KEY,
-    ATTR_WS_EVENT,
     DATA_COMPONENT,
     DATA_CONFIG_STORE,
     DATA_HASSIO_HOST,
     DATA_HASSIO_SUPERVISOR_USER,
     DATA_KEY_SUPERVISOR_ISSUES,
     DOMAIN,
-    EVENT_SUPERVISOR_EVENT,
-    EVENT_SUPERVISOR_UPDATE,
+    JOBS_COORDINATOR,
     MAIN_COORDINATOR,
     STATS_COORDINATOR,
-    UPDATE_KEY_NETWORK,
 )
 from .coordinator import (
     HassioAddOnDataUpdateCoordinator,
     HassioMainDataUpdateCoordinator,
     HassioStatsDataUpdateCoordinator,
+    SupervisorJobsCoordinator,
     get_addons_info,
     get_addons_list,
     get_addons_stats,
@@ -333,9 +328,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await coordinator.async_config_entry_first_refresh()
     hass.data[MAIN_COORDINATOR] = coordinator
 
-    addon_coordinator = HassioAddOnDataUpdateCoordinator(
-        hass, entry, dev_reg, coordinator.jobs
-    )
+    jobs_coordinator = SupervisorJobsCoordinator(hass, entry)
+    await jobs_coordinator.async_config_entry_first_refresh()
+    hass.data[JOBS_COORDINATOR] = jobs_coordinator
+
+    addon_coordinator = HassioAddOnDataUpdateCoordinator(hass, entry, dev_reg)
     await addon_coordinator.async_config_entry_first_refresh()
     hass.data[ADDONS_COORDINATOR] = addon_coordinator
 
@@ -392,21 +389,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     entry.async_on_unload(hass.bus.async_listen(EVENT_CORE_CONFIG_UPDATE, push_config))
 
-    @callback
-    def _async_supervisor_event(event: dict[str, Any]) -> None:
-        """Reload network adapters when Supervisor reports a network change."""
-        if (
-            event.get(ATTR_WS_EVENT) == EVENT_SUPERVISOR_UPDATE
-            and event.get(ATTR_UPDATE_KEY) == UPDATE_KEY_NETWORK
-        ):
-            entry.async_create_background_task(
-                hass, network.async_reload_adapters(hass), "hassio_reload_adapters"
-            )
-
-    entry.async_on_unload(
-        async_dispatcher_connect(hass, EVENT_SUPERVISOR_EVENT, _async_supervisor_event)
-    )
-
     async def update_hass_api(refresh_token: RefreshToken) -> None:
         """Update Home Assistant API data on Hass.io."""
         # hass.config.api is always set here: hassio depends on http, and the
@@ -459,5 +441,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.pop(MAIN_COORDINATOR, None)
     hass.data.pop(ADDONS_COORDINATOR, None)
     hass.data.pop(STATS_COORDINATOR, None)
+    hass.data.pop(JOBS_COORDINATOR, None)
 
     return unload_ok
