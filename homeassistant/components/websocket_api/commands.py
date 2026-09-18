@@ -8,7 +8,7 @@ import json
 import logging
 from typing import Any, cast
 
-import voluptuous as vol
+import probatio
 
 from homeassistant.auth.models import User
 from homeassistant.auth.permissions.const import POLICY_READ
@@ -63,8 +63,8 @@ from homeassistant.helpers.event import (
 from homeassistant.helpers.json import (
     JSON_DUMP,
     ExtendedJSONEncoder,
+    cached_json_bytes,
     find_paths_unserializable_data,
-    json_bytes,
     json_fragment,
 )
 from homeassistant.helpers.service import (
@@ -182,8 +182,8 @@ def _forward_events_unconditional(
 @callback
 @decorators.websocket_command(
     {
-        vol.Required("type"): "subscribe_events",
-        vol.Optional("event_type", default=MATCH_ALL): str,
+        probatio.Required("type"): "subscribe_events",
+        probatio.Optional("event_type", default=MATCH_ALL): str,
     }
 )
 def handle_subscribe_events(
@@ -224,7 +224,7 @@ def handle_subscribe_events(
 @callback
 @decorators.websocket_command(
     {
-        vol.Required("type"): "subscribe_bootstrap_integrations",
+        probatio.Required("type"): "subscribe_bootstrap_integrations",
     }
 )
 def handle_subscribe_bootstrap_integrations(
@@ -247,8 +247,8 @@ def handle_subscribe_bootstrap_integrations(
 @callback
 @decorators.websocket_command(
     {
-        vol.Required("type"): "unsubscribe_events",
-        vol.Required("subscription"): cv.positive_int,
+        probatio.Required("type"): "unsubscribe_events",
+        probatio.Required("subscription"): cv.positive_int,
     }
 )
 def handle_unsubscribe_events(
@@ -266,12 +266,12 @@ def handle_unsubscribe_events(
 
 @decorators.websocket_command(
     {
-        vol.Required("type"): "call_service",
-        vol.Required("domain"): str,
-        vol.Required("service"): str,
-        vol.Optional("target"): cv.ENTITY_SERVICE_FIELDS,
-        vol.Optional("service_data"): dict,
-        vol.Optional("return_response", default=False): bool,
+        probatio.Required("type"): "call_service",
+        probatio.Required("domain"): str,
+        probatio.Required("service"): str,
+        probatio.Optional("target"): cv.ENTITY_SERVICE_FIELDS,
+        probatio.Optional("service_data"): dict,
+        probatio.Optional("return_response", default=False): bool,
     }
 )
 @decorators.async_response
@@ -320,7 +320,7 @@ async def handle_call_service(
                     "child_service": err.service,
                 },
             )
-    except vol.Invalid as err:
+    except probatio.Invalid as err:
         connection.send_error(msg["id"], const.ERR_INVALID_FORMAT, str(err))
     except ServiceValidationError as err:
         connection.logger.error(err)
@@ -367,7 +367,7 @@ def _async_get_allowed_states(
 
 
 @callback
-@decorators.websocket_command({vol.Required("type"): "get_states"})
+@decorators.websocket_command({probatio.Required("type"): "get_states"})
 def handle_get_states(
     hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
@@ -439,8 +439,8 @@ def _forward_entity_changes(
 @callback
 @decorators.websocket_command(
     {
-        vol.Required("type"): "subscribe_entities",
-        vol.Optional("entity_ids"): cv.entity_ids,
+        probatio.Required("type"): "subscribe_entities",
+        probatio.Optional("entity_ids"): cv.entity_ids,
         **INCLUDE_EXCLUDE_BASE_FILTER_SCHEMA.schema,
     }
 )
@@ -543,7 +543,7 @@ async def _async_get_all_condition_descriptions_json(hass: HomeAssistant) -> byt
         # If the descriptions are the same, return the cached JSON payload
         if cached_descriptions is descriptions:
             return cast(bytes, cached_json_payload)
-    json_payload = json_bytes(
+    json_payload = cached_json_bytes(
         {
             condition: description
             for condition, description in descriptions.items()
@@ -554,7 +554,9 @@ async def _async_get_all_condition_descriptions_json(hass: HomeAssistant) -> byt
     return json_payload
 
 
-@decorators.websocket_command({vol.Required("type"): "condition_platforms/subscribe"})
+@decorators.websocket_command(
+    {probatio.Required("type"): "condition_platforms/subscribe"}
+)
 @decorators.async_response
 async def handle_subscribe_condition_platforms(
     hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
@@ -590,12 +592,12 @@ async def _async_get_all_service_descriptions_json(hass: HomeAssistant) -> bytes
         # If the descriptions are the same, return the cached JSON payload
         if cached_descriptions is descriptions:
             return cast(bytes, cached_json_payload)
-    json_payload = json_bytes(descriptions)
+    json_payload = cached_json_bytes(descriptions)
     hass.data[ALL_SERVICE_DESCRIPTIONS_JSON_CACHE] = (descriptions, json_payload)
     return json_payload
 
 
-@decorators.websocket_command({vol.Required("type"): "get_services"})
+@decorators.websocket_command({probatio.Required("type"): "get_services"})
 @decorators.async_response
 async def handle_get_services(
     hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
@@ -615,7 +617,7 @@ async def _async_get_all_trigger_descriptions_json(hass: HomeAssistant) -> bytes
         # If the descriptions are the same, return the cached JSON payload
         if cached_descriptions is descriptions:
             return cast(bytes, cached_json_payload)
-    json_payload = json_bytes(
+    json_payload = cached_json_bytes(
         {
             trigger: description
             for trigger, description in descriptions.items()
@@ -626,7 +628,9 @@ async def _async_get_all_trigger_descriptions_json(hass: HomeAssistant) -> bytes
     return json_payload
 
 
-@decorators.websocket_command({vol.Required("type"): "trigger_platforms/subscribe"})
+@decorators.websocket_command(
+    {probatio.Required("type"): "trigger_platforms/subscribe"}
+)
 @decorators.async_response
 async def handle_subscribe_trigger_platforms(
     hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
@@ -653,7 +657,7 @@ async def handle_subscribe_trigger_platforms(
 
 
 @callback
-@decorators.websocket_command({vol.Required("type"): "get_config"})
+@decorators.websocket_command({probatio.Required("type"): "get_config"})
 def handle_get_config(
     hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
@@ -667,7 +671,10 @@ def handle_get_config(
 
 
 @decorators.websocket_command(
-    {vol.Required("type"): "manifest/list", vol.Optional("integrations"): [str]}
+    {
+        probatio.Required("type"): "manifest/list",
+        probatio.Optional("integrations"): [str],
+    }
 )
 @decorators.async_response
 async def handle_manifest_list(
@@ -691,7 +698,7 @@ async def handle_manifest_list(
 
 
 @decorators.websocket_command(
-    {vol.Required("type"): "manifest/get", vol.Required("integration"): str}
+    {probatio.Required("type"): "manifest/get", probatio.Required("integration"): str}
 )
 @decorators.async_response
 async def handle_manifest_get(
@@ -707,7 +714,7 @@ async def handle_manifest_get(
 
 
 @callback
-@decorators.websocket_command({vol.Required("type"): "integration/setup_info"})
+@decorators.websocket_command({probatio.Required("type"): "integration/setup_info"})
 def handle_integration_setup_info(
     hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
@@ -722,7 +729,7 @@ def handle_integration_setup_info(
 
 
 @callback
-@decorators.websocket_command({vol.Required("type"): "ping"})
+@decorators.websocket_command({probatio.Required("type"): "ping"})
 def handle_ping(
     hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
@@ -732,7 +739,7 @@ def handle_ping(
 
 @callback
 @decorators.websocket_command(
-    {vol.Required("type"): "slugify", vol.Required("text"): str}
+    {probatio.Required("type"): "slugify", probatio.Required("text"): str}
 )
 def handle_slugify(
     hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
@@ -749,13 +756,13 @@ def _cached_template(template_str: str, hass: HomeAssistant) -> template.Templat
 
 @decorators.websocket_command(
     {
-        vol.Required("type"): "render_template",
-        vol.Required("template"): str,
-        vol.Optional("entity_ids"): cv.entity_ids,
-        vol.Optional("variables"): dict,
-        vol.Optional("timeout"): vol.Coerce(float),
-        vol.Optional("strict", default=False): bool,
-        vol.Optional("report_errors", default=False): bool,
+        probatio.Required("type"): "render_template",
+        probatio.Required("template"): str,
+        probatio.Optional("entity_ids"): cv.entity_ids,
+        probatio.Optional("variables"): dict,
+        probatio.Optional("timeout"): probatio.Coerce(float),
+        probatio.Optional("strict", default=False): bool,
+        probatio.Optional("report_errors", default=False): bool,
     }
 )
 @decorators.async_response
@@ -856,7 +863,7 @@ def _serialize_entity_sources(
 
 
 @callback
-@decorators.websocket_command({vol.Required("type"): "entity/source"})
+@decorators.websocket_command({probatio.Required("type"): "entity/source"})
 def handle_entity_source(
     hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
 ) -> None:
@@ -879,10 +886,10 @@ def handle_entity_source(
 @callback
 @decorators.websocket_command(
     {
-        vol.Required("type"): "extract_from_target",
-        vol.Required("target"): cv.TARGET_FIELDS,
-        vol.Optional("expand_group", default=False): bool,
-        vol.Optional("primary_entities_only", default=True): bool,
+        probatio.Required("type"): "extract_from_target",
+        probatio.Required("target"): cv.TARGET_FIELDS,
+        probatio.Optional("expand_group", default=False): bool,
+        probatio.Optional("primary_entities_only", default=True): bool,
     }
 )
 def handle_extract_from_target(
@@ -915,9 +922,9 @@ def handle_extract_from_target(
 
 @decorators.websocket_command(
     {
-        vol.Required("type"): "get_triggers_for_target",
-        vol.Required("target"): cv.TARGET_FIELDS,
-        vol.Optional("expand_group", default=True): bool,
+        probatio.Required("type"): "get_triggers_for_target",
+        probatio.Required("target"): cv.TARGET_FIELDS,
+        probatio.Optional("expand_group", default=True): bool,
     }
 )
 @decorators.async_response
@@ -938,9 +945,9 @@ async def handle_get_triggers_for_target(
 
 @decorators.websocket_command(
     {
-        vol.Required("type"): "get_conditions_for_target",
-        vol.Required("target"): cv.TARGET_FIELDS,
-        vol.Optional("expand_group", default=True): bool,
+        probatio.Required("type"): "get_conditions_for_target",
+        probatio.Required("target"): cv.TARGET_FIELDS,
+        probatio.Optional("expand_group", default=True): bool,
     }
 )
 @decorators.async_response
@@ -961,9 +968,9 @@ async def handle_get_conditions_for_target(
 
 @decorators.websocket_command(
     {
-        vol.Required("type"): "get_services_for_target",
-        vol.Required("target"): cv.TARGET_FIELDS,
-        vol.Optional("expand_group", default=True): bool,
+        probatio.Required("type"): "get_services_for_target",
+        probatio.Required("target"): cv.TARGET_FIELDS,
+        probatio.Optional("expand_group", default=True): bool,
     }
 )
 @decorators.async_response
@@ -984,9 +991,9 @@ async def handle_get_services_for_target(
 
 @decorators.websocket_command(
     {
-        vol.Required("type"): "subscribe_trigger",
-        vol.Required("trigger"): cv.TRIGGER_SCHEMA,
-        vol.Optional("variables"): dict,
+        probatio.Required("type"): "subscribe_trigger",
+        probatio.Required("trigger"): cv.TRIGGER_SCHEMA,
+        probatio.Optional("variables"): dict,
     }
 )
 @decorators.require_admin
@@ -1000,7 +1007,7 @@ async def handle_subscribe_trigger(
     # unexpected errors by the default websocket error handler.
     try:
         trigger_config = await async_validate_trigger_config(hass, msg["trigger"])
-    except vol.Invalid as err:
+    except probatio.Invalid as err:
         connection.send_error(msg["id"], const.ERR_INVALID_FORMAT, str(err))
         return
     except HomeAssistantError as err:
@@ -1048,9 +1055,9 @@ async def handle_subscribe_trigger(
 
 @decorators.websocket_command(
     {
-        vol.Required("type"): "test_condition",
-        vol.Required("condition"): cv.CONDITION_SCHEMA,
-        vol.Optional("variables"): dict,
+        probatio.Required("type"): "test_condition",
+        probatio.Required("condition"): cv.CONDITION_SCHEMA,
+        probatio.Optional("variables"): dict,
     }
 )
 @decorators.require_admin
@@ -1066,7 +1073,7 @@ async def handle_test_condition(
         # Do static + dynamic validation of the condition
         config = await async_validate_condition_config(hass, msg["condition"])
         condition = await async_condition_from_config(hass, config)
-    except vol.Invalid as err:
+    except probatio.Invalid as err:
         connection.send_error(msg["id"], const.ERR_INVALID_FORMAT, str(err))
         return
     except HomeAssistantError as err:
@@ -1112,11 +1119,10 @@ async def handle_test_condition(
 
 @decorators.websocket_command(
     {
-        vol.Required("type"): "subscribe_condition",
-        vol.Required("condition"): cv.CONDITION_SCHEMA,
+        probatio.Required("type"): "subscribe_condition",
+        probatio.Required("condition"): cv.CONDITION_SCHEMA,
     }
 )
-@decorators.require_admin
 @decorators.async_response
 async def handle_subscribe_condition(
     hass: HomeAssistant, connection: ActiveConnection, msg: dict[str, Any]
@@ -1125,7 +1131,7 @@ async def handle_subscribe_condition(
     try:
         condition_config = await async_validate_condition_config(hass, msg["condition"])
         condition = await async_condition_from_config(hass, condition_config)
-    except vol.Invalid as err:
+    except probatio.Invalid as err:
         connection.send_error(msg["id"], const.ERR_INVALID_FORMAT, str(err))
         return
     except HomeAssistantError as err:
@@ -1189,9 +1195,9 @@ async def handle_subscribe_condition(
 
 @decorators.websocket_command(
     {
-        vol.Required("type"): "execute_script",
-        vol.Required("sequence"): cv.SCRIPT_SCHEMA,
-        vol.Optional("variables"): dict,
+        probatio.Required("type"): "execute_script",
+        probatio.Required("sequence"): cv.SCRIPT_SCHEMA,
+        probatio.Optional("variables"): dict,
     }
 )
 @decorators.require_admin
@@ -1240,9 +1246,9 @@ async def handle_execute_script(
 @callback
 @decorators.websocket_command(
     {
-        vol.Required("type"): "fire_event",
-        vol.Required("event_type"): str,
-        vol.Optional("event_data"): dict,
+        probatio.Required("type"): "fire_event",
+        probatio.Required("event_type"): str,
+        probatio.Optional("event_data"): dict,
     }
 )
 @decorators.require_admin
@@ -1258,10 +1264,10 @@ def handle_fire_event(
 
 @decorators.websocket_command(
     {
-        vol.Required("type"): "validate_config",
-        vol.Optional("triggers"): cv.match_all,
-        vol.Optional("conditions"): cv.match_all,
-        vol.Optional("actions"): cv.match_all,
+        probatio.Required("type"): "validate_config",
+        probatio.Optional("triggers"): cv.match_all,
+        probatio.Optional("conditions"): cv.match_all,
+        probatio.Optional("actions"): cv.match_all,
     }
 )
 @decorators.async_response
@@ -1289,7 +1295,7 @@ async def handle_validate_config(
         try:
             await validator(hass, schema(msg[key]))
         except (
-            vol.Invalid,
+            probatio.Invalid,
             HomeAssistantError,
         ) as err:
             result[key] = {"valid": False, "error": str(err)}
@@ -1302,8 +1308,8 @@ async def handle_validate_config(
 @callback
 @decorators.websocket_command(
     {
-        vol.Required("type"): "supported_features",
-        vol.Required("features"): {str: int},
+        probatio.Required("type"): "supported_features",
+        probatio.Required("features"): {str: int},
     }
 )
 def handle_supported_features(
@@ -1326,8 +1332,8 @@ async def handle_integration_descriptions(
 
 @decorators.websocket_command(
     {
-        vol.Required("type"): "integration/wait",
-        vol.Required("domain"): str,
+        probatio.Required("type"): "integration/wait",
+        probatio.Required("domain"): str,
     }
 )
 @decorators.async_response

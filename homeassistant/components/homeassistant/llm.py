@@ -5,7 +5,7 @@ from enum import Enum
 from operator import attrgetter
 from typing import Any, override
 
-import voluptuous as vol
+import probatio
 
 from homeassistant.components.llm import LLMTools
 from homeassistant.components.sensor import (
@@ -22,9 +22,14 @@ from homeassistant.helpers import (
     entity_registry as er,
     intent,
 )
-from homeassistant.helpers.llm import LLM_API_ASSIST, LLMContext, Tool, ToolInput
+from homeassistant.helpers.llm import (
+    LLM_API_ASSIST,
+    LLMContext,
+    Tool,
+    ToolInput,
+    ToolResult,
+)
 from homeassistant.util import dt as dt_util, yaml as yaml_util
-from homeassistant.util.json import JsonObjectType
 
 from .exposed_entities import async_should_expose
 
@@ -220,21 +225,21 @@ class GetLiveContextTool(Tool):
         "Prefer filtering by domain when searching"
         " for multiple devices of the same type."
     )
-    parameters = vol.Schema(
+    parameters = probatio.Schema(
         {
-            vol.Optional(
+            probatio.Optional(
                 "name",
                 description="Filter entities by name or alias (case-insensitive).",
             ): cv.string,
-            vol.Optional(
+            probatio.Optional(
                 "domain",
                 description=(
                     "Filter entities by domain"
                     " (e.g. 'light', 'sensor')."
                     " Accepts a single domain or a list."
                 ),
-            ): vol.Any(cv.string, [cv.string]),
-            vol.Optional(
+            ): probatio.Any(cv.string, [cv.string]),
+            probatio.Optional(
                 "area",
                 description="Filter entities by area name or alias (case-insensitive).",
             ): cv.string,
@@ -247,13 +252,13 @@ class GetLiveContextTool(Tool):
         hass: HomeAssistant,
         tool_input: ToolInput,
         llm_context: LLMContext,
-    ) -> JsonObjectType:
+    ) -> ToolResult:
         """Get the current state of exposed entities."""
         args = self.parameters(tool_input.tool_args)
         exposed_entities = async_get_exposed_entities(hass, llm_context.assistant)
 
         if not exposed_entities:
-            return {"success": False, "error": NO_ENTITIES_PROMPT}
+            return ToolResult(data={"error": NO_ENTITIES_PROMPT}, error=True)
 
         name_filter = args.get("name")
         area_filter = args.get("area")
@@ -290,12 +295,14 @@ class GetLiveContextTool(Tool):
             )
 
             if not match_result.is_match:
-                return {
-                    "success": False,
-                    "error": _live_context_match_error(
-                        match_result, name_filter, area_filter, domain_filter
-                    ),
-                }
+                return ToolResult(
+                    data={
+                        "error": _live_context_match_error(
+                            match_result, name_filter, area_filter, domain_filter
+                        )
+                    },
+                    error=True,
+                )
 
             matched_ids = {state.entity_id for state in match_result.states}
             entities = [
@@ -311,10 +318,7 @@ class GetLiveContextTool(Tool):
             " and the devices in this smart home:",
             yaml_util.dump(entities),
         ]
-        return {
-            "success": True,
-            "result": "\n".join(prompt),
-        }
+        return ToolResult(data={"result": "\n".join(prompt)})
 
 
 @callback
