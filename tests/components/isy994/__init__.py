@@ -1,8 +1,10 @@
 """Tests for the Universal Devices ISY/IoX integration."""
+
 from unittest.mock import AsyncMock, Mock, patch
 
 from pyisy import ISY, networking, nodes, programs, variables
 from pyisy.constants import CONFIG_NETWORKING, CONFIG_PORTAL
+from pyisy.helpers import EventEmitter, EventListener
 
 from homeassistant.components.isy994.const import (
     DOMAIN,
@@ -13,6 +15,7 @@ from homeassistant.components.isy994.const import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import Entity
 
 from tests.common import MockConfigEntry
 
@@ -81,3 +84,12 @@ async def async_init_integration(hass: HomeAssistant) -> ConfigEntry:
         await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
     return entry
+
+
+def entity_listeners(emitter: EventEmitter, entity: Entity) -> list[EventListener]:
+    """Return the listeners of an emitter whose callback is bound to the entity."""
+    return [
+        listener
+        for listener in emitter._subscribers
+        if getattr(listener.callback, "__self__", None) is entity
+    ]
